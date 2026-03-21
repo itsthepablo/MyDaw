@@ -3,6 +3,8 @@
 #include "Bridge/TrackEffectsBridge.h"
 #include "Bridge/TrackMixerPlaylistBridge.h"
 
+//Prueba para Gemini
+
 MainComponent::MainComponent() {
     commandManager.registerAllCommandsForTarget(this); 
     addKeyListener(commandManager.getKeyMappings());
