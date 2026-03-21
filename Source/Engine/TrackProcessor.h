@@ -4,13 +4,13 @@
 
 class TrackProcessor {
 public:
-    static void process(Track* track, 
-                        const AudioClock& clock, 
-                        int numSamples, 
-                        bool isPlayingNow, 
-                        juce::MidiBuffer& previewMidi, 
-                        bool isPianoRollActive,
-                        float loopEndPos) 
+    static void process(Track* track,
+        const AudioClock& clock,
+        int numSamples,
+        bool isPlayingNow,
+        juce::MidiBuffer& previewMidi,
+        bool isPianoRollActive,
+        float loopEndPos)
     {
         juce::MidiBuffer trackMidi;
 
@@ -21,7 +21,7 @@ public:
                 for (const auto& note : track->notes) {
                     bool triggerOn = clock.looped ? ((note.x >= clock.currentPh && note.x < loopEndPos) || (note.x >= 0 && note.x < clock.nextPh)) : (note.x >= clock.currentPh && note.x < clock.nextPh);
                     if (triggerOn) trackMidi.addEvent(juce::MidiMessage::noteOn(1, note.pitch, 0.8f), 0);
-                    
+
                     float offX = note.x + note.width;
                     bool triggerOff = clock.looped ? ((offX >= clock.currentPh && offX < loopEndPos) || (offX >= 0 && offX < clock.nextPh)) : (offX >= clock.currentPh && offX < clock.nextPh);
                     if (triggerOff) trackMidi.addEvent(juce::MidiMessage::noteOff(1, note.pitch), 0);
@@ -36,14 +36,15 @@ public:
                 long long clipEndSample = clipStartSample + clip->fileBuffer.getNumSamples();
 
                 if (clipStartSample < clock.blockEndSamplePos && clipEndSample > clock.currentSamplePos) {
-                    int readStart = 0; 
-                    int writeStart = 0; 
+                    int readStart = 0;
+                    int writeStart = 0;
                     int samplesToWrite = numSamples;
 
                     if (clipStartSample > clock.currentSamplePos) {
                         writeStart = (int)(clipStartSample - clock.currentSamplePos);
                         samplesToWrite -= writeStart;
-                    } else {
+                    }
+                    else {
                         readStart = (int)(clock.currentSamplePos - clipStartSample);
                     }
 

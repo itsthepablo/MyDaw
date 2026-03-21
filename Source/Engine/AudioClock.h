@@ -27,12 +27,13 @@ public:
         looped = false;
 
         double pixelsPerSec = (bpm / 60.0) * 80.0;
-        
+
         // Protección matemática por si el BPM es 0
         if (pixelsPerSec > 0) {
             samplesPerPixel = sampleRate / pixelsPerSec;
-        } else {
-            samplesPerPixel = 1.0; 
+        }
+        else {
+            samplesPerPixel = 1.0;
         }
 
         currentSamplePos = (long long)(currentPh * samplesPerPixel);

@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <JuceHeader.h>
 #include "../GlobalData.h" 
 #include "../PluginHost/VSTHost.h" 
@@ -37,7 +37,7 @@ public:
     std::vector<Note> notes;
     juce::OwnedArray<VSTHost> plugins;
 
-    // Almacén de clips de audio reales
+    // Almacï¿½n de clips de audio reales
     juce::OwnedArray<AudioClipData> audioClips;
 
     // --- REAPER FOLDER MECHANICS ---
