@@ -5,7 +5,12 @@
 PlaylistComponent::PlaylistComponent() {
     addAndMakeVisible(hBar); hBar.addListener(this);
     addAndMakeVisible(vBar); vBar.addListener(this);
-    updateScrollBars(); startTimerHz(30);
+
+    // Configuramos para que el scroll no tape el contenido si no es necesario
+    vBar.setAlwaysOnTop(true);
+
+    updateScrollBars();
+    startTimerHz(30);
 }
 
 PlaylistComponent::~PlaylistComponent() { stopTimer(); }
@@ -18,10 +23,17 @@ void PlaylistComponent::updateScrollBars() {
 
     int totalH = 0;
     if (tracksRef) {
-        for (auto* t : *tracksRef) if (t->isShowingInChildren) totalH += trackHeight;
+        for (auto* t : *tracksRef) {
+            if (t->isShowingInChildren) totalH += (int)trackHeight;
+        }
     }
+
+    double visibleH = (double)getHeight() - timelineH - scrollBarSize;
     vBar.setRangeLimits(0.0, (double)totalH);
-    vBar.setCurrentRange(vBar.getCurrentRangeStart(), (double)getHeight() - timelineH);
+    vBar.setCurrentRange(vBar.getCurrentRangeStart(), visibleH);
+
+    // --- LÓGICA DE VISIBILIDAD AUTOMÁTICA ---
+    vBar.setVisible(totalH > visibleH);
 }
 
 int PlaylistComponent::getTrackY(Track* targetTrack) const {
@@ -29,7 +41,7 @@ int PlaylistComponent::getTrackY(Track* targetTrack) const {
     int currentY = timelineH - (int)vBar.getCurrentRangeStart();
     for (auto* t : *tracksRef) {
         if (t == targetTrack) return currentY;
-        if (t->isShowingInChildren) currentY += trackHeight;
+        if (t->isShowingInChildren) currentY += (int)trackHeight;
     }
     return -1;
 }
@@ -43,7 +55,7 @@ int PlaylistComponent::getTrackAtY(int y) const {
         auto* t = (*tracksRef)[i];
         if (!t->isShowingInChildren) continue;
         if (y >= currentY && y < currentY + trackHeight) return i;
-        currentY += trackHeight;
+        currentY += (int)trackHeight;
     }
     return -1;
 }
@@ -56,8 +68,9 @@ void PlaylistComponent::paint(juce::Graphics& g) {
     int viewAreaH = getHeight() - timelineH - scrollBarSize;
 
     g.saveState();
-    g.reduceClipRegion(0, viewAreaY, getWidth() - scrollBarSize, viewAreaH);
+    g.reduceClipRegion(0, viewAreaY, getWidth() - (vBar.isVisible() ? scrollBarSize : 0), viewAreaH);
 
+    // Rejilla vertical (Tiempo)
     for (double i = 0; i <= 32 * 320; i += 80.0) {
         int dx = (int)(i * hZoom) - (int)hS;
         if (dx < 0) continue;
@@ -65,16 +78,18 @@ void PlaylistComponent::paint(juce::Graphics& g) {
         g.drawVerticalLine(dx, (float)viewAreaY, (float)getHeight());
     }
 
+    // Líneas horizontales (Separación de Tracks)
     int currentY = timelineH - (int)vS;
     if (tracksRef) {
         for (auto* t : *tracksRef) {
             if (!t->isShowingInChildren) continue;
             g.setColour(juce::Colours::black.withAlpha(0.4f));
             g.drawHorizontalLine(currentY + (int)trackHeight - 1, 0.0f, (float)getWidth());
-            currentY += trackHeight;
+            currentY += (int)trackHeight;
         }
     }
 
+    // Dibujado de clips
     for (const auto& clip : clips) {
         int yPos = getTrackY(clip.trackPtr);
         if (yPos < timelineH - 100 || yPos > getHeight()) continue;
@@ -88,6 +103,7 @@ void PlaylistComponent::paint(juce::Graphics& g) {
     }
     g.restoreState();
 
+    // Timeline superior
     g.setColour(juce::Colour(20, 22, 25)); g.fillRect(0, 0, getWidth(), timelineH);
     int phX = (int)(playheadAbsPos * hZoom) - (int)hS;
     g.setColour(juce::Colours::red); g.drawVerticalLine(phX, 0, (float)getHeight());
@@ -152,7 +168,6 @@ void PlaylistComponent::mouseDrag(const juce::MouseEvent& e) {
 
 void PlaylistComponent::mouseUp(const juce::MouseEvent&) { draggingClipIndex = -1; }
 
-// --- ARREGLO PARA LNK2001 ---
 void PlaylistComponent::mouseMove(const juce::MouseEvent& e) {
     int idx = getClipAt(e.x, e.y);
     if (idx != -1) {

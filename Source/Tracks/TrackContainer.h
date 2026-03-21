@@ -13,6 +13,7 @@ public:
     std::function<void(int)> onDeleteTrack;
     std::function<void(Track&)> onOpenEffectsPanel;
     std::function<void()> onTracksReordered;
+    std::function<void()> onTrackAdded; // <--- AGREGADO: Declaración del callback
 
     int vOffset = 0;
 
@@ -52,7 +53,11 @@ public:
         addAndMakeVisible(p);
         recalculateDeltasFromDepths();
         resized();
+
         if (onTracksReordered) onTracksReordered();
+
+        // --- AGREGADO: Llamada al callback para el scroll ---
+        if (onTrackAdded) onTrackAdded();
     }
 
     void removeTrack(int index) {
