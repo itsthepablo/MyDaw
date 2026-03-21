@@ -8,6 +8,7 @@
 #include "PianoRoll/PianoRollComponent.h" 
 #include "Engine/AudioEngine.h"
 #include "UI/TransportBar.h"
+#include "UI/Buttons/ToolbarButtons.h" // <--- NUEVO
 
 class MainComponent : public juce::AudioAppComponent,
     public juce::ApplicationCommandTarget
@@ -37,8 +38,8 @@ private:
 
     std::unique_ptr<juce::DocumentWindow> pianoRollWindow;
     TransportBar transportBar;
+    ToolbarButtons toolbarButtons; // <--- AGREGADO
 
-    juce::TextButton showMixerBtn;
     bool isMixerVisible = false;
     bool isEffectsPanelVisible = false;
 
