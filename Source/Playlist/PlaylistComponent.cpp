@@ -5,10 +5,7 @@
 PlaylistComponent::PlaylistComponent() {
     addAndMakeVisible(hBar); hBar.addListener(this);
     addAndMakeVisible(vBar); vBar.addListener(this);
-
-    // Configuramos para que el scroll no tape el contenido si no es necesario
     vBar.setAlwaysOnTop(true);
-
     updateScrollBars();
     startTimerHz(30);
 }
@@ -20,19 +17,13 @@ void PlaylistComponent::timerCallback() { repaint(); }
 void PlaylistComponent::updateScrollBars() {
     hBar.setRangeLimits(0.0, 32 * 320 * hZoom);
     hBar.setCurrentRange(hBar.getCurrentRangeStart(), (double)getWidth() - scrollBarSize);
-
     int totalH = 0;
     if (tracksRef) {
-        for (auto* t : *tracksRef) {
-            if (t->isShowingInChildren) totalH += (int)trackHeight;
-        }
+        for (auto* t : *tracksRef) if (t->isShowingInChildren) totalH += (int)trackHeight;
     }
-
     double visibleH = (double)getHeight() - timelineH - scrollBarSize;
     vBar.setRangeLimits(0.0, (double)totalH);
     vBar.setCurrentRange(vBar.getCurrentRangeStart(), visibleH);
-
-    // --- LÓGICA DE VISIBILIDAD AUTOMÁTICA ---
     vBar.setVisible(totalH > visibleH);
 }
 
@@ -51,7 +42,7 @@ int PlaylistComponent::getTrackAtY(int y) const {
     int vS = (int)vBar.getCurrentRangeStart();
     int currentY = timelineH - vS;
     if (!tracksRef) return -1;
-    for (int i = 0; i < tracksRef->size(); ++i) {
+    for (int i = 0; i < (int)tracksRef->size(); ++i) {
         auto* t = (*tracksRef)[i];
         if (!t->isShowingInChildren) continue;
         if (y >= currentY && y < currentY + trackHeight) return i;
@@ -66,19 +57,14 @@ void PlaylistComponent::paint(juce::Graphics& g) {
     float vS = (float)vBar.getCurrentRangeStart();
     int viewAreaY = timelineH;
     int viewAreaH = getHeight() - timelineH - scrollBarSize;
-
     g.saveState();
     g.reduceClipRegion(0, viewAreaY, getWidth() - (vBar.isVisible() ? scrollBarSize : 0), viewAreaH);
-
-    // Rejilla vertical (Tiempo)
     for (double i = 0; i <= 32 * 320; i += 80.0) {
         int dx = (int)(i * hZoom) - (int)hS;
         if (dx < 0) continue;
         g.setColour(juce::Colours::white.withAlpha(0.05f));
         g.drawVerticalLine(dx, (float)viewAreaY, (float)getHeight());
     }
-
-    // Líneas horizontales (Separación de Tracks)
     int currentY = timelineH - (int)vS;
     if (tracksRef) {
         for (auto* t : *tracksRef) {
@@ -88,8 +74,6 @@ void PlaylistComponent::paint(juce::Graphics& g) {
             currentY += (int)trackHeight;
         }
     }
-
-    // Dibujado de clips
     for (const auto& clip : clips) {
         int yPos = getTrackY(clip.trackPtr);
         if (yPos < timelineH - 100 || yPos > getHeight()) continue;
@@ -102,12 +86,9 @@ void PlaylistComponent::paint(juce::Graphics& g) {
         g.drawText(clip.name, clipRect.reduced(5, 0), juce::Justification::topLeft, true);
     }
     g.restoreState();
-
-    // Timeline superior
     g.setColour(juce::Colour(20, 22, 25)); g.fillRect(0, 0, getWidth(), timelineH);
     int phX = (int)(playheadAbsPos * hZoom) - (int)hS;
     g.setColour(juce::Colours::red); g.drawVerticalLine(phX, 0, (float)getHeight());
-
     if (isExternalFileDragging) {
         g.fillAll(juce::Colours::dodgerblue.withAlpha(0.2f));
         g.setColour(juce::Colours::white);
@@ -131,9 +112,7 @@ void PlaylistComponent::mouseWheelMove(const juce::MouseEvent& e, const juce::Mo
         hZoom = juce::jlimit(0.1f, 5.0f, hZoom + w.deltaY * 0.1f);
         updateScrollBars();
     }
-    else {
-        vBar.mouseWheelMove(e, w);
-    }
+    else vBar.mouseWheelMove(e, w);
     repaint();
 }
 
@@ -151,7 +130,7 @@ void PlaylistComponent::mouseDown(const juce::MouseEvent& e) {
     if (cIdx != -1) {
         draggingClipIndex = cIdx;
         dragStartAbsX = (e.x + (float)hBar.getCurrentRangeStart()) / hZoom;
-        dragStartXOriginal = clips[cIdx].startX;
+        dragStartXOriginal = clips[cIdx].startX; // CORREGIDO
         dragStartWidth = clips[cIdx].width;
         isResizingClip = e.x > ((clips[cIdx].startX * hZoom - hBar.getCurrentRangeStart()) + clips[cIdx].width * hZoom - 10);
     }
@@ -161,8 +140,8 @@ void PlaylistComponent::mouseDrag(const juce::MouseEvent& e) {
     if (draggingClipIndex == -1) return;
     float absX = (e.x + (float)hBar.getCurrentRangeStart()) / hZoom;
     float diff = absX - dragStartAbsX;
-    if (isResizingClip) clips[draggingClipIndex].width = std::max(10.0f, dragStartWidth + diff);
-    else clips[draggingClipIndex].startX = std::max(0.0f, dragStartXOriginal + diff);
+    if (isResizingClip) clips[draggingClipIndex].width = juce::jmax(10.0f, dragStartWidth + diff);
+    else clips[draggingClipIndex].startX = juce::jmax(0.0f, dragStartXOriginal + diff); // CORREGIDO
     repaint();
 }
 
@@ -175,9 +154,7 @@ void PlaylistComponent::mouseMove(const juce::MouseEvent& e) {
         if (e.x > edgeX - 10) setMouseCursor(juce::MouseCursor::LeftRightResizeCursor);
         else setMouseCursor(juce::MouseCursor::DraggingHandCursor);
     }
-    else {
-        setMouseCursor(juce::MouseCursor::NormalCursor);
-    }
+    else setMouseCursor(juce::MouseCursor::NormalCursor);
 }
 
 bool PlaylistComponent::isInterestedInFileDrag(const juce::StringArray&) { return true; }
@@ -187,17 +164,13 @@ void PlaylistComponent::fileDragExit(const juce::StringArray&) { isExternalFileD
 void PlaylistComponent::filesDropped(const juce::StringArray& files, int x, int y) {
     isExternalFileDragging = false;
     int tIdx = getTrackAtY(y);
-
     if (tIdx == -1 && onNewTrackRequested) {
         onNewTrackRequested();
-        if (tracksRef) tIdx = tracksRef->size() - 1;
+        if (tracksRef) tIdx = (int)tracksRef->size() - 1;
     }
-
     if (tIdx == -1) return;
-
     float absX = (x + (float)hBar.getCurrentRangeStart()) / hZoom;
     juce::AudioFormatManager fmt; fmt.registerBasicFormats();
-
     for (auto path : files) {
         juce::File f(path);
         std::unique_ptr<juce::AudioFormatReader> reader(fmt.createReaderFor(f));
@@ -208,7 +181,6 @@ void PlaylistComponent::filesDropped(const juce::StringArray& files, int x, int 
             data->fileBuffer.setSize((int)reader->numChannels, (int)reader->lengthInSamples);
             reader->read(&data->fileBuffer, 0, (int)reader->lengthInSamples, 0, true, true);
             data->width = (float)(reader->lengthInSamples / reader->sampleRate) * (120.0f / 60.0f) * 80.0f;
-
             (*tracksRef)[tIdx]->audioClips.add(data);
             clips.push_back({ (*tracksRef)[tIdx], absX, data->width, data->name, data });
             absX += data->width;

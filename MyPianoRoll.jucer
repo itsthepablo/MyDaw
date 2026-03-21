@@ -15,6 +15,8 @@
         <FILE id="mEx8qf" name="AudioClock.h" compile="0" resource="0" file="Source/Engine/AudioClock.h"/>
         <FILE id="jWdwyO" name="AudioEngine.h" compile="0" resource="0" file="Source/Engine/AudioEngine.h"/>
         <FILE id="kbAMkm" name="MasterMixer.h" compile="0" resource="0" file="Source/Engine/MasterMixer.h"/>
+        <FILE id="YPFnVd" name="SafetyProcessors.h" compile="0" resource="0"
+              file="Source/Engine/SafetyProcessors.h"/>
         <FILE id="EvutIs" name="TrackProcessor.h" compile="0" resource="0"
               file="Source/Engine/TrackProcessor.h"/>
       </GROUP>

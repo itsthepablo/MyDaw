@@ -34,6 +34,17 @@ public:
     float getPlayheadPos() const { return playheadAbsPos; }
     void setPlayheadPos(float newPos) { playheadAbsPos = newPos; repaint(); }
 
+    // NUEVO: Calcula el final del loop basándose en el audio más lejano (Mínimo 4 compases)
+    float getLoopEndPos() const {
+        double dynamicLoopEnd = 1280.0; // Mínimo de 4 compases por defecto (4 * 320px)
+        for (const auto& clip : clips) {
+            if (clip.startX + clip.width > dynamicLoopEnd) {
+                dynamicLoopEnd = clip.startX + clip.width;
+            }
+        }
+        return (float)(std::ceil((dynamicLoopEnd - 0.001) / 320.0) * 320.0);
+    }
+
     void setBpm(double newBpm) { bpm = newBpm; repaint(); }
     double getBpm() const { return bpm; }
 
@@ -42,7 +53,7 @@ public:
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseDrag(const juce::MouseEvent& e) override;
     void mouseUp(const juce::MouseEvent& e) override;
-    void mouseMove(const juce::MouseEvent& e) override; // Crucial para LNK2001
+    void mouseMove(const juce::MouseEvent& e) override;
     void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override;
     void scrollBarMoved(juce::ScrollBar* scrollBarThatHasMoved, double newRangeStart) override;
     void timerCallback() override;
@@ -71,7 +82,7 @@ private:
     int draggingClipIndex = -1;
     bool isResizingClip = false;
     float dragStartAbsX = 0;
-    float dragStartXOriginal = 0;
+    float dragStartXOriginal = 0; // CORREGIDO: Nombre restaurado
     float dragStartWidth = 0;
 
     bool isExternalFileDragging = false;

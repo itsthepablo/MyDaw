@@ -15,7 +15,7 @@ public:
         std::function<void()> triggerResize)
     {
         // 1. Cerrar el panel desde la 'X' de la UI lateral
-        panel.onClose = [&isVisible, triggerResize] {
+        panel.onClose = [&isVisible, triggerResize]() {
             isVisible = false;
             triggerResize();
             };

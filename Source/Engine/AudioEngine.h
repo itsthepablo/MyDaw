@@ -3,8 +3,8 @@
 #include "AudioClock.h"
 #include "TrackProcessor.h"
 #include "MasterMixer.h"
+#include "SafetyProcessors.h"
 
-// Forward declarations para evitar errores de compilación circular
 class TrackContainer;
 class PianoRollComponent;
 class PlaylistComponent;
@@ -22,7 +22,7 @@ public:
                 if (p->isLoaded()) p->prepareToPlay(s, samples);
     }
 
-    void releaseResources() {} // Función vacía para evitar errores de llamada en MainComponent
+    void releaseResources() {}
 
     void processBlock(const juce::AudioSourceChannelInfo& bufferToFill,
         TrackContainer& trackContainer,
@@ -35,7 +35,7 @@ public:
         bufferToFill.clearActiveBufferRegion();
         bool isPlayingNow = pianoRollUI.getIsPlaying();
 
-        // 1. Pánico MIDI (All Notes Off al detener)
+        // 1. Pánico MIDI
         if (!isPlayingNow && clock.wasPlayingLastBlock) {
             for (auto* track : trackContainer.getTracks()) {
                 juce::MidiBuffer panic;
@@ -76,8 +76,11 @@ public:
             track->currentPeakLevelL = 0.0f; track->currentPeakLevelR = 0.0f;
         }
 
-        // 3. Actualizar Reloj
-        clock.update(bufferToFill.numSamples, isPlayingNow, pianoRollUI.getPlayheadPos(), pianoRollUI.getLoopEndPos(), pianoRollUI.getBpm());
+        // 3. Actualizar Reloj 
+        // NUEVO: Calculamos el final del loop dinámico tomando el más largo entre el Piano Roll (MIDI) y la Playlist (Audio WAVs)
+        float finalLoopEnd = juce::jmax(pianoRollUI.getLoopEndPos(), playlistUI.getLoopEndPos());
+
+        clock.update(bufferToFill.numSamples, isPlayingNow, pianoRollUI.getPlayheadPos(), finalLoopEnd, pianoRollUI.getBpm());
 
         // 4. Calcular Jerarquía de Carpetas (Routing)
         std::vector<int> parentIndices(tracks.size(), -1);
@@ -95,7 +98,8 @@ public:
         for (int i = (int)tracks.size() - 1; i >= 0; --i) {
             auto* track = tracks[i];
             bool isPianoRollActive = (&(track->notes) == pianoRollUI.getActiveNotesPointer());
-            TrackProcessor::process(track, clock, bufferToFill.numSamples, isPlayingNow, previewMidi, isPianoRollActive, pianoRollUI.getLoopEndPos());
+            // NUEVO: Pasamos 'finalLoopEnd' al TrackProcessor para evitar cortes prematuros
+            TrackProcessor::process(track, clock, bufferToFill.numSamples, isPlayingNow, previewMidi, isPianoRollActive, finalLoopEnd);
             MasterMixer::processTrackVolumeAndRouting(track, bufferToFill.numSamples, hardwareOutChannels, parentIndices[i], tracks, bufferToFill);
         }
 
@@ -107,6 +111,9 @@ public:
                 });
         }
 
+        // --- APLICACIÓN DE SEGURIDAD Y VOLUMEN MASTER ---
+        SafetyProcessors::applyNaNKiller(*bufferToFill.buffer, bufferToFill.startSample, bufferToFill.numSamples);
         bufferToFill.buffer->applyGain(bufferToFill.startSample, bufferToFill.numSamples, mixerUI.getMasterVolume());
+        SafetyProcessors::applyHardClipper(*bufferToFill.buffer, bufferToFill.startSample, bufferToFill.numSamples, 1.0f);
     }
 };

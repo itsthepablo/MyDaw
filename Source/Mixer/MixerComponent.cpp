@@ -27,13 +27,13 @@ MixerStrip::MixerStrip(Track& t) : track(t) {
     nameLabel.setJustificationType(juce::Justification::centred);
     nameLabel.setFont(juce::Font(13.0f, juce::Font::bold));
 
-    // Agregamos los medidores estéreo
+    // Agregamos los medidores estÃ©reo
     addAndMakeVisible(meterL);
     addAndMakeVisible(meterR);
 }
 
 void MixerStrip::syncWithTrack() {
-    // Sincronización de interfaz
+    // SincronizaciÃ³n de interfaz
     if (nameLabel.getText() != track.getName())
         nameLabel.setText(track.getName(), juce::dontSendNotification);
 
@@ -43,11 +43,11 @@ void MixerStrip::syncWithTrack() {
     if (panSlider.getValue() != track.getBalance())
         panSlider.setValue(track.getBalance(), juce::dontSendNotification);
 
-    // Sincronización de niveles de audio para los vúmetros
+    // SincronizaciÃ³n de niveles de audio para los vÃºmetros
     meterL.setLevel(track.currentPeakLevelL);
     meterR.setLevel(track.currentPeakLevelR);
 
-    // Detección de cambios estructurales (Carpetas/Colores)
+    // DetecciÃ³n de cambios estructurales (Carpetas/Colores)
     if (lastDepth != track.folderDepth || lastColor != track.getColor()) {
         lastDepth = track.folderDepth;
         lastColor = track.getColor();
@@ -84,7 +84,7 @@ void MixerStrip::resized() {
     panSlider.setBounds(area.removeFromTop(45).reduced(5));
     area.removeFromTop(5);
 
-    // Espacio para los vúmetros a la derecha del fader
+    // Espacio para los vÃºmetros a la derecha del fader
     auto meterArea = area.removeFromRight(14);
     meterR.setBounds(meterArea.removeFromRight(6));
     meterArea.removeFromRight(2);
@@ -98,7 +98,7 @@ void MixerStrip::resized() {
 // CONSOLA PRINCIPAL (MixerComponent)
 // ==========================================================
 MixerComponent::MixerComponent() {
-    // Configuración Master
+    // ConfiguraciÃ³n Master
     addAndMakeVisible(masterVol);
     masterVol.setSliderStyle(juce::Slider::LinearVertical);
     masterVol.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
@@ -110,7 +110,7 @@ MixerComponent::MixerComponent() {
     masterLabel.setJustificationType(juce::Justification::centred);
     masterLabel.setFont(juce::Font(14.0f, juce::Font::bold));
 
-    // Configuración del Viewport para Scroll Horizontal
+    // ConfiguraciÃ³n del Viewport para Scroll Horizontal
     addAndMakeVisible(viewport);
     viewport.setViewedComponent(&stripContainer, false);
     viewport.setScrollBarsShown(false, true); // Solo horizontal
@@ -146,7 +146,7 @@ void MixerComponent::updateStrips() {
 void MixerComponent::timerCallback() {
     if (!tracksRef) return;
 
-    // Verificar si el número de pistas cambió para reconstruir
+    // Verificar si el nÃºmero de pistas cambiÃ³ para reconstruir
     bool needsRebuild = (tracksRef->size() != strips.size());
     if (!needsRebuild) {
         for (int i = 0; i < tracksRef->size(); ++i) {
@@ -165,7 +165,7 @@ void MixerComponent::timerCallback() {
         for (int i = 0; i < strips.size(); ++i) {
             auto* t = (*tracksRef)[i];
 
-            // Si cambió la visibilidad (colapso de carpeta), marcamos para resized()
+            // Si cambiÃ³ la visibilidad (colapso de carpeta), marcamos para resized()
             if (strips[i]->lastVis != t->isShowingInChildren || strips[i]->lastDepth != t->folderDepth) {
                 strips[i]->lastVis = t->isShowingInChildren;
                 strips[i]->lastDepth = t->folderDepth;
@@ -187,7 +187,7 @@ void MixerComponent::paint(juce::Graphics& g) {
 void MixerComponent::resized() {
     if (tracksRef && tracksRef->size() != strips.size()) return;
 
-    // 1. Master Fader (Posición fija)
+    // 1. Master Fader (PosiciÃ³n fija)
     int masterW = 90;
     auto masterArea = getLocalBounds().removeFromLeft(masterW);
     masterLabel.setBounds(masterArea.removeFromBottom(30));
@@ -240,6 +240,6 @@ void MixerComponent::resized() {
         }
     }
 
-    // Actualizar tamaño del contenedor interno para activar el scroll
+    // Actualizar tamaÃ±o del contenedor interno para activar el scroll
     stripContainer.setBounds(0, 0, x, containerH);
 }
