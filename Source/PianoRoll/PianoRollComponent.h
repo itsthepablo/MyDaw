@@ -25,7 +25,6 @@ public:
     PianoRollComponent();
     ~PianoRollComponent() override;
 
-    // --- M	TODOS PARA CONEXIN CON TRACKS Y AUDICIN ---
     void setActiveNotes(std::vector<Note>* trackNotes) {
         externalNotes = trackNotes;
         automationEditor.setNotesReference(trackNotes);
@@ -40,11 +39,13 @@ public:
     void setPlayheadPos(float newPos) { playheadAbsPos = newPos; }
 
     float getLoopEndPos() const;
-    double getBpm() const { return bpmSlider.getValue(); }
+
+    // Cambiado para usar el valor interno en lugar del slider eliminado
+    double getBpm() const { return bpmValue; }
+    void setBpm(double newBpm) { bpmValue = newBpm; repaint(); }
 
     int getPreviewPitch() const { return previewPitch; }
     bool getIsPreviewing() const { return isPreviewingNote; }
-    // --------------------------------------------------
 
     void paint(juce::Graphics& g) override;
     void resized() override;
@@ -62,16 +63,18 @@ public:
     bool keyPressed(const juce::KeyPress& key, juce::Component* originatingComponent) override;
     void timerCallback() override;
 
-    const std::vector<Note>& getNotes() const {       static std::vector<Note> empty;
+    const std::vector<Note>& getNotes() const {
+        static std::vector<Note> empty;
         return (externalNotes != nullptr) ? *externalNotes : empty;
     }
 
     AutomationEditor& getAutoEditor() { return automationEditor; }
 
 private:
-    std::vector<Note>* externalNotes = nullptr; // CAMBIADO A PUNTERO PARA TRACKS
+    std::vector<Note>* externalNotes = nullptr;
     float playheadAbsPos = 0.0f;
     bool isPlaying = false;
+    double bpmValue = 120.0; // Nueva variable interna
 
     int previewPitch = -1;
     bool isPreviewingNote = false;
@@ -116,8 +119,7 @@ private:
 
     juce::Slider hZoomSlider; juce::Slider vZoomSlider;
     juce::Label hZoomLabel; juce::Label vZoomLabel;
-    juce::ComboBox snapSelector; juce::Slider bpmSlider;
-    juce::Label bpmLabel;
+    juce::ComboBox snapSelector;
     juce::TextButton toolBtn;
     juce::TextButton linkAutoBtn;
     juce::ScrollBar hBar{ false }; juce::ScrollBar vBar{ true };

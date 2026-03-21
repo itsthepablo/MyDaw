@@ -1,8 +1,14 @@
 #pragma once
 #include <JuceHeader.h>
 #include "AudioClock.h"
-#include "TrackProcessor.h" // Incluimos el procesador
-#include "MasterMixer.h"    // Incluimos el mixer
+#include "TrackProcessor.h"
+#include "MasterMixer.h"
+
+// Forward declarations para evitar errores de compilación circular
+class TrackContainer;
+class PianoRollComponent;
+class PlaylistComponent;
+class MixerComponent;
 
 class AudioEngine {
 public:
@@ -11,19 +17,21 @@ public:
     void prepareToPlay(int samples, double s, TrackContainer& trackContainer, juce::CriticalSection& audioMutex) {
         clock.prepare(s, samples);
         const juce::ScopedLock sl(audioMutex);
-        for (auto* track : trackContainer.getTracks()) 
-            for (auto* p : track->plugins) 
-                p->prepareToPlay(s, samples);
+        for (auto* track : trackContainer.getTracks())
+            for (auto* p : track->plugins)
+                if (p->isLoaded()) p->prepareToPlay(s, samples);
     }
 
+    void releaseResources() {} // Función vacía para evitar errores de llamada en MainComponent
+
     void processBlock(const juce::AudioSourceChannelInfo& bufferToFill,
-                      TrackContainer& trackContainer,
-                      PianoRollComponent& pianoRollUI,
-                      PlaylistComponent& playlistUI,
-                      MixerComponent& mixerUI,
-                      juce::CriticalSection& audioMutex) 
+        TrackContainer& trackContainer,
+        PianoRollComponent& pianoRollUI,
+        PlaylistComponent& playlistUI,
+        MixerComponent& mixerUI,
+        juce::CriticalSection& audioMutex)
     {
-        const juce::ScopedLock sl(audioMutex); 
+        const juce::ScopedLock sl(audioMutex);
         bufferToFill.clearActiveBufferRegion();
         bool isPlayingNow = pianoRollUI.getIsPlaying();
 
@@ -51,9 +59,9 @@ public:
                 clock.lastPreviewPitch = currentPreview;
             }
         }
-        else if (clock.lastPreviewPitch != -1) { 
-            previewMidi.addEvent(juce::MidiMessage::noteOff(1, clock.lastPreviewPitch), 0); 
-            clock.lastPreviewPitch = -1; 
+        else if (clock.lastPreviewPitch != -1) {
+            previewMidi.addEvent(juce::MidiMessage::noteOff(1, clock.lastPreviewPitch), 0);
+            clock.lastPreviewPitch = -1;
         }
 
         int safeNumChannels = juce::jmax(16, bufferToFill.buffer->getNumChannels());
@@ -74,7 +82,7 @@ public:
         // 4. Calcular Jerarquía de Carpetas (Routing)
         std::vector<int> parentIndices(tracks.size(), -1);
         std::vector<int> parentStack;
-        for (int i = 0; i < tracks.size(); ++i) {
+        for (int i = 0; i < (int)tracks.size(); ++i) {
             if (!parentStack.empty()) parentIndices[i] = parentStack.back();
             if (tracks[i]->folderDepthChange == 1) parentStack.push_back(i);
             else if (tracks[i]->folderDepthChange < 0) {
@@ -83,17 +91,11 @@ public:
             }
         }
 
-        // ====================================================================
-        // 5. PROCESAMIENTO PISTA POR PISTA (AQUÍ ESTÁ LA MAGIA)
-        // ====================================================================
+        // 5. PROCESAMIENTO PISTA POR PISTA
         for (int i = (int)tracks.size() - 1; i >= 0; --i) {
             auto* track = tracks[i];
             bool isPianoRollActive = (&(track->notes) == pianoRollUI.getActiveNotesPointer());
-            
-            // Trabajador 1: Procesa Clips y Plugins
             TrackProcessor::process(track, clock, bufferToFill.numSamples, isPlayingNow, previewMidi, isPianoRollActive, pianoRollUI.getLoopEndPos());
-
-            // Trabajador 2: Aplica Volumen y Mezcla
             MasterMixer::processTrackVolumeAndRouting(track, bufferToFill.numSamples, hardwareOutChannels, parentIndices[i], tracks, bufferToFill);
         }
 
@@ -102,7 +104,7 @@ public:
             juce::MessageManager::callAsync([&pianoRollUI, &playlistUI, nPh]() {
                 pianoRollUI.setPlayheadPos(nPh);
                 playlistUI.setPlayheadPos(nPh);
-            });
+                });
         }
 
         bufferToFill.buffer->applyGain(bufferToFill.startSample, bufferToFill.numSamples, mixerUI.getMasterVolume());

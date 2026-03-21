@@ -4,6 +4,9 @@
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1">
   <MAINGROUP id="OgOeCb" name="MyPianoRoll">
     <GROUP id="{832B9725-4498-E7CC-3428-6D1D4B31D6DB}" name="Source">
+      <GROUP id="{721FC522-4CF1-05D4-BC36-D97CDC4B59FC}" name="UI">
+        <FILE id="NkM4y4" name="TransportBar.h" compile="0" resource="0" file="Source/UI/TransportBar.h"/>
+      </GROUP>
       <GROUP id="{DE716C5C-395E-36B2-27F4-94E8BA4A1B7D}" name="Engine">
         <FILE id="mEx8qf" name="AudioClock.h" compile="0" resource="0" file="Source/Engine/AudioClock.h"/>
         <FILE id="jWdwyO" name="AudioEngine.h" compile="0" resource="0" file="Source/Engine/AudioEngine.h"/>

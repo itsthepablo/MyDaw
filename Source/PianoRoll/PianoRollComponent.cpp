@@ -7,10 +7,10 @@ PianoRollComponent::PianoRollComponent()
     hBar.addListener(this); vBar.addListener(this);
 
     addAndMakeVisible(hZoomSlider); hZoomSlider.setRange(0.1, 10.0, 0.01); hZoomSlider.setValue(1.0);
-    hZoomSlider.onValueChange = [this] { hZoom = (float)hZoomSlider.getValue(); updateScrollBars(); automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, getSnapPixels(), playheadAbsPos); repaint(); };
+    hZoomSlider.onValueChange = [this] { hZoom = (float)hZoomSlider.getValue(); updateScrollBars(); automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, (float)getSnapPixels(), playheadAbsPos); repaint(); };
 
     addAndMakeVisible(vZoomSlider); vZoomSlider.setRange(0.5, 3.0, 0.01); vZoomSlider.setValue(1.0);
-    vZoomSlider.onValueChange = [this] { vZoom = (float)vZoomSlider.getValue(); updateScrollBars(); automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, getSnapPixels(), playheadAbsPos); repaint(); };
+    vZoomSlider.onValueChange = [this] { vZoom = (float)vZoomSlider.getValue(); updateScrollBars(); automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, (float)getSnapPixels(), playheadAbsPos); repaint(); };
 
     addAndMakeVisible(hZoomLabel); hZoomLabel.setText("H-Zoom", juce::dontSendNotification);
     addAndMakeVisible(vZoomLabel); vZoomLabel.setText("V-Zoom", juce::dontSendNotification);
@@ -21,10 +21,7 @@ PianoRollComponent::PianoRollComponent()
     snapSelector.addItem("1/6 step", 5); snapSelector.addItem("1/4 step", 6); snapSelector.addItem("1/3 step", 7); snapSelector.addItem("1/2 step", 8); snapSelector.addItem("Step", 9);
     snapSelector.addItem("1/6 beat", 10); snapSelector.addItem("1/4 beat", 11); snapSelector.addItem("1/3 beat", 12); snapSelector.addItem("1/2 beat", 13); snapSelector.addItem("Beat", 14); snapSelector.addItem("Bar", 15);
     snapSelector.setSelectedId(14);
-    snapSelector.onChange = [this] { automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, getSnapPixels(), playheadAbsPos); repaint(); };
-
-    addAndMakeVisible(bpmSlider); bpmSlider.setRange(40.0, 240.0, 1.0); bpmSlider.setValue(120.0);
-    addAndMakeVisible(bpmLabel); bpmLabel.setText("BPM:", juce::dontSendNotification);
+    snapSelector.onChange = [this] { automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, (float)getSnapPixels(), playheadAbsPos); repaint(); };
 
     addAndMakeVisible(toolBtn); toolBtn.setButtonText("DIBUJAR"); toolBtn.setClickingTogglesState(true);
     toolBtn.onClick = [this] { currentTool = toolBtn.getToggleState() ? ToolMode::Select : ToolMode::Draw; toolBtn.setButtonText(toolBtn.getToggleState() ? "LAZO" : "DIBUJAR"); };
@@ -94,7 +91,7 @@ void PianoRollComponent::filesDropped(const juce::StringArray& files, int x, int
             }
         }
     }
-    commitHistory(); automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, getSnapPixels(), playheadAbsPos); repaint();
+    commitHistory(); automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, (float)getSnapPixels(), playheadAbsPos); repaint();
 }
 
 void PianoRollComponent::updateScrollBars() {
@@ -105,11 +102,11 @@ void PianoRollComponent::updateScrollBars() {
 }
 
 void PianoRollComponent::commitHistory() { if (externalNotes == nullptr) return; if (currentHistoryIndex < (int)undoHistory.size() - 1) undoHistory.resize(currentHistoryIndex + 1); undoHistory.push_back(*externalNotes); currentHistoryIndex++; if (undoHistory.size() > 50) { undoHistory.erase(undoHistory.begin()); currentHistoryIndex--; } automationEditor.repaint(); }
-void PianoRollComponent::undo() { if (externalNotes == nullptr || currentHistoryIndex <= 0) return; currentHistoryIndex--; *externalNotes = undoHistory[currentHistoryIndex]; selectedNotes.clear(); automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, getSnapPixels(), playheadAbsPos); repaint(); }
-void PianoRollComponent::redo() { if (externalNotes == nullptr || currentHistoryIndex >= (int)undoHistory.size() - 1) return; currentHistoryIndex++; *externalNotes = undoHistory[currentHistoryIndex]; selectedNotes.clear(); automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, getSnapPixels(), playheadAbsPos); repaint(); }
+void PianoRollComponent::undo() { if (externalNotes == nullptr || currentHistoryIndex <= 0) return; currentHistoryIndex--; *externalNotes = undoHistory[currentHistoryIndex]; selectedNotes.clear(); automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, (float)getSnapPixels(), playheadAbsPos); repaint(); }
+void PianoRollComponent::redo() { if (externalNotes == nullptr || currentHistoryIndex >= (int)undoHistory.size() - 1) return; currentHistoryIndex++; *externalNotes = undoHistory[currentHistoryIndex]; selectedNotes.clear(); automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, (float)getSnapPixels(), playheadAbsPos); repaint(); }
 void PianoRollComponent::copySelectedNotes() { if (externalNotes == nullptr) return; clipboard.clear(); for (int idx : selectedNotes) clipboard.push_back((*externalNotes)[idx]); }
-void PianoRollComponent::pasteNotes() { if (externalNotes == nullptr || clipboard.empty()) return; int minX = 2000000000; for (auto& n : clipboard) if (n.x < minX) minX = n.x; selectedNotes.clear(); int offset = (int)playheadAbsPos - minX; for (auto n : clipboard) { n.x = std::max(0, n.x + offset); externalNotes->push_back(n); selectedNotes.insert((int)externalNotes->size() - 1); } commitHistory(); automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, getSnapPixels(), playheadAbsPos); }
-void PianoRollComponent::quantizeNotes() { if (externalNotes == nullptr) return; double s = getSnapPixels(); std::vector<int> targets; if (selectedNotes.empty()) for (int i = 0; i < (int)externalNotes->size(); ++i) targets.push_back(i); else for (int idx : selectedNotes) targets.push_back(idx); if (targets.empty()) return; for (int idx : targets) { (*externalNotes)[idx].x = (int)(std::round((*externalNotes)[idx].x / s) * s); (*externalNotes)[idx].width = std::max((int)s, (int)(std::round((*externalNotes)[idx].width / s) * s)); } commitHistory(); automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, getSnapPixels(), playheadAbsPos); }
+void PianoRollComponent::pasteNotes() { if (externalNotes == nullptr || clipboard.empty()) return; int minX = 2000000000; for (auto& n : clipboard) if (n.x < minX) minX = n.x; selectedNotes.clear(); int offset = (int)playheadAbsPos - minX; for (auto n : clipboard) { n.x = std::max(0, n.x + offset); externalNotes->push_back(n); selectedNotes.insert((int)externalNotes->size() - 1); } commitHistory(); automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, (float)getSnapPixels(), playheadAbsPos); }
+void PianoRollComponent::quantizeNotes() { if (externalNotes == nullptr) return; double s = getSnapPixels(); std::vector<int> targets; if (selectedNotes.empty()) for (int i = 0; i < (int)externalNotes->size(); ++i) targets.push_back(i); else for (int idx : selectedNotes) targets.push_back(idx); if (targets.empty()) return; for (int idx : targets) { (*externalNotes)[idx].x = (int)(std::round((*externalNotes)[idx].x / s) * s); (*externalNotes)[idx].width = std::max((int)s, (int)(std::round((*externalNotes)[idx].width / s) * s)); } commitHistory(); automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, (float)getSnapPixels(), playheadAbsPos); }
 
 bool PianoRollComponent::isWhiteKey(int midiNote) { int n = midiNote % 12; return (n == 0 || n == 2 || n == 4 || n == 5 || n == 7 || n == 9 || n == 11); }
 double PianoRollComponent::getSnapPixels() {
@@ -245,23 +242,24 @@ void PianoRollComponent::paint(juce::Graphics& g) {
 }
 
 void PianoRollComponent::resized() {
-    snapSelector.setBounds(10, 10, 100, 30); bpmLabel.setBounds(120, 15, 35, 20); bpmSlider.setBounds(155, 15, 120, 20);
-    toolBtn.setBounds(285, 10, 100, 30); linkAutoBtn.setBounds(395, 10, 100, 30);
-    hZoomLabel.setBounds(510, 15, 50, 20); hZoomSlider.setBounds(560, 15, 80, 20);
-    vZoomLabel.setBounds(650, 15, 50, 20); vZoomSlider.setBounds(700, 15, 80, 20);
+    snapSelector.setBounds(10, 10, 100, 30);
+    toolBtn.setBounds(120, 10, 100, 30); // Reajustado para ocupar el hueco del BPM
+    linkAutoBtn.setBounds(230, 10, 100, 30);
+    hZoomLabel.setBounds(345, 15, 50, 20); hZoomSlider.setBounds(395, 15, 80, 20);
+    vZoomLabel.setBounds(485, 15, 50, 20); vZoomSlider.setBounds(535, 15, 80, 20);
     rootNoteCombo.setBounds(getWidth() - 320, 10, 50, 30); scaleCombo.setBounds(getWidth() - 260, 10, 240, 30);
     int hbY = getHeight() - autoH - scrollBarSize; automationEditor.setBounds(0, getHeight() - autoH, getWidth(), autoH); hBar.setBounds(keyW, hbY, getWidth() - keyW - scrollBarSize, scrollBarSize); vBar.setBounds(getWidth() - scrollBarSize, toolH + timelineH, scrollBarSize, hbY - (toolH + timelineH));
-    updateScrollBars(); automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, getSnapPixels(), playheadAbsPos);
+    updateScrollBars(); automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, (float)getSnapPixels(), playheadAbsPos);
 }
 
 void PianoRollComponent::timerCallback() {
     bool needsRepaint = isPlaying;
     for (int i = (int)animations.size() - 1; i >= 0; --i) { animations[i].alpha -= 0.08f; if (animations[i].alpha <= 0.0f) animations.erase(animations.begin() + i); needsRepaint = true; }
-    if (isPlaying) { automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, getSnapPixels(), playheadAbsPos); }
+    if (isPlaying) { automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, (float)getSnapPixels(), playheadAbsPos); }
     if (needsRepaint) repaint();
 }
 
-void PianoRollComponent::scrollBarMoved(juce::ScrollBar* sb, double) { if (sb == &hBar) automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, getSnapPixels(), playheadAbsPos); repaint(); }
+void PianoRollComponent::scrollBarMoved(juce::ScrollBar* sb, double) { if (sb == &hBar) automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, (float)getSnapPixels(), playheadAbsPos); repaint(); }
 
 void PianoRollComponent::mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel) {
     if (event.mods.isCtrlDown() || event.mods.isCommandDown()) {
@@ -288,7 +286,7 @@ void PianoRollComponent::mouseWheelMove(const juce::MouseEvent& event, const juc
             vBar.setCurrentRangeStart(newStart);
         }
     }
-    automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, getSnapPixels(), playheadAbsPos);
+    automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, (float)getSnapPixels(), playheadAbsPos);
     repaint();
 }
 
@@ -312,7 +310,7 @@ void PianoRollComponent::mouseDown(const juce::MouseEvent& event) {
         return;
     }
 
-    if (event.y >= toolH && event.y < toolH + timelineH) { isDraggingPlayhead = true; playheadAbsPos = (float)(std::round(absX / getSnapPixels()) * getSnapPixels()); automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, getSnapPixels(), playheadAbsPos); repaint(); return; }
+    if (event.y >= toolH && event.y < toolH + timelineH) { isDraggingPlayhead = true; playheadAbsPos = (float)(std::round(absX / getSnapPixels()) * getSnapPixels()); automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, (float)getSnapPixels(), playheadAbsPos); repaint(); return; }
     if (event.x > getWidth() - scrollBarSize || event.y < toolH + timelineH || event.y >= hbY) return;
 
     int p = yToPitch(event.y); double f = 440.0 * std::pow(2.0, (p - 69) / 12.0);
@@ -328,7 +326,7 @@ void PianoRollComponent::mouseDown(const juce::MouseEvent& event) {
             else {
                 animations.push_back({ (*externalNotes)[clickedIdx].pitch, (*externalNotes)[clickedIdx].x, (*externalNotes)[clickedIdx].width, 1.0f, true }); externalNotes->erase(externalNotes->begin() + clickedIdx);
             }
-            selectedNotes.clear(); repaint(); automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, getSnapPixels(), playheadAbsPos);
+            selectedNotes.clear(); repaint(); automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, (float)getSnapPixels(), playheadAbsPos);
         }
         return;
     }
@@ -350,7 +348,7 @@ void PianoRollComponent::mouseDown(const juce::MouseEvent& event) {
             int ni = (int)externalNotes->size() - 1; selectedNotes.insert(ni); dragStates.clear(); dragStates.push_back({ ni, fx, p, lastNoteWidth }); isResizing = true; dragStartAbsX = absX; dragStartPitch = p; previewPitch = p; isPreviewingNote = true;
         }
     }
-    repaint(); automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, getSnapPixels(), playheadAbsPos);
+    repaint(); automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, (float)getSnapPixels(), playheadAbsPos);
 }
 
 void PianoRollComponent::mouseDrag(const juce::MouseEvent& event) {
@@ -358,7 +356,7 @@ void PianoRollComponent::mouseDrag(const juce::MouseEvent& event) {
     currentMousePos = event.getPosition();
     if (isResizingAutoPanel) { autoH = juce::jlimit(50, getHeight() - 200, getHeight() - event.y - scrollBarSize); resized(); return; }
     float absX = std::max(0.0f, (event.x - keyW + (float)hBar.getCurrentRangeStart()) / hZoom);
-    if (isDraggingPlayhead) { playheadAbsPos = (float)(std::round(absX / getSnapPixels()) * getSnapPixels()); automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, getSnapPixels(), playheadAbsPos); repaint(); return; }
+    if (isDraggingPlayhead) { playheadAbsPos = (float)(std::round(absX / getSnapPixels()) * getSnapPixels()); automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, (float)getSnapPixels(), playheadAbsPos); repaint(); return; }
 
     int hbY = getHeight() - autoH - scrollBarSize;
     if (event.x < keyW) { if (event.y >= toolH + timelineH && event.y < hbY) { previewPitch = yToPitch(event.y); isPreviewingNote = true; } return; }
@@ -373,7 +371,7 @@ void PianoRollComponent::mouseDrag(const juce::MouseEvent& event) {
         else { (*externalNotes)[s.index].x = juce::jlimit(0, (int)(32.0 * 320.0), s.startX + snappedDX); if (canMP && dP != 0) { int newP = s.startPitch + dP; if ((*externalNotes)[s.index].pitch != newP) { (*externalNotes)[s.index].pitch = newP; (*externalNotes)[s.index].frequency = 440.0 * std::pow(2.0, (newP - 69) / 12.0); previewPitch = newP; isPreviewingNote = true; } } }
     }
     if (linkAutoBtn.getToggleState() && snappedDX != 0 && !isResizing) { automationEditor.moveLinkedNodes((float)snappedDX); }
-    repaint(); automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, getSnapPixels(), playheadAbsPos);
+    repaint(); automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, (float)getSnapPixels(), playheadAbsPos);
 }
 
 void PianoRollComponent::mouseUp(const juce::MouseEvent&) {
@@ -398,7 +396,7 @@ bool PianoRollComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
         if (!selectedNotes.empty() && externalNotes != nullptr) {
             hasStateChanged = true; std::vector<int> toD(selectedNotes.begin(), selectedNotes.end()); std::sort(toD.rbegin(), toD.rend());
             for (int i : toD) { animations.push_back({ (*externalNotes)[i].pitch, (*externalNotes)[i].x, (*externalNotes)[i].width, 1.0f, true }); externalNotes->erase(externalNotes->begin() + i); }
-            selectedNotes.clear(); commitHistory(); repaint(); automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, getSnapPixels(), playheadAbsPos);
+            selectedNotes.clear(); commitHistory(); repaint(); automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, (float)getSnapPixels(), playheadAbsPos);
         } return true;
     }
     return false;

@@ -7,7 +7,9 @@ PlaylistComponent::PlaylistComponent() {
     addAndMakeVisible(vBar); vBar.addListener(this);
     updateScrollBars(); startTimerHz(30);
 }
+
 PlaylistComponent::~PlaylistComponent() { stopTimer(); }
+
 void PlaylistComponent::timerCallback() { repaint(); }
 
 void PlaylistComponent::updateScrollBars() {
@@ -150,6 +152,19 @@ void PlaylistComponent::mouseDrag(const juce::MouseEvent& e) {
 
 void PlaylistComponent::mouseUp(const juce::MouseEvent&) { draggingClipIndex = -1; }
 
+// --- ARREGLO PARA LNK2001 ---
+void PlaylistComponent::mouseMove(const juce::MouseEvent& e) {
+    int idx = getClipAt(e.x, e.y);
+    if (idx != -1) {
+        float edgeX = (clips[idx].startX * hZoom - hBar.getCurrentRangeStart()) + clips[idx].width * hZoom;
+        if (e.x > edgeX - 10) setMouseCursor(juce::MouseCursor::LeftRightResizeCursor);
+        else setMouseCursor(juce::MouseCursor::DraggingHandCursor);
+    }
+    else {
+        setMouseCursor(juce::MouseCursor::NormalCursor);
+    }
+}
+
 bool PlaylistComponent::isInterestedInFileDrag(const juce::StringArray&) { return true; }
 void PlaylistComponent::fileDragEnter(const juce::StringArray&, int, int) { isExternalFileDragging = true; repaint(); }
 void PlaylistComponent::fileDragExit(const juce::StringArray&) { isExternalFileDragging = false; repaint(); }
@@ -158,10 +173,9 @@ void PlaylistComponent::filesDropped(const juce::StringArray& files, int x, int 
     isExternalFileDragging = false;
     int tIdx = getTrackAtY(y);
 
-    // Si no hay pista o sueltas fuera, pide crear una
     if (tIdx == -1 && onNewTrackRequested) {
         onNewTrackRequested();
-        tIdx = (tracksRef ? tracksRef->size() - 1 : -1);
+        if (tracksRef) tIdx = tracksRef->size() - 1;
     }
 
     if (tIdx == -1) return;
@@ -176,10 +190,8 @@ void PlaylistComponent::filesDropped(const juce::StringArray& files, int x, int 
             auto* data = new AudioClipData();
             data->name = f.getFileNameWithoutExtension();
             data->startX = absX;
-            data->fileBuffer.setSize(reader->numChannels, (int)reader->lengthInSamples);
+            data->fileBuffer.setSize((int)reader->numChannels, (int)reader->lengthInSamples);
             reader->read(&data->fileBuffer, 0, (int)reader->lengthInSamples, 0, true, true);
-
-            // Calculamos ancho basado en duración real (píxeles por segundo)
             data->width = (float)(reader->lengthInSamples / reader->sampleRate) * (120.0f / 60.0f) * 80.0f;
 
             (*tracksRef)[tIdx]->audioClips.add(data);
