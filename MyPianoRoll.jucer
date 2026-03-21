@@ -12,18 +12,14 @@
               file="Source/Engine/TrackProcessor.h"/>
       </GROUP>
       <GROUP id="{E133DAA7-A9EF-385F-B76E-9BD38D9F0AC7}" name="Bridge">
-        <FILE id="XTQzrN" name="TrackAudioBridge.h" compile="1" resource="0"
-              file="Source/Bridge/TrackAudioBridge.h"/>
         <FILE id="E9uxC2" name="TrackEffectsBridge.h" compile="1" resource="0"
               file="Source/Bridge/TrackEffectsBridge.h"/>
-        <FILE id="mLJOmR" name="TrackMixerBridge.h" compile="1" resource="0"
-              file="Source/Bridge/TrackMixerBridge.h"/>
         <FILE id="MoyJcG" name="TrackMixerPlaylistBridge.h" compile="0" resource="0"
               file="Source/Bridge/TrackMixerPlaylistBridge.h"/>
         <FILE id="Xu9v5w" name="TrackPianoRollBridge.h" compile="1" resource="0"
               file="Source/Bridge/TrackPianoRollBridge.h"/>
-        <FILE id="bsANBr" name="TrackPlaylistBridge.h" compile="1" resource="0"
-              file="Source/Bridge/TrackPlaylistBridge.h"/>
+        <FILE id="s7f94C" name="TransportBridge.h" compile="0" resource="0"
+              file="Source/Bridge/TransportBridge.h"/>
       </GROUP>
       <GROUP id="{73F36168-2865-EFB5-E542-4C7CFFA91F73}" name="Effects">
         <FILE id="LzcHep" name="EffectsPanel.cpp" compile="1" resource="0"
