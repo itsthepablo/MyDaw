@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<JUCERPROJECT id="kQUd48" name="MyPianoRoll" projectType="guiapp" useAppConfig="0"
+              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1">
+  <MAINGROUP id="OgOeCb" name="MyPianoRoll">
+    <GROUP id="{832B9725-4498-E7CC-3428-6D1D4B31D6DB}" name="Source">
+      <GROUP id="{DE716C5C-395E-36B2-27F4-94E8BA4A1B7D}" name="Engine">
+        <FILE id="mEx8qf" name="AudioClock.h" compile="0" resource="0" file="Source/Engine/AudioClock.h"/>
+        <FILE id="jWdwyO" name="AudioEngine.h" compile="0" resource="0" file="Source/Engine/AudioEngine.h"/>
+        <FILE id="kbAMkm" name="MasterMixer.h" compile="0" resource="0" file="Source/Engine/MasterMixer.h"/>
+        <FILE id="EvutIs" name="TrackProcessor.h" compile="0" resource="0"
+              file="Source/Engine/TrackProcessor.h"/>
+      </GROUP>
+      <GROUP id="{E133DAA7-A9EF-385F-B76E-9BD38D9F0AC7}" name="Bridge">
+        <FILE id="XTQzrN" name="TrackAudioBridge.h" compile="1" resource="0"
+              file="Source/Bridge/TrackAudioBridge.h"/>
+        <FILE id="E9uxC2" name="TrackEffectsBridge.h" compile="1" resource="0"
+              file="Source/Bridge/TrackEffectsBridge.h"/>
+        <FILE id="mLJOmR" name="TrackMixerBridge.h" compile="1" resource="0"
+              file="Source/Bridge/TrackMixerBridge.h"/>
+        <FILE id="MoyJcG" name="TrackMixerPlaylistBridge.h" compile="0" resource="0"
+              file="Source/Bridge/TrackMixerPlaylistBridge.h"/>
+        <FILE id="Xu9v5w" name="TrackPianoRollBridge.h" compile="1" resource="0"
+              file="Source/Bridge/TrackPianoRollBridge.h"/>
+        <FILE id="bsANBr" name="TrackPlaylistBridge.h" compile="1" resource="0"
+              file="Source/Bridge/TrackPlaylistBridge.h"/>
+      </GROUP>
+      <GROUP id="{73F36168-2865-EFB5-E542-4C7CFFA91F73}" name="Effects">
+        <FILE id="LzcHep" name="EffectsPanel.cpp" compile="1" resource="0"
+              file="Source/Effects/EffectsPanel.cpp"/>
+        <FILE id="RbHrXU" name="EffectsPanel.h" compile="0" resource="0" file="Source/Effects/EffectsPanel.h"/>
+      </GROUP>
+      <GROUP id="{57A16124-0184-7C27-B886-F155C0B20BDF}" name="Mixer">
+        <FILE id="CBlPLC" name="MixerComponent.cpp" compile="1" resource="0"
+              file="Source/Mixer/MixerComponent.cpp"/>
+        <FILE id="uNkpr9" name="MixerComponent.h" compile="0" resource="0"
+              file="Source/Mixer/MixerComponent.h"/>
+        <FILE id="UNUqtc" name="PeakMeter.h" compile="0" resource="0" file="Source/Mixer/PeakMeter.h"/>
+      </GROUP>
+      <GROUP id="{EBD30F33-E7EC-16DD-C806-2D1CD1306523}" name="Playlist">
+        <FILE id="FGYWeA" name="PlaylistComponent.cpp" compile="1" resource="0"
+              file="Source/Playlist/PlaylistComponent.cpp"/>
+        <FILE id="UCnxE5" name="PlaylistComponent.h" compile="0" resource="0"
+              file="Source/Playlist/PlaylistComponent.h"/>
+      </GROUP>
+      <GROUP id="{F98E9492-EAA4-A856-6CC6-2352DAB93A59}" name="Tracks">
+        <FILE id="QSBRZT" name="Track.h" compile="0" resource="0" file="Source/Tracks/Track.h"/>
+        <FILE id="UklVn6" name="TrackContainer.h" compile="0" resource="0"
+              file="Source/Tracks/TrackContainer.h"/>
+        <FILE id="DW4KPG" name="TrackControlPanel.h" compile="0" resource="0"
+              file="Source/Tracks/TrackControlPanel.h"/>
+      </GROUP>
+      <GROUP id="{9F2E0E2B-DA67-CB81-440A-F014789C271E}" name="Theme">
+        <FILE id="vwtk4p" name="CustomTheme.cpp" compile="1" resource="0" file="Source/Theme/CustomTheme.cpp"/>
+        <FILE id="dQKlMy" name="CustomTheme.h" compile="0" resource="0" file="Source/Theme/CustomTheme.h"/>
+      </GROUP>
+      <GROUP id="{5D7F3195-8788-684A-8936-46852730F3E5}" name="PluginHost">
+        <FILE id="vKHiGS" name="VSTHost.cpp" compile="1" resource="0" file="Source/PluginHost/VSTHost.cpp"/>
+        <FILE id="MFqlEp" name="VSTHost.h" compile="0" resource="0" file="Source/PluginHost/VSTHost.h"/>
+      </GROUP>
+      <GROUP id="{0670795B-50B4-F13C-AAC1-E814D3FF80C0}" name="PianoRoll">
+        <FILE id="Xxjo9P" name="AutomationEditor.cpp" compile="1" resource="0"
+              file="Source/PianoRoll/AutomationEditor.cpp"/>
+        <FILE id="bgkNoP" name="AutomationEditor.h" compile="0" resource="0"
+              file="Source/PianoRoll/AutomationEditor.h"/>
+        <FILE id="QnTpE4" name="AutomationMath.h" compile="0" resource="0"
+              file="Source/PianoRoll/AutomationMath.h"/>
+        <FILE id="lMqrh2" name="PianoRollComponent.cpp" compile="1" resource="0"
+              file="Source/PianoRoll/PianoRollComponent.cpp"/>
+        <FILE id="sGaZIn" name="PianoRollComponent.h" compile="0" resource="0"
+              file="Source/PianoRoll/PianoRollComponent.h"/>
+      </GROUP>
+      <FILE id="L5O99I" name="GlobalData.h" compile="0" resource="0" file="Source/GlobalData.h"/>
+      <FILE id="EwYe1F" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
+      <FILE id="aTUeza" name="MainComponent.h" compile="0" resource="0" file="Source/MainComponent.h"/>
+      <FILE id="UoniC2" name="MainComponent.cpp" compile="1" resource="0"
+            file="Source/MainComponent.cpp"/>
+    </GROUP>
+  </MAINGROUP>
+  <MODULES>
+    <MODULE id="juce_audio_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_audio_devices" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_audio_formats" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_audio_processors" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_audio_utils" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_core" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_data_structures" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_dsp" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_events" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_graphics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_gui_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_gui_extra" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+  </MODULES>
+  <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1" JUCE_PLUGINHOST_VST3="1"/>
+  <EXPORTFORMATS>
+    <VS2022 targetFolder="Builds/VisualStudio2022">
+      <CONFIGURATIONS>
+        <CONFIGURATION isDebug="1" name="Debug" targetName="MyPianoRoll" headerPath="C:\Users\pablo\Desktop\JUCE\modules\juce_audio_processors\format_types\VST3_SDK&#10;"/>
+        <CONFIGURATION isDebug="0" name="Release" targetName="MyPianoRoll" headerPath="C:\Users\pablo\Desktop\JUCE\modules\juce_audio_processors\format_types\VST3_SDK&#10;"/>
+      </CONFIGURATIONS>
+      <MODULEPATHS>
+        <MODULEPATH id="juce_audio_basics" path="C:/Users/pablo/Desktop/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_devices" path="C:/Users/pablo/Desktop/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_formats" path="C:/Users/pablo/Desktop/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_processors" path="C:/Users/pablo/Desktop/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_utils" path="C:/Users/pablo/Desktop/JUCE/modules"/>
+        <MODULEPATH id="juce_core" path="C:/Users/pablo/Desktop/JUCE/modules"/>
+        <MODULEPATH id="juce_data_structures" path="C:/Users/pablo/Desktop/JUCE/modules"/>
+        <MODULEPATH id="juce_dsp" path="C:/Users/pablo/Desktop/JUCE/modules"/>
+        <MODULEPATH id="juce_events" path="C:/Users/pablo/Desktop/JUCE/modules"/>
+        <MODULEPATH id="juce_graphics" path="C:/Users/pablo/Desktop/JUCE/modules"/>
+        <MODULEPATH id="juce_gui_basics" path="C:/Users/pablo/Desktop/JUCE/modules"/>
+        <MODULEPATH id="juce_gui_extra" path="C:/Users/pablo/Desktop/JUCE/modules"/>
+      </MODULEPATHS>
+    </VS2022>
+  </EXPORTFORMATS>
+</JUCERPROJECT>
