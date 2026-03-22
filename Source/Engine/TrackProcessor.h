@@ -62,7 +62,7 @@ public:
             }
         }
 
-        // 3. VSTs (El punto que más CPU consume, ahora en paralelo)
+        // 3. VSTs (El punto que ms CPU consume, ahora en paralelo)
         for (auto* p : track->plugins) {
             if (p->isLoaded()) p->processBlock(track->audioBuffer, trackMidi);
         }

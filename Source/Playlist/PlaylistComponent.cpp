@@ -1,5 +1,5 @@
 #include "PlaylistComponent.h"
-#include "../UI/WaveformRenderer.h" // REQUERIDO: Motor de dibujo pro
+#include "../UI/WaveformRenderer.h" 
 #include <cmath>
 #include <algorithm>
 
@@ -62,7 +62,6 @@ void PlaylistComponent::paint(juce::Graphics& g) {
     g.saveState();
     g.reduceClipRegion(0, viewAreaY, getWidth() - (vBar.isVisible() ? scrollBarSize : 0), viewAreaH);
 
-    // --- GRILLA (Grid visible detrás) ---
     for (double i = 0; i <= 32 * 320; i += 80.0) {
         int dx = (int)(i * hZoom) - (int)hS;
         if (dx < 0) continue;
@@ -80,7 +79,6 @@ void PlaylistComponent::paint(juce::Graphics& g) {
         }
     }
 
-    // --- DIBUJO DE CLIPS CON WAVEFORM CACHÉ ---
     for (const auto& clip : clips) {
         int yPos = getTrackY(clip.trackPtr);
         if (yPos < timelineH - 100 || yPos > getHeight()) continue;
@@ -88,16 +86,13 @@ void PlaylistComponent::paint(juce::Graphics& g) {
         int wPos = (int)(clip.width * hZoom);
         juce::Rectangle<int> clipRect(xPos, yPos + 2, wPos - 1, (int)trackHeight - 4);
 
-        // 1. Fondo Clip: Transparente (20%) para ver la grilla
         g.setColour(clip.trackPtr->getColor().withAlpha(0.2f));
         g.fillRoundedRectangle(clipRect.toFloat(), 4.0f);
 
-        // 2. Renderizado Waveform instantáneo desde el caché
         if (clip.linkedAudio != nullptr) {
             WaveformRenderer::drawWaveform(g, *clip.linkedAudio, clipRect, clip.trackPtr->getColor());
         }
 
-        // 3. Texto
         g.setColour(juce::Colours::white.withAlpha(0.9f));
         g.drawText(clip.name, clipRect.reduced(5, 2), juce::Justification::topLeft, true);
     }
@@ -199,7 +194,6 @@ void PlaylistComponent::filesDropped(const juce::StringArray& files, int x, int 
             data->fileBuffer.setSize((int)reader->numChannels, (int)reader->lengthInSamples);
             reader->read(&data->fileBuffer, 0, (int)reader->lengthInSamples, 0, true, true);
 
-            // --- LLAMADA CRÍTICA: Generamos el caché de dibujo una sola vez al cargar ---
             data->generateCache();
 
             data->width = (float)(reader->lengthInSamples / reader->sampleRate) * (120.0f / 60.0f) * 80.0f;

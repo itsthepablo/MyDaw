@@ -1,8 +1,8 @@
 #pragma once
 #include <JuceHeader.h>
 #include <vector>
-#include <functional> // REQUERIDO: Para std::function
-#include <cmath>       // REQUERIDO: Para std::ceil/std::abs
+#include <functional> 
+#include <cmath>       
 #include "../Tracks/Track.h" 
 
 struct TrackClip {
@@ -37,7 +37,7 @@ public:
     void setPlayheadPos(float newPos) { playheadAbsPos = newPos; repaint(); }
 
     float getLoopEndPos() const {
-        double dynamicLoopEnd = 1280.0; // Mínimo de 4 compases por defecto (4 * 320px)
+        double dynamicLoopEnd = 1280.0; // Minimo de 4 compases
         for (const auto& clip : clips) {
             if (clip.startX + clip.width > dynamicLoopEnd) {
                 dynamicLoopEnd = clip.startX + clip.width;

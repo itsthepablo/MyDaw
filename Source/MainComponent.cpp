@@ -9,8 +9,12 @@ MainComponent::MainComponent() {
     commandManager.registerAllCommandsForTarget(this);
     addKeyListener(commandManager.getKeyMappings());
 
+    // Inicializamos el medidor pasándole una referencia a la aplicación de audio
+    resourceMeter = std::make_unique<ResourceMeter>(*this);
+
     addAndMakeVisible(transportBar);
     addAndMakeVisible(toolbarButtons);
+    addAndMakeVisible(*resourceMeter); // <--- HACEMOS VISIBLE EL MEDIDOR
     addAndMakeVisible(effectsPanelUI);
     addAndMakeVisible(trackContainer);
     addAndMakeVisible(playlistUI);
@@ -19,7 +23,7 @@ MainComponent::MainComponent() {
     mixerUI.setVisible(false);
     effectsPanelUI.setVisible(false);
 
-    // AÑADIDO: Conectar el Mutex del motor de audio al contenedor de pistas para evitar crashes
+    // Protección de memoria (Mantenido de la versión segura)
     trackContainer.setExternalMutex(&audioMutex);
 
     // --- CONEXIONES MEDIANTE BRIDGES ---
@@ -32,7 +36,6 @@ MainComponent::MainComponent() {
     TrackMixerPlaylistBridge::connect(trackContainer, mixerUI, playlistUI);
     TransportBridge::connect(transportBar, pianoRollUI, playlistUI);
 
-    // Conexión actualizada para que el botón global tenga contexto de las pistas
     InterfaceBridge::connect(toolbarButtons, isMixerVisible, isEffectsPanelVisible,
         mixerUI, effectsPanelUI, trackContainer, [this] { resized(); });
 
@@ -44,7 +47,6 @@ MainComponent::MainComponent() {
             playlistUI.updateScrollBars();
             playlistUI.repaint();
 
-            // Si borramos la pista activa, ocultamos el panel
             isEffectsPanelVisible = false;
             effectsPanelUI.setVisible(false);
             resized();
@@ -80,6 +82,10 @@ void MainComponent::resized() {
 
     auto topArea = area.removeFromTop(45);
     toolbarButtons.setBounds(topArea.removeFromRight(180));
+    
+    // UBICACIÓN DEL MEDIDOR: A la derecha, al lado de los botones de la barra de herramientas
+    resourceMeter->setBounds(topArea.removeFromRight(100).reduced(8, 10)); 
+    
     transportBar.setBounds(topArea);
 
     if (isMixerVisible) {

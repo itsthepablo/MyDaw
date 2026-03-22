@@ -9,6 +9,7 @@
           <FILE id="DNLFnt" name="ToolbarButtons.h" compile="0" resource="0"
                 file="Source/UI/Buttons/ToolbarButtons.h"/>
         </GROUP>
+        <FILE id="yioUXf" name="ResourceMeter.h" compile="0" resource="0" file="Source/UI/ResourceMeter.h"/>
         <FILE id="NkM4y4" name="TransportBar.h" compile="0" resource="0" file="Source/UI/TransportBar.h"/>
         <FILE id="ZgzqNL" name="WaveformRenderer.h" compile="0" resource="0"
               file="Source/UI/WaveformRenderer.h"/>

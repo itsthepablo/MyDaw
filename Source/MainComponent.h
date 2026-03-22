@@ -8,7 +8,8 @@
 #include "PianoRoll/PianoRollComponent.h" 
 #include "Engine/AudioEngine.h"
 #include "UI/TransportBar.h"
-#include "UI/Buttons/ToolbarButtons.h" // <--- NUEVO
+#include "UI/Buttons/ToolbarButtons.h"
+#include "UI/ResourceMeter.h" // <--- NUEVO MEDIDOR
 
 class MainComponent : public juce::AudioAppComponent,
     public juce::ApplicationCommandTarget
@@ -38,7 +39,9 @@ private:
 
     std::unique_ptr<juce::DocumentWindow> pianoRollWindow;
     TransportBar transportBar;
-    ToolbarButtons toolbarButtons; // <--- AGREGADO
+    ToolbarButtons toolbarButtons; 
+    
+    std::unique_ptr<ResourceMeter> resourceMeter; // <--- PUNTERO AL MEDIDOR
 
     bool isMixerVisible = false;
     bool isEffectsPanelVisible = false;
