@@ -1,9 +1,11 @@
 #pragma once
 #include <JuceHeader.h>
 #include <vector>
+#include <memory>
 #include <functional> 
 #include <cmath>       
 #include "../Tracks/Track.h" 
+#include "Tools/PlaylistTool.h" 
 
 struct TrackClip {
     Track* trackPtr;
@@ -30,6 +32,31 @@ public:
     std::function<void(Track*, MidiClipData*)> onMidiClipDoubleClicked;
     std::function<void(MidiClipData*)> onMidiClipDeleted;
 
+    // --- VARIABLES PÚBLICAS PARA QUE LAS TOOLS LAS LEAN/MODIFIQUEN ---
+    const juce::OwnedArray<Track>* tracksRef = nullptr;
+    std::vector<TrackClip> clips;
+    float hZoom = 1.0f;
+    juce::ScrollBar hBar{ false };
+    juce::ScrollBar vBar{ true };
+
+    int draggingClipIndex = -1;
+    int selectedClipIndex = -1;
+    bool isResizingClip = false;
+    float dragStartAbsX = 0.0f;
+    float dragStartXOriginal = 0.0f;
+    float dragStartWidth = 0.0f;
+
+    int draggingNoteIndex = -1;
+    bool isResizingNote = false;
+    float dragStartNoteX = 0.0f;
+    float dragStartNoteWidth = 0.0f;
+
+    juce::CriticalSection* audioMutex = nullptr;
+    const int timelineH = 35;
+    const float trackHeight = 100.0f;
+    const int scrollBarSize = 16; // <--- AÑADIDO: Faltaba esta constante para las barras
+    // -----------------------------------------------------------------
+
     void setTracksReference(const juce::OwnedArray<Track>* tracks) {
         tracksRef = tracks;
         updateScrollBars();
@@ -37,9 +64,7 @@ public:
     }
 
     void setExternalMutex(juce::CriticalSection* mutex) { audioMutex = mutex; }
-
     void addMidiClipToView(Track* targetTrack, MidiClipData* newClip);
-
     void updateScrollBars();
 
     float getPlayheadPos() const { return playheadAbsPos; }
@@ -78,44 +103,20 @@ public:
     void fileDragExit(const juce::StringArray& files) override;
     void filesDropped(const juce::StringArray& files, int x, int y) override;
 
-    bool isPlaying = false;
-
-private:
-    const juce::OwnedArray<Track>* tracksRef = nullptr;
-    std::vector<TrackClip> clips;
-    float playheadAbsPos = 0.0f;
-    double bpm = 120.0;
-
-    const int timelineH = 35;
-    const int scrollBarSize = 16;
-    const float trackHeight = 100.0f;
-
-    juce::ScrollBar hBar{ false };
-    juce::ScrollBar vBar{ true };
-    float hZoom = 1.0f;
-
-    int draggingClipIndex = -1;
-    int selectedClipIndex = -1;
-    bool isResizingClip = false;
-    float dragStartAbsX = 0;
-    float dragStartXOriginal = 0;
-    float dragStartWidth = 0;
-
-    // --- NUEVO: ESTADOS PARA EDICI�N INLINE DE NOTAS ---
-    int draggingNoteIndex = -1;
-    bool isResizingNote = false;
-    float dragStartNoteX = 0;
-    float dragStartNoteWidth = 0;
-
-    bool isExternalFileDragging = false;
-    juce::CriticalSection* audioMutex = nullptr;
-
-    void deleteClip(int index);
-
-    double getSnapPixels() const { return 80.0; }
     int getTrackAtY(int y) const;
     int getClipAt(int x, int y) const;
     int getTrackY(Track* targetTrack) const;
+    void deleteClip(int index);
+
+    bool isPlaying = false;
+
+private:
+    std::unique_ptr<PlaylistTool> activeTool;
+
+    float playheadAbsPos = 0.0f;
+    double bpm = 120.0;
+    bool isExternalFileDragging = false;
+    double getSnapPixels() const { return 80.0; }
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PlaylistComponent)
 };
