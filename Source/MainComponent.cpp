@@ -13,7 +13,9 @@ MainComponent::MainComponent() {
 
     addAndMakeVisible(transportBar);
     addAndMakeVisible(toolbarButtons);
-    addAndMakeVisible(*resourceMeter);
+    addAndMakeVisible(*resourceMeter); 
+    
+    addAndMakeVisible(pickerPanelUI); // AÑADIDO
     addAndMakeVisible(effectsPanelUI);
     addAndMakeVisible(trackContainer);
     addAndMakeVisible(playlistUI);
@@ -21,10 +23,29 @@ MainComponent::MainComponent() {
 
     mixerUI.setVisible(false);
     effectsPanelUI.setVisible(false);
+    pickerPanelUI.setVisible(true);
 
     trackContainer.setExternalMutex(&audioMutex);
+    playlistUI.setExternalMutex(&audioMutex);
+    
+    // Le damos acceso a las pistas para que las pueda escanear
+    pickerPanelUI.setTrackContainer(&trackContainer);
+    
+    toolbarButtons.onSnapChanged = [this](double newSnapPixels) {
+        playlistUI.snapPixels = newSnapPixels;
+    };
 
-    // ACTUALIZADO: Pasamos la Playlist para que el botón de la pista pueda inyectar clips
+    toolbarButtons.onToolChanged = [this](int toolId) {
+        playlistUI.setTool(toolId);
+    };
+
+    playlistUI.onMidiClipDeleted = [this](MidiClipData* deletedClip) {
+        if (pianoRollUI.getActiveNotesPointer() == &(deletedClip->notes)) {
+            pianoRollUI.setActiveNotes(nullptr);
+            if (pianoRollWindow) pianoRollWindow->setVisible(false);
+        }
+    };
+
     TrackPianoRollBridge::connect(trackContainer, playlistUI, pianoRollUI, pianoRollWindow);
     TrackPianoRollBridge::connectPlaylist(playlistUI, pianoRollUI, pianoRollWindow);
 
@@ -35,8 +56,9 @@ MainComponent::MainComponent() {
     TrackMixerPlaylistBridge::connect(trackContainer, mixerUI, playlistUI);
     TransportBridge::connect(transportBar, pianoRollUI, playlistUI);
 
-    InterfaceBridge::connect(toolbarButtons, isMixerVisible, isEffectsPanelVisible,
-        mixerUI, effectsPanelUI, trackContainer, [this] { resized(); });
+    // ACTALIZADO EL BRIDGE
+    InterfaceBridge::connect(toolbarButtons, isMixerVisible, isEffectsPanelVisible, isPickerVisible,
+        mixerUI, effectsPanelUI, pickerPanelUI, trackContainer, [this] { resized(); });
 
     trackContainer.onDeleteTrack = [this](int index) {
         const juce::ScopedLock sl(audioMutex);
@@ -80,8 +102,9 @@ void MainComponent::resized() {
     auto area = getLocalBounds();
 
     auto topArea = area.removeFromTop(45);
-    toolbarButtons.setBounds(topArea.removeFromRight(180));
-    resourceMeter->setBounds(topArea.removeFromRight(100).reduced(8, 10));
+    
+    toolbarButtons.setBounds(topArea.removeFromRight(550)); 
+    resourceMeter->setBounds(topArea.removeFromRight(100).reduced(8, 10)); 
     transportBar.setBounds(topArea);
 
     if (isMixerVisible) {
@@ -92,6 +115,18 @@ void MainComponent::resized() {
         mixerUI.setVisible(false);
     }
 
+    // --- REORGANIZACIÓN DE PANELES LATERALES ---
+    
+    // 1. Picker Panel (Extremo Izquierdo)
+    if (isPickerVisible) {
+        pickerPanelUI.setVisible(true);
+        pickerPanelUI.setBounds(area.removeFromLeft(160));
+    }
+    else {
+        pickerPanelUI.setVisible(false);
+    }
+
+    // 2. Panel de Efectos (Al lado del Picker, si está abierto)
     if (isEffectsPanelVisible) {
         effectsPanelUI.setVisible(true);
         effectsPanelUI.setBounds(area.removeFromLeft(220));
@@ -100,7 +135,10 @@ void MainComponent::resized() {
         effectsPanelUI.setVisible(false);
     }
 
+    // 3. Contenedor de Pistas
     trackContainer.setBounds(area.removeFromLeft(250));
+    
+    // 4. Playlist
     playlistUI.setBounds(area);
 }
 

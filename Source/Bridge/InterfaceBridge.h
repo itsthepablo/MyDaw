@@ -1,40 +1,45 @@
 #pragma once
 #include <JuceHeader.h>
 #include "../UI/Buttons/ToolbarButtons.h"
+#include "../Mixer/MixerComponent.h"
 #include "../Effects/EffectsPanel.h"
+#include "../UI/PickerPanel.h" // NUEVO
 #include "../Tracks/TrackContainer.h"
 
 class InterfaceBridge {
 public:
-    static void connect(ToolbarButtons& buttons,
-        bool& mixerVisible,
-        bool& effectsVisible,
-        juce::Component& mixer,
-        EffectsPanel& effectsPanel, // Usamos la clase específica
-        TrackContainer& container,  // Agregado para acceder a los tracks
+    static void connect(ToolbarButtons& toolbar,
+        bool& isMixerVisible, bool& isEffectsPanelVisible, bool& isPickerVisible, // NUEVO BOOLEANO
+        MixerComponent& mixerUI, EffectsPanel& effectsPanelUI, PickerPanel& pickerPanelUI, // NUEVA UI
+        TrackContainer& trackContainer,
         std::function<void()> triggerResize)
     {
-        // Botón del Mixer
-        buttons.showMixerBtn.onClick = [&mixerVisible, &mixer, triggerResize] {
-            mixerVisible = !mixerVisible;
-            mixer.setVisible(mixerVisible);
+        // NUEVO EVENTO
+        toolbar.onTogglePicker = [&isPickerVisible, triggerResize] {
+            isPickerVisible = !isPickerVisible;
             triggerResize();
-            };
+        };
 
-        // Botón de Efectos (Corregido)
-        buttons.showEffectsBtn.onClick = [&effectsVisible, &effectsPanel, &container, triggerResize] {
-            effectsVisible = !effectsVisible;
+        toolbar.onToggleMixer = [&isMixerVisible, triggerResize] {
+            isMixerVisible = !isMixerVisible;
+            triggerResize();
+        };
 
-            // Si estamos abriendo el panel y no tiene ninguna pista asignada,
-            // cargamos la primera pista por defecto para que no aparezca vacío.
-            if (effectsVisible && effectsPanel.getActiveTrack() == nullptr) {
-                if (container.getTracks().size() > 0) {
-                    effectsPanel.setTrack(container.getTracks()[0]);
+        toolbar.onToggleFx = [&isEffectsPanelVisible, triggerResize, &effectsPanelUI, &trackContainer] {
+            isEffectsPanelVisible = !isEffectsPanelVisible;
+            
+            if (isEffectsPanelVisible) {
+                bool found = false;
+                for (auto* t : trackContainer.getTracks()) {
+                    if (t->getType() == TrackType::Audio || t->getType() == TrackType::MIDI) {
+                        effectsPanelUI.setTrack(t);
+                        found = true;
+                        break;
+                    }
                 }
+                if (!found) effectsPanelUI.setTrack(nullptr);
             }
-
-            effectsPanel.setVisible(effectsVisible);
             triggerResize();
-            };
+        };
     }
 };

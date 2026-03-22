@@ -1,7 +1,9 @@
 #include "PlaylistComponent.h"
 #include "../UI/WaveformRenderer.h" 
 #include "../UI/MidiClipRenderer.h"
-#include "Tools/PointerTool.h" // NUEVO
+#include "Tools/PointerTool.h" 
+#include "Tools/ScissorTool.h" 
+#include "Tools/EraserTool.h" // NUEVO: Importamos el Borrador
 #include <cmath>
 #include <algorithm>
 
@@ -9,7 +11,6 @@ PlaylistComponent::PlaylistComponent() {
     setWantsKeyboardFocus(true); 
     addKeyListener(this);        
     
-    // Por defecto, iniciamos con la herramienta de selección/mover
     activeTool = std::make_unique<PointerTool>();
     
     addAndMakeVisible(hBar); hBar.addListener(this);
@@ -92,6 +93,13 @@ void PlaylistComponent::deleteClip(int index) {
     repaint();
 }
 
+void PlaylistComponent::setTool(int toolId) {
+    if (toolId == 1) activeTool = std::make_unique<PointerTool>();
+    // else if (toolId == 2) activeTool = std::make_unique<DrawTool>(); // Lapiz pendiente
+    else if (toolId == 3) activeTool = std::make_unique<ScissorTool>();
+    else if (toolId == 4) activeTool = std::make_unique<EraserTool>(); // CORREGIDO: Ahora carga el Borrador
+}
+
 bool PlaylistComponent::keyPressed(const juce::KeyPress& key, juce::Component*) {
     if (key.getKeyCode() == juce::KeyPress::deleteKey || key.getKeyCode() == juce::KeyPress::backspaceKey) {
         if (selectedClipIndex != -1) {
@@ -112,10 +120,18 @@ void PlaylistComponent::paint(juce::Graphics& g) {
     g.saveState();
     g.reduceClipRegion(0, viewAreaY, getWidth() - (vBar.isVisible() ? scrollBarSize : 0), viewAreaH);
 
-    for (double i = 0; i <= 32 * 320; i += 80.0) {
+    double visualSnap = (snapPixels < 10.0) ? 80.0 : snapPixels;
+    
+    for (double i = 0; i <= 32 * 320; i += visualSnap) {
         int dx = (int)(i * hZoom) - (int)hS;
         if (dx < 0) continue;
-        g.setColour(juce::Colours::white.withAlpha(0.05f));
+        
+        if (std::fmod(i, 80.0) == 0.0) {
+            g.setColour(juce::Colours::white.withAlpha(0.1f)); 
+        } else {
+            g.setColour(juce::Colours::white.withAlpha(0.04f)); 
+        }
+        
         g.drawVerticalLine(dx, (float)viewAreaY, (float)getHeight());
     }
 
@@ -213,7 +229,7 @@ void PlaylistComponent::mouseDoubleClick(const juce::MouseEvent& e) {
     int tIdx = getTrackAtY(e.y);
     if (tIdx != -1 && (*tracksRef)[tIdx]->getType() == TrackType::MIDI && cIdx == -1) {
         float absX = (e.x + (float)hBar.getCurrentRangeStart()) / hZoom;
-        float snappedX = std::round(absX / 80.0f) * 80.0f; 
+        float snappedX = std::round(absX / snapPixels) * snapPixels; 
 
         auto* newMidiClip = new MidiClipData();
         newMidiClip->name = "Pattern " + juce::String((*tracksRef)[tIdx]->midiClips.size() + 1);
@@ -227,7 +243,6 @@ void PlaylistComponent::mouseDoubleClick(const juce::MouseEvent& e) {
     }
 }
 
-// --- DELEGACIÓN DEL RATÓN A LAS TOOLS ---
 void PlaylistComponent::mouseDown(const juce::MouseEvent& e) {
     if (activeTool) activeTool->mouseDown(e, *this);
 }
@@ -258,7 +273,8 @@ void PlaylistComponent::filesDropped(const juce::StringArray& files, int x, int 
     if (tIdx == -1) return;
 
     float absX = (x + (float)hBar.getCurrentRangeStart()) / hZoom;
-    absX = std::round(absX / 80.0f) * 80.0f;
+    
+    absX = std::round(absX / snapPixels) * snapPixels;
     absX = juce::jmax(0.0f, absX);
 
     juce::AudioFormatManager fmt; fmt.registerBasicFormats();

@@ -72,7 +72,8 @@ public:
             auto* midiClip = p.clips[p.draggingClipIndex].linkedMidi;
             auto& note = midiClip->notes[p.draggingNoteIndex];
             
-            float snappedX = std::round((p.dragStartNoteX + diff) / 20.0f) * 20.0f; 
+            // OBEDECE AL SNAP GLOBAL ELEGIDO
+            float snappedX = std::round((p.dragStartNoteX + diff) / p.snapPixels) * p.snapPixels; 
             
             if (p.isResizingNote) {
                 note.width = juce::jmax(10.0f, p.dragStartNoteWidth + diff);
@@ -108,7 +109,8 @@ public:
             }
         }
 
-        float snappedX = std::round((p.dragStartXOriginal + diff) / 80.0f) * 80.0f;
+        // OBEDECE AL SNAP GLOBAL ELEGIDO
+        float snappedX = std::round((p.dragStartXOriginal + diff) / p.snapPixels) * p.snapPixels;
         snappedX = juce::jmax(0.0f, snappedX);
 
         if (p.isResizingClip) {

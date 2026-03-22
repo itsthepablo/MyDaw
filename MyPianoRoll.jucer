@@ -11,6 +11,7 @@
         </GROUP>
         <FILE id="Bc6gRt" name="MidiClipRenderer.h" compile="0" resource="0"
               file="Source/UI/MidiClipRenderer.h"/>
+        <FILE id="BK4mww" name="PickerPanel.h" compile="0" resource="0" file="Source/UI/PickerPanel.h"/>
         <FILE id="yioUXf" name="ResourceMeter.h" compile="0" resource="0" file="Source/UI/ResourceMeter.h"/>
         <FILE id="NkM4y4" name="TransportBar.h" compile="0" resource="0" file="Source/UI/TransportBar.h"/>
         <FILE id="ZgzqNL" name="WaveformRenderer.h" compile="0" resource="0"
@@ -51,8 +52,10 @@
       </GROUP>
       <GROUP id="{EBD30F33-E7EC-16DD-C806-2D1CD1306523}" name="Playlist">
         <GROUP id="{361B1AF3-F0CC-2376-25A1-51065AF40789}" name="Tools">
+          <FILE id="eNp0RM" name="EraserTool.h" compile="0" resource="0" file="Source/Playlist/Tools/EraserTool.h"/>
           <FILE id="BIHoRJ" name="PlaylistTool.h" compile="0" resource="0" file="Source/Playlist/Tools/PlaylistTool.h"/>
           <FILE id="Rb4h8T" name="PointerTool.h" compile="0" resource="0" file="Source/Playlist/Tools/PointerTool.h"/>
+          <FILE id="a71jBQ" name="ScissorTool.h" compile="0" resource="0" file="Source/Playlist/Tools/ScissorTool.h"/>
         </GROUP>
         <FILE id="FGYWeA" name="PlaylistComponent.cpp" compile="1" resource="0"
               file="Source/Playlist/PlaylistComponent.cpp"/>

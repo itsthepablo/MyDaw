@@ -1,19 +1,17 @@
 #pragma once
 #include <JuceHeader.h>
-#include "GlobalData.h"
-#include "Playlist/PlaylistComponent.h" 
-#include "Mixer/MixerComponent.h" 
 #include "Tracks/TrackContainer.h"
+#include "Playlist/PlaylistComponent.h"
+#include "PianoRoll/PianoRollComponent.h"
+#include "Mixer/MixerComponent.h"
 #include "Effects/EffectsPanel.h"
-#include "PianoRoll/PianoRollComponent.h" 
-#include "Engine/AudioEngine.h"
 #include "UI/TransportBar.h"
 #include "UI/Buttons/ToolbarButtons.h"
-#include "UI/ResourceMeter.h" // <--- NUEVO MEDIDOR
+#include "UI/ResourceMeter.h"
+#include "UI/PickerPanel.h" // NUEVO INCLUDE
+#include "Engine/AudioEngine.h"
 
-class MainComponent : public juce::AudioAppComponent,
-    public juce::ApplicationCommandTarget
-{
+class MainComponent : public juce::AudioAppComponent, public juce::ApplicationCommandTarget {
 public:
     MainComponent();
     ~MainComponent() override;
@@ -31,25 +29,27 @@ public:
 
 private:
     juce::ApplicationCommandManager commandManager;
+    const juce::CommandID playStopCommand = 1;
+
     TrackContainer trackContainer;
     PlaylistComponent playlistUI;
+    PianoRollComponent pianoRollUI;
     MixerComponent mixerUI;
     EffectsPanel effectsPanelUI;
-    PianoRollComponent pianoRollUI;
+    TransportBar transportBar;
+    ToolbarButtons toolbarButtons;
+    std::unique_ptr<ResourceMeter> resourceMeter;
+    
+    PickerPanel pickerPanelUI; // NUEVA INSTANCIA
 
     std::unique_ptr<juce::DocumentWindow> pianoRollWindow;
-    TransportBar transportBar;
-    ToolbarButtons toolbarButtons; 
-    
-    std::unique_ptr<ResourceMeter> resourceMeter; // <--- PUNTERO AL MEDIDOR
-
-    bool isMixerVisible = false;
-    bool isEffectsPanelVisible = false;
 
     juce::CriticalSection audioMutex;
     AudioEngine audioEngine;
 
-    const juce::CommandID playStopCommand = 0x1001;
-
+    bool isMixerVisible = false;
+    bool isEffectsPanelVisible = false;
+    bool isPickerVisible = true; // Por defecto, se muestra
+    
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
