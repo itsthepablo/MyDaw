@@ -16,34 +16,28 @@ MainComponent::MainComponent() {
     addAndMakeVisible(*resourceMeter); 
     
     addAndMakeVisible(leftSidebar); 
-    addAndMakeVisible(sidebarResizer); // AÑADIDO A LA PANTALLA
+    addAndMakeVisible(sidebarResizer); 
     addAndMakeVisible(trackContainer);
     addAndMakeVisible(playlistUI);
-    addAndMakeVisible(mixerUI);
+    
+    addAndMakeVisible(bottomDock); // REEMPLAZA AL MIXER INDIVIDUAL
 
-    mixerUI.setVisible(false);
+    bottomDock.setVisible(true);
     leftSidebar.setVisible(true);
 
     trackContainer.setExternalMutex(&audioMutex);
     playlistUI.setExternalMutex(&audioMutex);
     
     pickerPanelUI.setTrackContainer(&trackContainer);
+    rackPanelUI.setTrackContainer(&trackContainer); // LE DAMOS LAS PISTAS AL RACK
     
-    // --- LÓGICA DE REDIMENSIONAMIENTO EN TIEMPO REAL ---
     sidebarResizer.onResizeDelta = [this](int delta) {
-        // jlimit evita que el usuario lo haga invisible (mínimo 150px) 
-        // o que se coma toda la pantalla (máximo 600px).
         leftSidebarWidth = juce::jlimit(150, 600, leftSidebarWidth + delta);
-        resized(); // Forzamos un redibujado instantáneo
+        resized(); 
     };
 
-    toolbarButtons.onSnapChanged = [this](double newSnapPixels) {
-        playlistUI.snapPixels = newSnapPixels;
-    };
-
-    toolbarButtons.onToolChanged = [this](int toolId) {
-        playlistUI.setTool(toolId);
-    };
+    toolbarButtons.onSnapChanged = [this](double newSnapPixels) { playlistUI.snapPixels = newSnapPixels; };
+    toolbarButtons.onToolChanged = [this](int toolId) { playlistUI.setTool(toolId); };
 
     playlistUI.onMidiClipDeleted = [this](MidiClipData* deletedClip) {
         if (pianoRollUI.getActiveNotesPointer() == &(deletedClip->notes)) {
@@ -58,16 +52,14 @@ MainComponent::MainComponent() {
     TrackEffectsBridge::connect(trackContainer, effectsPanelUI, audioMutex,
         audioEngine.clock.sampleRate, audioEngine.clock.blockSize,
         [this] { 
-            isLeftSidebarVisible = true;
-            leftSidebar.showTab(LeftSidebar::FxTab);
-            resized(); 
+            isLeftSidebarVisible = true; leftSidebar.showTab(LeftSidebar::FxTab); resized(); 
         });
 
     TrackMixerPlaylistBridge::connect(trackContainer, mixerUI, playlistUI);
     TransportBridge::connect(transportBar, pianoRollUI, playlistUI);
 
-    InterfaceBridge::connect(toolbarButtons, isMixerVisible, isLeftSidebarVisible,
-        mixerUI, effectsPanelUI, leftSidebar, trackContainer, [this] { resized(); });
+    InterfaceBridge::connect(toolbarButtons, isBottomDockVisible, isLeftSidebarVisible,
+        bottomDock, effectsPanelUI, leftSidebar, trackContainer, [this] { resized(); });
 
     trackContainer.onDeleteTrack = [this](int index) {
         const juce::ScopedLock sl(audioMutex);
@@ -77,9 +69,7 @@ MainComponent::MainComponent() {
             playlistUI.updateScrollBars();
             playlistUI.repaint();
 
-            if (leftSidebar.getCurrentTab() == LeftSidebar::FxTab) {
-                isLeftSidebarVisible = false;
-            }
+            if (leftSidebar.getCurrentTab() == LeftSidebar::FxTab) isLeftSidebarVisible = false;
             resized();
         }
         };
@@ -88,54 +78,35 @@ MainComponent::MainComponent() {
     setAudioChannels(0, 2);
 }
 
-MainComponent::~MainComponent() {
-    shutdownAudio();
-}
-
-void MainComponent::prepareToPlay(int samples, double s) {
-    audioEngine.prepareToPlay(samples, s, trackContainer, audioMutex);
-}
-
-void MainComponent::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill) {
-    audioEngine.processBlock(bufferToFill, trackContainer, pianoRollUI, playlistUI, mixerUI, audioMutex);
-}
-
-void MainComponent::releaseResources() {
-    audioEngine.releaseResources();
-}
-
-void MainComponent::paint(juce::Graphics& g) {
-    g.fillAll(juce::Colour(30, 32, 35));
-}
+MainComponent::~MainComponent() { shutdownAudio(); }
+void MainComponent::prepareToPlay(int samples, double s) { audioEngine.prepareToPlay(samples, s, trackContainer, audioMutex); }
+void MainComponent::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill) { audioEngine.processBlock(bufferToFill, trackContainer, pianoRollUI, playlistUI, mixerUI, audioMutex); }
+void MainComponent::releaseResources() { audioEngine.releaseResources(); }
+void MainComponent::paint(juce::Graphics& g) { g.fillAll(juce::Colour(30, 32, 35)); }
 
 void MainComponent::resized() {
     auto area = getLocalBounds();
 
     auto topArea = area.removeFromTop(45);
-    
     toolbarButtons.setBounds(topArea.removeFromRight(550)); 
     resourceMeter->setBounds(topArea.removeFromRight(100).reduced(8, 10)); 
     transportBar.setBounds(topArea);
 
-    if (isMixerVisible) {
-        mixerUI.setVisible(true);
-        mixerUI.setBounds(area.removeFromBottom(getHeight() * 0.35));
-    }
-    else {
-        mixerUI.setVisible(false);
+    // --- CONTENEDOR INFERIOR (MIXER + RACK) ---
+    if (isBottomDockVisible) {
+        bottomDock.setVisible(true);
+        bottomDock.setBounds(area.removeFromBottom(getHeight() * 0.35));
+    } else {
+        bottomDock.setVisible(false);
     }
 
+    // --- CONTENEDOR LATERAL ---
     if (isLeftSidebarVisible) {
         leftSidebar.setVisible(true);
-        sidebarResizer.setVisible(true); // Mostramos el divisor
-        
-        // Usamos la variable en lugar de un número estático
+        sidebarResizer.setVisible(true); 
         leftSidebar.setBounds(area.removeFromLeft(leftSidebarWidth));
-        
-        // Le asignamos 4 píxeles de ancho a la barra para agarrarla cómodamente
         sidebarResizer.setBounds(area.removeFromLeft(4)); 
-    }
-    else {
+    } else {
         leftSidebar.setVisible(false);
         sidebarResizer.setVisible(false);
     }
@@ -146,18 +117,13 @@ void MainComponent::resized() {
 
 juce::ApplicationCommandTarget* MainComponent::getNextCommandTarget() { return nullptr; }
 void MainComponent::getAllCommands(juce::Array<juce::CommandID>& c) { c.add(playStopCommand); }
-
 void MainComponent::getCommandInfo(juce::CommandID id, juce::ApplicationCommandInfo& result) {
     if (id == playStopCommand) {
         result.setInfo("Play / Stop", "Transporte", "Transport", 0);
         result.addDefaultKeypress(' ', 0);
     }
 }
-
 bool MainComponent::perform(const juce::ApplicationCommandTarget::InvocationInfo& info) {
-    if (info.commandID == playStopCommand) {
-        transportBar.playBtn.triggerClick();
-        return true;
-    }
+    if (info.commandID == playStopCommand) { transportBar.playBtn.triggerClick(); return true; }
     return false;
 }

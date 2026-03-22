@@ -3,8 +3,11 @@
 
 class ToolbarButtons : public juce::Component {
 public:
-    juce::TextButton pickerBtn{"Pick"}; // NUEVO BOTÓN
-    juce::TextButton mixerBtn{"Mixer"}, fxBtn{"Effects"};
+    juce::TextButton pickerBtn{"Pick"}; 
+    juce::TextButton filesBtn{"Files"}; 
+    juce::TextButton mixerBtn{"Mixer"};
+    juce::TextButton rackBtn{"Rack"}; // NUEVO BOTÓN
+    juce::TextButton fxBtn{"Effects"};
     
     juce::TextButton pointerBtn{"Sel"};
     juce::TextButton drawBtn{"Lap"};
@@ -13,18 +16,23 @@ public:
     
     juce::ComboBox snapCombo;
 
-    std::function<void()> onTogglePicker; // NUEVO CALLBACK
-    std::function<void()> onToggleMixer, onToggleFx;
+    std::function<void()> onTogglePicker, onToggleFiles; 
+    std::function<void()> onToggleMixer, onToggleRack, onToggleFx; // AÑADIDO RACK
     std::function<void(int)> onToolChanged;
     std::function<void(double)> onSnapChanged;
 
     ToolbarButtons() {
         addAndMakeVisible(pickerBtn);
         pickerBtn.onClick = [this] { if (onTogglePicker) onTogglePicker(); };
-        pickerBtn.setTooltip("Mostrar/Ocultar Picker de Patrones");
 
+        addAndMakeVisible(filesBtn);
+        filesBtn.onClick = [this] { if (onToggleFiles) onToggleFiles(); };
+
+        // MIXER Y RACK
         addAndMakeVisible(mixerBtn);
         mixerBtn.onClick = [this] { if (onToggleMixer) onToggleMixer(); };
+        addAndMakeVisible(rackBtn);
+        rackBtn.onClick = [this] { if (onToggleRack) onToggleRack(); };
 
         addAndMakeVisible(fxBtn);
         fxBtn.onClick = [this] { if (onToggleFx) onToggleFx(); };
@@ -33,11 +41,6 @@ public:
         addAndMakeVisible(drawBtn);
         addAndMakeVisible(cutBtn);
         addAndMakeVisible(eraseBtn);
-
-        pointerBtn.setTooltip("Seleccionar y Mover");
-        drawBtn.setTooltip("Dibujar (Pronto)");
-        cutBtn.setTooltip("Tijera (Cortar Clips)");
-        eraseBtn.setTooltip("Borrador");
 
         pointerBtn.setClickingTogglesState(true);
         drawBtn.setClickingTogglesState(true);
@@ -82,14 +85,14 @@ public:
     void resized() override {
         auto area = getLocalBounds().reduced(2);
         
-        // Botón Picker a la izquierda
-        pickerBtn.setBounds(area.removeFromLeft(60).reduced(2));
-        area.removeFromLeft(10); 
+        pickerBtn.setBounds(area.removeFromLeft(40).reduced(2));
+        filesBtn.setBounds(area.removeFromLeft(40).reduced(2)); 
+        area.removeFromLeft(5); 
 
-        snapCombo.setBounds(area.removeFromLeft(140).reduced(0, 4));
-        area.removeFromLeft(10); 
+        snapCombo.setBounds(area.removeFromLeft(120).reduced(0, 4));
+        area.removeFromLeft(5); 
 
-        int btnW = 40; 
+        int btnW = 35; 
         pointerBtn.setBounds(area.removeFromLeft(btnW).reduced(2));
         drawBtn.setBounds(area.removeFromLeft(btnW).reduced(2));
         cutBtn.setBounds(area.removeFromLeft(btnW).reduced(2));
@@ -97,7 +100,9 @@ public:
 
         area.removeFromLeft(10); 
 
-        fxBtn.setBounds(area.removeFromRight(80).reduced(2));
-        mixerBtn.setBounds(area.removeFromRight(80).reduced(2));
+        // Botones de la derecha
+        fxBtn.setBounds(area.removeFromRight(65).reduced(2));
+        mixerBtn.setBounds(area.removeFromRight(55).reduced(2));
+        rackBtn.setBounds(area.removeFromRight(55).reduced(2)); // RACK
     }
 };

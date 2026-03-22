@@ -9,8 +9,11 @@
 #include "UI/Buttons/ToolbarButtons.h"
 #include "UI/ResourceMeter.h"
 #include "UI/PickerPanel.h"
+#include "UI/FileBrowserPanel.h" 
+#include "UI/ChannelRackPanel.h" // NUEVO
 #include "UI/LeftSidebar.h"
-#include "UI/SidebarResizer.h" // NUEVO INCLUDE
+#include "UI/BottomDock.h"       // NUEVO
+#include "UI/SidebarResizer.h" 
 #include "Engine/AudioEngine.h"
 
 class MainComponent : public juce::AudioAppComponent, public juce::ApplicationCommandTarget {
@@ -36,13 +39,16 @@ private:
     TrackContainer trackContainer;
     PlaylistComponent playlistUI;
     PianoRollComponent pianoRollUI;
+    
     MixerComponent mixerUI;
+    ChannelRackPanel rackPanelUI;
+    BottomDock bottomDock{mixerUI, rackPanelUI}; // CONTENEDOR INFERIOR
     
     EffectsPanel effectsPanelUI;
     PickerPanel pickerPanelUI; 
-    
-    LeftSidebar leftSidebar{pickerPanelUI, effectsPanelUI}; 
-    SidebarResizer sidebarResizer; // NUEVA BARRA DIVISORIA
+    FileBrowserPanel fileBrowserPanelUI; 
+    LeftSidebar leftSidebar{pickerPanelUI, effectsPanelUI, fileBrowserPanelUI}; 
+    SidebarResizer sidebarResizer; 
 
     TransportBar transportBar;
     ToolbarButtons toolbarButtons;
@@ -53,9 +59,9 @@ private:
     juce::CriticalSection audioMutex;
     AudioEngine audioEngine;
 
-    bool isMixerVisible = false;
+    bool isBottomDockVisible = true; // CONTROL DEL PANEL INFERIOR
     bool isLeftSidebarVisible = true; 
-    int leftSidebarWidth = 200; // NUEVA MEMORIA DEL ANCHO DEL PANEL
+    int leftSidebarWidth = 200; 
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

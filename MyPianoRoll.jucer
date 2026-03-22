@@ -9,6 +9,11 @@
           <FILE id="DNLFnt" name="ToolbarButtons.h" compile="0" resource="0"
                 file="Source/UI/Buttons/ToolbarButtons.h"/>
         </GROUP>
+        <FILE id="G1m4fc" name="BottomDock.h" compile="0" resource="0" file="Source/UI/BottomDock.h"/>
+        <FILE id="mmFN15" name="ChannelRackPanel.h" compile="0" resource="0"
+              file="Source/UI/ChannelRackPanel.h"/>
+        <FILE id="h6clO8" name="FileBrowserPanel.h" compile="0" resource="0"
+              file="Source/UI/FileBrowserPanel.h"/>
         <FILE id="M86NJQ" name="LeftSidebar.h" compile="0" resource="0" file="Source/UI/LeftSidebar.h"/>
         <FILE id="Bc6gRt" name="MidiClipRenderer.h" compile="0" resource="0"
               file="Source/UI/MidiClipRenderer.h"/>
