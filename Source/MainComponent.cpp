@@ -13,40 +13,53 @@ MainComponent::MainComponent() {
 
     addAndMakeVisible(transportBar);
     addAndMakeVisible(toolbarButtons);
-    addAndMakeVisible(*resourceMeter);
-
-    addAndMakeVisible(leftSidebar);
-    addAndMakeVisible(sidebarResizer);
+    addAndMakeVisible(*resourceMeter); 
+    
+    addAndMakeVisible(leftSidebar); 
+    addAndMakeVisible(sidebarResizer); 
     addAndMakeVisible(trackContainer);
     addAndMakeVisible(playlistUI);
-
-    // Usamos el BottomDock en lugar del mixer suelto
-    addAndMakeVisible(bottomDock);
+    
+    // Añadimos el Dock y su barra resizer
+    addAndMakeVisible(bottomDockResizer); // NUEVO
+    addAndMakeVisible(bottomDock); 
 
     bottomDock.setVisible(true);
     leftSidebar.setVisible(true);
 
     trackContainer.setExternalMutex(&audioMutex);
     playlistUI.setExternalMutex(&audioMutex);
-
+    
     pickerPanelUI.setTrackContainer(&trackContainer);
-
-    // --- L�GICA DE LOS BOTONES CERRAR [X] ---
+    
+    // --- LÓGICA DE LOS BOTONES CERRAR [X] ---
     leftSidebar.onClose = [this] {
         isLeftSidebarVisible = false;
-        resized();
-        };
+        resized(); 
+    };
 
     bottomDock.onClose = [this] {
         isBottomDockVisible = false;
-        resized();
-        };
+        resized(); 
+    };
+    
+    // --- LÓGICA DE REDIMENSIONAMIENTO LATERAL (Izquierdo) ---
+    sidebarResizer.onResizeDelta = [this](int deltaX) {
+        leftSidebarWidth = juce::jlimit(150, 600, leftSidebarWidth + deltaX);
+        resized(); 
+    };
 
-    // --- L�GICA DE REDIMENSIONAMIENTO LATERAL ---
-    sidebarResizer.onResizeDelta = [this](int delta) {
-        leftSidebarWidth = juce::jlimit(150, 600, leftSidebarWidth + delta);
-        resized();
-        };
+    // --- LÓGICA DE REDIMENSIONAMIENTO INFERIOR (NUEVO) ---
+    bottomDockResizer.onResizeDelta = [this](int deltaY) {
+        // Recordar: Arrastrar hacia ARRIBA es deltaY NEGATIVO.
+        // Queremos que el panel CREZCA al arrastrar hacia arriba, por lo que RESTAMOS deltaY.
+        
+        // jlimit: mínimo 100px (para ver pestañas), máximo 80% del alto total de la ventana.
+        int maxHeight = (int)(getHeight() * 0.8f);
+        bottomDockHeight = juce::jlimit(100, maxHeight, bottomDockHeight - deltaY);
+        
+        resized(); // Forzamos repintado instantáneo
+    };
 
     // Conexiones de la barra superior
     toolbarButtons.onSnapChanged = [this](double newSnapPixels) { playlistUI.snapPixels = newSnapPixels; };
@@ -57,24 +70,23 @@ MainComponent::MainComponent() {
             pianoRollUI.setActiveNotes(nullptr);
             if (pianoRollWindow) pianoRollWindow->setVisible(false);
         }
-        };
+    };
 
-    // Puentes de comunicaci�n
+    // Puentes de comunicación
     TrackPianoRollBridge::connect(trackContainer, playlistUI, pianoRollUI, pianoRollWindow);
     TrackPianoRollBridge::connectPlaylist(playlistUI, pianoRollUI, pianoRollWindow);
 
     TrackEffectsBridge::connect(trackContainer, effectsPanelUI, audioMutex,
         audioEngine.clock.sampleRate, audioEngine.clock.blockSize,
-        [this] {
-            isLeftSidebarVisible = true;
-            leftSidebar.showTab(LeftSidebar::FxTab);
-            resized();
+        [this] { 
+            isLeftSidebarVisible = true; 
+            leftSidebar.showTab(LeftSidebar::FxTab); 
+            resized(); 
         });
 
     TrackMixerPlaylistBridge::connect(trackContainer, mixerUI, playlistUI);
     TransportBridge::connect(transportBar, pianoRollUI, playlistUI);
 
-    // ATENCI�N: El puente ahora gestiona el BottomDock y el LeftSidebar
     InterfaceBridge::connect(toolbarButtons, isBottomDockVisible, isLeftSidebarVisible,
         bottomDock, effectsPanelUI, leftSidebar, trackContainer, [this] { resized(); });
 
@@ -86,7 +98,7 @@ MainComponent::MainComponent() {
             playlistUI.updateScrollBars();
             playlistUI.repaint();
 
-            // Si borramos una pista mientras ve�amos sus efectos, cerramos la pesta�a
+            // Si borramos una pista mientras veíamos sus efectos, cerramos la pestaña
             if (leftSidebar.getCurrentTab() == LeftSidebar::FxTab) isLeftSidebarVisible = false;
             resized();
         }
@@ -96,51 +108,56 @@ MainComponent::MainComponent() {
     setAudioChannels(0, 2);
 }
 
-MainComponent::~MainComponent() {
-    shutdownAudio();
+MainComponent::~MainComponent() { 
+    shutdownAudio(); 
 }
 
-void MainComponent::prepareToPlay(int samples, double s) {
-    audioEngine.prepareToPlay(samples, s, trackContainer, audioMutex);
+void MainComponent::prepareToPlay(int samples, double s) { 
+    audioEngine.prepareToPlay(samples, s, trackContainer, audioMutex); 
 }
 
-void MainComponent::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill) {
-    audioEngine.processBlock(bufferToFill, trackContainer, pianoRollUI, playlistUI, mixerUI, audioMutex);
+void MainComponent::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill) { 
+    audioEngine.processBlock(bufferToFill, trackContainer, pianoRollUI, playlistUI, mixerUI, audioMutex); 
 }
 
-void MainComponent::releaseResources() {
-    audioEngine.releaseResources();
+void MainComponent::releaseResources() { 
+    audioEngine.releaseResources(); 
 }
 
-void MainComponent::paint(juce::Graphics& g) {
-    g.fillAll(juce::Colour(30, 32, 35));
+void MainComponent::paint(juce::Graphics& g) { 
+    g.fillAll(juce::Colour(30, 32, 35)); 
 }
 
 void MainComponent::resized() {
     auto area = getLocalBounds();
 
     auto topArea = area.removeFromTop(45);
-    toolbarButtons.setBounds(topArea.removeFromRight(550));
-    resourceMeter->setBounds(topArea.removeFromRight(100).reduced(8, 10));
+    toolbarButtons.setBounds(topArea.removeFromRight(550)); 
+    resourceMeter->setBounds(topArea.removeFromRight(100).reduced(8, 10)); 
     transportBar.setBounds(topArea);
 
-    // --- CONTENEDOR INFERIOR (MIXER + RACK) ---
+    // --- CONTENEDOR INFERIOR (MIXER + RACK + RESIZER) ---
     if (isBottomDockVisible) {
         bottomDock.setVisible(true);
-        bottomDock.setBounds(area.removeFromBottom(getHeight() * 0.35));
-    }
-    else {
+        bottomDockResizer.setVisible(true); // Mostramos la barra
+        
+        // Asignamos la altura dinámica desde nuestra variable
+        bottomDock.setBounds(area.removeFromBottom(bottomDockHeight));
+        
+        // Posicionamos la barra resizer justo encima del dock (le damos 4px de alto para agarrar)
+        bottomDockResizer.setBounds(area.removeFromBottom(4)); 
+    } else {
         bottomDock.setVisible(false);
+        bottomDockResizer.setVisible(false);
     }
 
     // --- CONTENEDOR LATERAL IZQUIERDO ---
     if (isLeftSidebarVisible) {
         leftSidebar.setVisible(true);
-        sidebarResizer.setVisible(true);
+        sidebarResizer.setVisible(true); 
         leftSidebar.setBounds(area.removeFromLeft(leftSidebarWidth));
-        sidebarResizer.setBounds(area.removeFromLeft(4));
-    }
-    else {
+        sidebarResizer.setBounds(area.removeFromLeft(4)); 
+    } else {
         leftSidebar.setVisible(false);
         sidebarResizer.setVisible(false);
     }
@@ -160,9 +177,9 @@ void MainComponent::getCommandInfo(juce::CommandID id, juce::ApplicationCommandI
 }
 
 bool MainComponent::perform(const juce::ApplicationCommandTarget::InvocationInfo& info) {
-    if (info.commandID == playStopCommand) {
-        transportBar.playBtn.triggerClick();
-        return true;
+    if (info.commandID == playStopCommand) { 
+        transportBar.playBtn.triggerClick(); 
+        return true; 
     }
     return false;
 }

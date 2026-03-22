@@ -14,6 +14,7 @@
 #include "UI/LeftSidebar.h"
 #include "UI/BottomDock.h"       
 #include "UI/SidebarResizer.h" 
+#include "UI/BottomDockResizer.h" // NUEVO INCLUDE
 #include "Engine/AudioEngine.h"
 
 class MainComponent : public juce::AudioAppComponent, public juce::ApplicationCommandTarget {
@@ -39,32 +40,35 @@ private:
     TrackContainer trackContainer;
     PlaylistComponent playlistUI;
     PianoRollComponent pianoRollUI;
-
+    
     // Contenedor Inferior
     MixerComponent mixerUI;
-    ChannelRackPanel rackPanelUI;
-    BottomDock bottomDock{ mixerUI, rackPanelUI };
-
+    ChannelRackPanel rackPanelUI; 
+    BottomDock bottomDock{mixerUI, rackPanelUI}; 
+    BottomDockResizer bottomDockResizer; // NUEVA BARRA DIVISORIA INFERIOR
+    
     // Contenedor Lateral Izquierdo
     EffectsPanel effectsPanelUI;
-    PickerPanel pickerPanelUI;
-    FileBrowserPanel fileBrowserPanelUI;
-    LeftSidebar leftSidebar{ pickerPanelUI, effectsPanelUI, fileBrowserPanelUI };
-    SidebarResizer sidebarResizer;
+    PickerPanel pickerPanelUI; 
+    FileBrowserPanel fileBrowserPanelUI; 
+    LeftSidebar leftSidebar{pickerPanelUI, effectsPanelUI, fileBrowserPanelUI}; 
+    SidebarResizer sidebarResizer; 
 
     TransportBar transportBar;
     ToolbarButtons toolbarButtons;
     std::unique_ptr<ResourceMeter> resourceMeter;
-
+    
     std::unique_ptr<juce::DocumentWindow> pianoRollWindow;
 
     juce::CriticalSection audioMutex;
     AudioEngine audioEngine;
 
-    // Controles de visibilidad
-    bool isBottomDockVisible = true;
-    bool isLeftSidebarVisible = true;
-    int leftSidebarWidth = 200;
+    // Controles de visibilidad y TAMAÑO
+    bool isBottomDockVisible = true; 
+    int bottomDockHeight = 250; // NUEVA MEMORIA DE ALTURA (valor inicial por defecto)
 
+    bool isLeftSidebarVisible = true; 
+    int leftSidebarWidth = 200; 
+    
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
