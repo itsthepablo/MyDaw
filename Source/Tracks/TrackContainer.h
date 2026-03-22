@@ -18,7 +18,6 @@ public:
     int vOffset = 0;
 
     TrackContainer() {
-        // Fondo del encabezado
         addAndMakeVisible(headerBg);
         headerBg.setInterceptsMouseClicks(false, false);
 
@@ -31,13 +30,11 @@ public:
         addAudioBtn.onClick = [this] { addTrack(TrackType::Audio); };
     }
 
-    // NUEVO: Método para recibir el Mutex desde MainComponent
     void setExternalMutex(juce::CriticalSection* mutex) { audioMutex = mutex; }
 
     const juce::OwnedArray<Track>& getTracks() const { return tracks; }
 
     void addTrack(TrackType type) {
-        // BLOQUEO DE SEGURIDAD: Evita que el motor de audio lea mientras escribimos
         std::unique_ptr<juce::ScopedLock> lock;
         if (audioMutex != nullptr) lock = std::make_unique<juce::ScopedLock>(*audioMutex);
 
@@ -56,6 +53,12 @@ public:
             resized(); repaint(); if (onTracksReordered) onTracksReordered();
             };
 
+        // CONEXIÓN PARA EL REPINTADO AL CAMBIAR LA VISTA DE LA ONDA (L/R)
+        p->onWaveformViewChanged = [this] {
+            repaint();
+            if (getParentComponent()) getParentComponent()->repaint();
+            };
+
         trackPanels.add(p);
         addAndMakeVisible(p);
         recalculateDeltasFromDepths();
@@ -66,7 +69,6 @@ public:
     }
 
     void removeTrack(int index) {
-        // BLOQUEO DE SEGURIDAD: Evita crashes al borrar una pista que el motor está procesando
         std::unique_ptr<juce::ScopedLock> lock;
         if (audioMutex != nullptr) lock = std::make_unique<juce::ScopedLock>(*audioMutex);
 
@@ -123,7 +125,6 @@ public:
     bool isInterestedInFileDrag(const juce::StringArray&) override { return true; }
 
     void filesDropped(const juce::StringArray& files, int, int) override {
-        // Bloqueo para evitar colisiones durante el drag and drop masivo
         std::unique_ptr<juce::ScopedLock> lock;
         if (audioMutex != nullptr) lock = std::make_unique<juce::ScopedLock>(*audioMutex);
 
@@ -164,7 +165,6 @@ private:
     juce::OwnedArray<Track> tracks;
     juce::OwnedArray<TrackControlPanel> trackPanels;
 
-    // Puntero al Mutex del motor de audio para sincronización
     juce::CriticalSection* audioMutex = nullptr;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TrackContainer)

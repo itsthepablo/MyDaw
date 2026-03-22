@@ -6,6 +6,7 @@
 class TrackControlPanel : public juce::Component {
 public:
     std::function<void()> onFxClick, onPianoRollClick, onDeleteClick, onEffectsClick, onFolderStateChange;
+    std::function<void()> onWaveformViewChanged;
     std::function<void(int)> onPluginClick;
 
     TrackControlPanel(Track& t) : track(t) {
@@ -90,39 +91,26 @@ public:
     }
 
     void paint(juce::Graphics& g) override {
-        // Fondo general (Ocupa todo el ancho)
         g.fillAll(juce::Colour(30, 32, 35));
-
         int indent = track.folderDepth * 20;
         auto area = getLocalBounds().reduced(2).withTrimmedLeft(indent);
-
-        // Fondo del panel desplazado
         g.setColour(juce::Colour(40, 42, 46));
         g.fillRoundedRectangle(area.toFloat(), 4.0f);
-
-        // Franja de color desplazada
         g.setColour(track.getColor());
         g.fillRect(area.removeFromLeft(6));
     }
 
     void resized() override {
-        // La matemática crítica: Cortamos el espacio a la izquierda según la profundidad
         int indent = track.folderDepth * 20;
         auto area = getLocalBounds().reduced(6).withTrimmedLeft(indent);
-
-        // A partir de aquí, todo se dibuja dentro del espacio ya desplazado
         auto leftCol = area.removeFromLeft(125);
-
         auto topRow = leftCol.removeFromTop(20);
         if (track.folderDepthChange > 0) compactBtn.setBounds(topRow.removeFromLeft(20).reduced(2));
         nameLabel.setBounds(topRow);
-
         leftCol.removeFromTop(2);
-
         auto kRow = leftCol.removeFromTop(30);
         volSlider.setBounds(kRow.removeFromLeft(35));
         panSlider.setBounds(kRow.removeFromLeft(35));
-
         leftCol.removeFromTop(2);
 
         if (track.getType() == TrackType::MIDI) {
@@ -133,7 +121,6 @@ public:
         auto botRow = leftCol.removeFromTop(18);
         folderBtn.setBounds(botRow.removeFromLeft(18));
         effectsBtn.setBounds(botRow.withTrimmedLeft(4));
-
         auto fxArea = area.removeFromRight(120);
 
         if (track.getType() == TrackType::MIDI) {
@@ -149,8 +136,22 @@ public:
 
     void mouseDown(const juce::MouseEvent& e) override {
         if (e.mods.isRightButtonDown()) {
-            juce::PopupMenu m; m.addItem(1, "Eliminar Pista");
-            m.showMenuAsync(juce::PopupMenu::Options(), [this](int result) { if (result == 1 && onDeleteClick) onDeleteClick(); });
+            juce::PopupMenu m;
+            m.addItem(1, "Eliminar Pista");
+
+            if (track.getType() == TrackType::Audio) {
+                m.addSeparator();
+                m.addItem(2, "Vista: Combinada (Mono)", true, track.getWaveformViewMode() == WaveformViewMode::Combined);
+                m.addItem(3, "Vista: Separada (L / R)", true, track.getWaveformViewMode() == WaveformViewMode::SeparateLR);
+                m.addItem(4, "Vista: Mid / Side", true, track.getWaveformViewMode() == WaveformViewMode::MidSide); // NUEVO
+            }
+
+            m.showMenuAsync(juce::PopupMenu::Options(), [this](int result) {
+                if (result == 1 && onDeleteClick) onDeleteClick();
+                else if (result == 2) { track.setWaveformViewMode(WaveformViewMode::Combined); if (onWaveformViewChanged) onWaveformViewChanged(); }
+                else if (result == 3) { track.setWaveformViewMode(WaveformViewMode::SeparateLR); if (onWaveformViewChanged) onWaveformViewChanged(); }
+                else if (result == 4) { track.setWaveformViewMode(WaveformViewMode::MidSide); if (onWaveformViewChanged) onWaveformViewChanged(); }
+                });
         }
     }
 

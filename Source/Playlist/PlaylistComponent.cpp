@@ -90,7 +90,8 @@ void PlaylistComponent::paint(juce::Graphics& g) {
         g.fillRoundedRectangle(clipRect.toFloat(), 4.0f);
 
         if (clip.linkedAudio != nullptr) {
-            WaveformRenderer::drawWaveform(g, *clip.linkedAudio, clipRect, clip.trackPtr->getColor());
+            // AQUI ESTÁ LA CONEXIÓN: Pasamos el modo de vista elegido al renderizador
+            WaveformRenderer::drawWaveform(g, *clip.linkedAudio, clipRect, clip.trackPtr->getColor(), clip.trackPtr->getWaveformViewMode());
         }
 
         g.setColour(juce::Colours::white.withAlpha(0.9f));
@@ -154,7 +155,6 @@ void PlaylistComponent::mouseDrag(const juce::MouseEvent& e) {
     float absX = (e.x + (float)hBar.getCurrentRangeStart()) / hZoom;
     float diff = absX - dragStartAbsX;
 
-    // 1. SNAP TO GRID: Forza el movimiento visual a saltos de 1 beat (80 píxeles)
     float snappedX = std::round((dragStartXOriginal + diff) / 80.0f) * 80.0f;
     snappedX = juce::jmax(0.0f, snappedX);
 
@@ -167,7 +167,6 @@ void PlaylistComponent::mouseDrag(const juce::MouseEvent& e) {
     }
     else {
         clips[draggingClipIndex].startX = snappedX;
-        // 2. CORRECCIÓN CRÍTICA: Actualizamos la posición real en el Motor de Audio
         if (clips[draggingClipIndex].linkedAudio != nullptr) {
             clips[draggingClipIndex].linkedAudio->startX = snappedX;
         }
@@ -202,7 +201,6 @@ void PlaylistComponent::filesDropped(const juce::StringArray& files, int x, int 
 
     float absX = (x + (float)hBar.getCurrentRangeStart()) / hZoom;
 
-    // 3. SNAP TO GRID: Al soltar un archivo, este cae exactamente sobre la línea de beat más cercana
     absX = std::round(absX / 80.0f) * 80.0f;
     absX = juce::jmax(0.0f, absX);
 
