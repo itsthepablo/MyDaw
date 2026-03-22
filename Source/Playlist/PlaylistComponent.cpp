@@ -153,8 +153,25 @@ void PlaylistComponent::mouseDrag(const juce::MouseEvent& e) {
     if (draggingClipIndex == -1) return;
     float absX = (e.x + (float)hBar.getCurrentRangeStart()) / hZoom;
     float diff = absX - dragStartAbsX;
-    if (isResizingClip) clips[draggingClipIndex].width = juce::jmax(10.0f, dragStartWidth + diff);
-    else clips[draggingClipIndex].startX = juce::jmax(0.0f, dragStartXOriginal + diff);
+
+    // 1. SNAP TO GRID: Forza el movimiento visual a saltos de 1 beat (80 píxeles)
+    float snappedX = std::round((dragStartXOriginal + diff) / 80.0f) * 80.0f;
+    snappedX = juce::jmax(0.0f, snappedX);
+
+    if (isResizingClip) {
+        float newW = juce::jmax(10.0f, dragStartWidth + diff);
+        clips[draggingClipIndex].width = newW;
+        if (clips[draggingClipIndex].linkedAudio != nullptr) {
+            clips[draggingClipIndex].linkedAudio->width = newW;
+        }
+    }
+    else {
+        clips[draggingClipIndex].startX = snappedX;
+        // 2. CORRECCIÓN CRÍTICA: Actualizamos la posición real en el Motor de Audio
+        if (clips[draggingClipIndex].linkedAudio != nullptr) {
+            clips[draggingClipIndex].linkedAudio->startX = snappedX;
+        }
+    }
     repaint();
 }
 
@@ -182,7 +199,13 @@ void PlaylistComponent::filesDropped(const juce::StringArray& files, int x, int 
         if (tracksRef) tIdx = (int)tracksRef->size() - 1;
     }
     if (tIdx == -1) return;
+
     float absX = (x + (float)hBar.getCurrentRangeStart()) / hZoom;
+
+    // 3. SNAP TO GRID: Al soltar un archivo, este cae exactamente sobre la línea de beat más cercana
+    absX = std::round(absX / 80.0f) * 80.0f;
+    absX = juce::jmax(0.0f, absX);
+
     juce::AudioFormatManager fmt; fmt.registerBasicFormats();
     for (auto path : files) {
         juce::File f(path);
