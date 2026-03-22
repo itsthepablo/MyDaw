@@ -52,6 +52,17 @@ public:
             addAndMakeVisible(prButton); prButton.setButtonText("PIANO ROLL");
             prButton.onClick = [this] { if (onPianoRollClick) onPianoRollClick(); };
 
+            // NUEVO: Botón INLINE
+            addAndMakeVisible(inlineBtn);
+            inlineBtn.setButtonText("INLINE");
+            inlineBtn.setClickingTogglesState(true);
+            inlineBtn.setToggleState(track.isInlineEditingActive, juce::dontSendNotification);
+            inlineBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colours::orange);
+            inlineBtn.onClick = [this] {
+                track.isInlineEditingActive = inlineBtn.getToggleState();
+                if (onWaveformViewChanged) onWaveformViewChanged(); // Reutilizamos este evento para forzar el repintado de la Playlist
+                };
+
             addAndMakeVisible(fxButton); fxButton.setButtonText("+ VSTi");
             fxButton.onClick = [this] { if (onFxClick) onFxClick(); };
         }
@@ -114,7 +125,10 @@ public:
         leftCol.removeFromTop(2);
 
         if (track.getType() == TrackType::MIDI) {
-            prButton.setBounds(leftCol.removeFromTop(18).reduced(2, 0));
+            // Dividimos el espacio horizontal para los dos botones
+            auto prRow = leftCol.removeFromTop(18);
+            prButton.setBounds(prRow.removeFromLeft(prRow.getWidth() / 2).reduced(2, 0));
+            inlineBtn.setBounds(prRow.reduced(2, 0));
             leftCol.removeFromTop(2);
         }
 
@@ -143,7 +157,7 @@ public:
                 m.addSeparator();
                 m.addItem(2, "Vista: Combinada (Mono)", true, track.getWaveformViewMode() == WaveformViewMode::Combined);
                 m.addItem(3, "Vista: Separada (L / R)", true, track.getWaveformViewMode() == WaveformViewMode::SeparateLR);
-                m.addItem(4, "Vista: Mid / Side", true, track.getWaveformViewMode() == WaveformViewMode::MidSide); // NUEVO
+                m.addItem(4, "Vista: Mid / Side", true, track.getWaveformViewMode() == WaveformViewMode::MidSide);
             }
 
             m.showMenuAsync(juce::PopupMenu::Options(), [this](int result) {
@@ -164,7 +178,7 @@ public:
     Track& track;
 private:
     juce::Label nameLabel; juce::Slider volSlider, panSlider;
-    juce::TextButton fxButton, prButton, effectsBtn, folderBtn, compactBtn;
+    juce::TextButton fxButton, prButton, inlineBtn, effectsBtn, folderBtn, compactBtn;
     juce::OwnedArray<juce::TextButton> pluginButtons;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TrackControlPanel)
 };

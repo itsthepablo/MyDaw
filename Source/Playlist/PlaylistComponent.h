@@ -11,10 +11,12 @@ struct TrackClip {
     float width;
     juce::String name;
     AudioClipData* linkedAudio = nullptr;
+    MidiClipData* linkedMidi = nullptr;
 };
 
 class PlaylistComponent : public juce::Component,
     public juce::FileDragAndDropTarget,
+    public juce::KeyListener,
     private juce::ScrollBar::Listener,
     private juce::Timer
 {
@@ -25,11 +27,18 @@ public:
     std::function<void()> onNewTrackRequested;
     std::function<void(int)> onVerticalScroll;
 
+    std::function<void(Track*, MidiClipData*)> onMidiClipDoubleClicked;
+    std::function<void(MidiClipData*)> onMidiClipDeleted;
+
     void setTracksReference(const juce::OwnedArray<Track>* tracks) {
         tracksRef = tracks;
         updateScrollBars();
         repaint();
     }
+
+    void setExternalMutex(juce::CriticalSection* mutex) { audioMutex = mutex; }
+
+    void addMidiClipToView(Track* targetTrack, MidiClipData* newClip);
 
     void updateScrollBars();
 
@@ -37,7 +46,7 @@ public:
     void setPlayheadPos(float newPos) { playheadAbsPos = newPos; repaint(); }
 
     float getLoopEndPos() const {
-        double dynamicLoopEnd = 1280.0; // Minimo de 4 compases
+        double dynamicLoopEnd = 1280.0;
         for (const auto& clip : clips) {
             if (clip.startX + clip.width > dynamicLoopEnd) {
                 dynamicLoopEnd = clip.startX + clip.width;
@@ -51,11 +60,16 @@ public:
 
     void paint(juce::Graphics& g) override;
     void resized() override;
+
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseDrag(const juce::MouseEvent& e) override;
     void mouseUp(const juce::MouseEvent& e) override;
     void mouseMove(const juce::MouseEvent& e) override;
+    void mouseDoubleClick(const juce::MouseEvent& e) override;
     void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override;
+
+    bool keyPressed(const juce::KeyPress& key, juce::Component* originatingComponent) override;
+
     void scrollBarMoved(juce::ScrollBar* scrollBarThatHasMoved, double newRangeStart) override;
     void timerCallback() override;
 
@@ -81,12 +95,22 @@ private:
     float hZoom = 1.0f;
 
     int draggingClipIndex = -1;
+    int selectedClipIndex = -1;
     bool isResizingClip = false;
     float dragStartAbsX = 0;
     float dragStartXOriginal = 0;
     float dragStartWidth = 0;
 
+    // --- NUEVO: ESTADOS PARA EDICIÓN INLINE DE NOTAS ---
+    int draggingNoteIndex = -1;
+    bool isResizingNote = false;
+    float dragStartNoteX = 0;
+    float dragStartNoteWidth = 0;
+
     bool isExternalFileDragging = false;
+    juce::CriticalSection* audioMutex = nullptr;
+
+    void deleteClip(int index);
 
     double getSnapPixels() const { return 80.0; }
     int getTrackAtY(int y) const;

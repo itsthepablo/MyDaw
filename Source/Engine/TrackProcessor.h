@@ -9,17 +9,31 @@ public:
         const AudioClock& clock,
         int numSamples,
         bool isPlayingNow,
-        const juce::MidiBuffer& previewMidi, // Marcado como const para seguridad multihilo
+        const juce::MidiBuffer& previewMidi,
         bool isPianoRollActive,
         float loopEndPos)
     {
         juce::MidiBuffer trackMidi;
 
-        // 1. Leer MIDI
         if (isPianoRollActive) {
             trackMidi.addEvents(previewMidi, 0, numSamples, 0);
-            if (isPlayingNow) {
-                for (const auto& note : track->notes) {
+        }
+
+        // --- LECTURA DE NOTAS MIDI ---
+        if (isPlayingNow) {
+            // A. Notas Globales (Scratchpad/Legacy)
+            for (const auto& note : track->notes) {
+                bool triggerOn = clock.looped ? ((note.x >= clock.currentPh && note.x < loopEndPos) || (note.x >= 0 && note.x < clock.nextPh)) : (note.x >= clock.currentPh && note.x < clock.nextPh);
+                if (triggerOn) trackMidi.addEvent(juce::MidiMessage::noteOn(1, note.pitch, 0.8f), 0);
+
+                float offX = note.x + note.width;
+                bool triggerOff = clock.looped ? ((offX >= clock.currentPh && offX < loopEndPos) || (offX >= 0 && offX < clock.nextPh)) : (offX >= clock.currentPh && offX < clock.nextPh);
+                if (triggerOff) trackMidi.addEvent(juce::MidiMessage::noteOff(1, note.pitch), 0);
+            }
+
+            // B. Notas por Clips/Patterns (NUEVO)
+            for (auto* clip : track->midiClips) {
+                for (const auto& note : clip->notes) {
                     bool triggerOn = clock.looped ? ((note.x >= clock.currentPh && note.x < loopEndPos) || (note.x >= 0 && note.x < clock.nextPh)) : (note.x >= clock.currentPh && note.x < clock.nextPh);
                     if (triggerOn) trackMidi.addEvent(juce::MidiMessage::noteOn(1, note.pitch, 0.8f), 0);
 
@@ -30,7 +44,7 @@ public:
             }
         }
 
-        // 2. Audio Clips
+        // --- AUDIO CLIPS ---
         if (isPlayingNow) {
             for (auto* clip : track->audioClips) {
                 long long clipStartSample = (long long)(clip->startX * clock.samplesPerPixel);
@@ -62,7 +76,7 @@ public:
             }
         }
 
-        // 3. VSTs (El punto que ms CPU consume, ahora en paralelo)
+        // VSTs
         for (auto* p : track->plugins) {
             if (p->isLoaded()) p->processBlock(track->audioBuffer, trackMidi);
         }

@@ -7,7 +7,7 @@
 #include <cmath>
 
 enum class TrackType { MIDI, Audio };
-enum class WaveformViewMode { Combined, SeparateLR, MidSide }; // NUEVO: Modo Mid/Side
+enum class WaveformViewMode { Combined, SeparateLR, MidSide };
 
 struct AudioClipData {
     juce::String name;
@@ -16,11 +16,10 @@ struct AudioClipData {
     juce::AudioBuffer<float> fileBuffer;
     double sourceSampleRate = 44100.0;
 
-    // --- CACHÉ MULTIVISTA ---
     std::vector<float> cachedPeaksL;
     std::vector<float> cachedPeaksR;
-    std::vector<float> cachedPeaksMid;  // Caché para (L+R)/2
-    std::vector<float> cachedPeaksSide; // Caché para (L-R)/2
+    std::vector<float> cachedPeaksMid;
+    std::vector<float> cachedPeaksSide;
 
     void generateCache() {
         const int samplesPerPoint = 256;
@@ -39,7 +38,6 @@ struct AudioClipData {
             cachedPeaksSide.reserve(numPoints);
         }
 
-        // LECTURA OPTIMIZADA: Escaneamos L, R, Mid y Side en una sola pasada de CPU
         for (int i = 0; i < numPoints; ++i) {
             int startSample = i * samplesPerPoint;
             int numSamplesInPoint = std::min(samplesPerPoint, numSamples - startSample);
@@ -57,7 +55,6 @@ struct AudioClipData {
                     pL = std::max(pL, std::abs(l));
                     pR = std::max(pR, std::abs(r));
 
-                    // Matemática Mid/Side
                     pMid = std::max(pMid, std::abs((l + r) * 0.5f));
                     pSide = std::max(pSide, std::abs((l - r) * 0.5f));
                 }
@@ -74,6 +71,14 @@ struct AudioClipData {
             }
         }
     }
+};
+
+struct MidiClipData {
+    juce::String name;
+    float startX = 0.0f;
+    float width = 320.0f;
+    std::vector<Note> notes;
+    juce::Colour color;
 };
 
 class Track {
@@ -101,12 +106,17 @@ public:
 
     std::vector<Note> notes;
     juce::OwnedArray<VSTHost> plugins;
+
     juce::OwnedArray<AudioClipData> audioClips;
+    juce::OwnedArray<MidiClipData> midiClips;
 
     int folderDepthChange = 0;
     int folderDepth = 0;
     bool isCollapsed = false;
     bool isShowingInChildren = true;
+
+    // NUEVO: Estado del Track para la edición Inline
+    bool isInlineEditingActive = false;
 
     juce::AudioBuffer<float> audioBuffer;
     float currentPeakLevelL = 0.0f;

@@ -9,12 +9,11 @@ MainComponent::MainComponent() {
     commandManager.registerAllCommandsForTarget(this);
     addKeyListener(commandManager.getKeyMappings());
 
-    // Inicializamos el medidor pasándole una referencia a la aplicación de audio
     resourceMeter = std::make_unique<ResourceMeter>(*this);
 
     addAndMakeVisible(transportBar);
     addAndMakeVisible(toolbarButtons);
-    addAndMakeVisible(*resourceMeter); // <--- HACEMOS VISIBLE EL MEDIDOR
+    addAndMakeVisible(*resourceMeter);
     addAndMakeVisible(effectsPanelUI);
     addAndMakeVisible(trackContainer);
     addAndMakeVisible(playlistUI);
@@ -23,11 +22,11 @@ MainComponent::MainComponent() {
     mixerUI.setVisible(false);
     effectsPanelUI.setVisible(false);
 
-    // Protección de memoria (Mantenido de la versión segura)
     trackContainer.setExternalMutex(&audioMutex);
 
-    // --- CONEXIONES MEDIANTE BRIDGES ---
-    TrackPianoRollBridge::connect(trackContainer, pianoRollUI, pianoRollWindow);
+    // ACTUALIZADO: Pasamos la Playlist para que el botón de la pista pueda inyectar clips
+    TrackPianoRollBridge::connect(trackContainer, playlistUI, pianoRollUI, pianoRollWindow);
+    TrackPianoRollBridge::connectPlaylist(playlistUI, pianoRollUI, pianoRollWindow);
 
     TrackEffectsBridge::connect(trackContainer, effectsPanelUI, audioMutex,
         audioEngine.clock.sampleRate, audioEngine.clock.blockSize,
@@ -82,10 +81,7 @@ void MainComponent::resized() {
 
     auto topArea = area.removeFromTop(45);
     toolbarButtons.setBounds(topArea.removeFromRight(180));
-    
-    // UBICACIÓN DEL MEDIDOR: A la derecha, al lado de los botones de la barra de herramientas
-    resourceMeter->setBounds(topArea.removeFromRight(100).reduced(8, 10)); 
-    
+    resourceMeter->setBounds(topArea.removeFromRight(100).reduced(8, 10));
     transportBar.setBounds(topArea);
 
     if (isMixerVisible) {
