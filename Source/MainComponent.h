@@ -8,7 +8,9 @@
 #include "UI/TransportBar.h"
 #include "UI/Buttons/ToolbarButtons.h"
 #include "UI/ResourceMeter.h"
-#include "UI/PickerPanel.h" // NUEVO INCLUDE
+#include "UI/PickerPanel.h"
+#include "UI/LeftSidebar.h"
+#include "UI/SidebarResizer.h" // NUEVO INCLUDE
 #include "Engine/AudioEngine.h"
 
 class MainComponent : public juce::AudioAppComponent, public juce::ApplicationCommandTarget {
@@ -35,21 +37,25 @@ private:
     PlaylistComponent playlistUI;
     PianoRollComponent pianoRollUI;
     MixerComponent mixerUI;
+    
     EffectsPanel effectsPanelUI;
+    PickerPanel pickerPanelUI; 
+    
+    LeftSidebar leftSidebar{pickerPanelUI, effectsPanelUI}; 
+    SidebarResizer sidebarResizer; // NUEVA BARRA DIVISORIA
+
     TransportBar transportBar;
     ToolbarButtons toolbarButtons;
     std::unique_ptr<ResourceMeter> resourceMeter;
     
-    PickerPanel pickerPanelUI; // NUEVA INSTANCIA
-
     std::unique_ptr<juce::DocumentWindow> pianoRollWindow;
 
     juce::CriticalSection audioMutex;
     AudioEngine audioEngine;
 
     bool isMixerVisible = false;
-    bool isEffectsPanelVisible = false;
-    bool isPickerVisible = true; // Por defecto, se muestra
+    bool isLeftSidebarVisible = true; 
+    int leftSidebarWidth = 200; // NUEVA MEMORIA DEL ANCHO DEL PANEL
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

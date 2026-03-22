@@ -9,10 +9,13 @@
           <FILE id="DNLFnt" name="ToolbarButtons.h" compile="0" resource="0"
                 file="Source/UI/Buttons/ToolbarButtons.h"/>
         </GROUP>
+        <FILE id="M86NJQ" name="LeftSidebar.h" compile="0" resource="0" file="Source/UI/LeftSidebar.h"/>
         <FILE id="Bc6gRt" name="MidiClipRenderer.h" compile="0" resource="0"
               file="Source/UI/MidiClipRenderer.h"/>
         <FILE id="BK4mww" name="PickerPanel.h" compile="0" resource="0" file="Source/UI/PickerPanel.h"/>
         <FILE id="yioUXf" name="ResourceMeter.h" compile="0" resource="0" file="Source/UI/ResourceMeter.h"/>
+        <FILE id="lP5IIW" name="SidebarResizer.h" compile="0" resource="0"
+              file="Source/UI/SidebarResizer.h"/>
         <FILE id="NkM4y4" name="TransportBar.h" compile="0" resource="0" file="Source/UI/TransportBar.h"/>
         <FILE id="ZgzqNL" name="WaveformRenderer.h" compile="0" resource="0"
               file="Source/UI/WaveformRenderer.h"/>

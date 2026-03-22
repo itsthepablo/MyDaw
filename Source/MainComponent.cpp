@@ -15,22 +15,28 @@ MainComponent::MainComponent() {
     addAndMakeVisible(toolbarButtons);
     addAndMakeVisible(*resourceMeter); 
     
-    addAndMakeVisible(pickerPanelUI); // AÑADIDO
-    addAndMakeVisible(effectsPanelUI);
+    addAndMakeVisible(leftSidebar); 
+    addAndMakeVisible(sidebarResizer); // AÑADIDO A LA PANTALLA
     addAndMakeVisible(trackContainer);
     addAndMakeVisible(playlistUI);
     addAndMakeVisible(mixerUI);
 
     mixerUI.setVisible(false);
-    effectsPanelUI.setVisible(false);
-    pickerPanelUI.setVisible(true);
+    leftSidebar.setVisible(true);
 
     trackContainer.setExternalMutex(&audioMutex);
     playlistUI.setExternalMutex(&audioMutex);
     
-    // Le damos acceso a las pistas para que las pueda escanear
     pickerPanelUI.setTrackContainer(&trackContainer);
     
+    // --- LÓGICA DE REDIMENSIONAMIENTO EN TIEMPO REAL ---
+    sidebarResizer.onResizeDelta = [this](int delta) {
+        // jlimit evita que el usuario lo haga invisible (mínimo 150px) 
+        // o que se coma toda la pantalla (máximo 600px).
+        leftSidebarWidth = juce::jlimit(150, 600, leftSidebarWidth + delta);
+        resized(); // Forzamos un redibujado instantáneo
+    };
+
     toolbarButtons.onSnapChanged = [this](double newSnapPixels) {
         playlistUI.snapPixels = newSnapPixels;
     };
@@ -51,14 +57,17 @@ MainComponent::MainComponent() {
 
     TrackEffectsBridge::connect(trackContainer, effectsPanelUI, audioMutex,
         audioEngine.clock.sampleRate, audioEngine.clock.blockSize,
-        isEffectsPanelVisible, [this] { resized(); });
+        [this] { 
+            isLeftSidebarVisible = true;
+            leftSidebar.showTab(LeftSidebar::FxTab);
+            resized(); 
+        });
 
     TrackMixerPlaylistBridge::connect(trackContainer, mixerUI, playlistUI);
     TransportBridge::connect(transportBar, pianoRollUI, playlistUI);
 
-    // ACTALIZADO EL BRIDGE
-    InterfaceBridge::connect(toolbarButtons, isMixerVisible, isEffectsPanelVisible, isPickerVisible,
-        mixerUI, effectsPanelUI, pickerPanelUI, trackContainer, [this] { resized(); });
+    InterfaceBridge::connect(toolbarButtons, isMixerVisible, isLeftSidebarVisible,
+        mixerUI, effectsPanelUI, leftSidebar, trackContainer, [this] { resized(); });
 
     trackContainer.onDeleteTrack = [this](int index) {
         const juce::ScopedLock sl(audioMutex);
@@ -68,8 +77,9 @@ MainComponent::MainComponent() {
             playlistUI.updateScrollBars();
             playlistUI.repaint();
 
-            isEffectsPanelVisible = false;
-            effectsPanelUI.setVisible(false);
+            if (leftSidebar.getCurrentTab() == LeftSidebar::FxTab) {
+                isLeftSidebarVisible = false;
+            }
             resized();
         }
         };
@@ -115,30 +125,22 @@ void MainComponent::resized() {
         mixerUI.setVisible(false);
     }
 
-    // --- REORGANIZACIÓN DE PANELES LATERALES ---
-    
-    // 1. Picker Panel (Extremo Izquierdo)
-    if (isPickerVisible) {
-        pickerPanelUI.setVisible(true);
-        pickerPanelUI.setBounds(area.removeFromLeft(160));
+    if (isLeftSidebarVisible) {
+        leftSidebar.setVisible(true);
+        sidebarResizer.setVisible(true); // Mostramos el divisor
+        
+        // Usamos la variable en lugar de un número estático
+        leftSidebar.setBounds(area.removeFromLeft(leftSidebarWidth));
+        
+        // Le asignamos 4 píxeles de ancho a la barra para agarrarla cómodamente
+        sidebarResizer.setBounds(area.removeFromLeft(4)); 
     }
     else {
-        pickerPanelUI.setVisible(false);
+        leftSidebar.setVisible(false);
+        sidebarResizer.setVisible(false);
     }
 
-    // 2. Panel de Efectos (Al lado del Picker, si está abierto)
-    if (isEffectsPanelVisible) {
-        effectsPanelUI.setVisible(true);
-        effectsPanelUI.setBounds(area.removeFromLeft(220));
-    }
-    else {
-        effectsPanelUI.setVisible(false);
-    }
-
-    // 3. Contenedor de Pistas
     trackContainer.setBounds(area.removeFromLeft(250));
-    
-    // 4. Playlist
     playlistUI.setBounds(area);
 }
 

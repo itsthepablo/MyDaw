@@ -11,7 +11,10 @@ public:
     std::function<void(Track&, int)> onOpenFx;
     std::function<void(Track&)> onOpenPianoRoll;
     std::function<void(int)> onDeleteTrack;
-    std::function<void(Track&)> onOpenEffectsPanel;
+
+    // CORREGIDO: Renombrado a onOpenEffects para que coincida con el Bridge
+    std::function<void(Track&)> onOpenEffects;
+
     std::function<void()> onTracksReordered;
     std::function<void()> onTrackAdded;
 
@@ -47,13 +50,15 @@ public:
         p->onPluginClick = [this, t](int i) { if (onOpenFx) onOpenFx(*t, i); };
         p->onPianoRollClick = [this, t] { if (onOpenPianoRoll) onOpenPianoRoll(*t); };
         p->onDeleteClick = [this, t] { if (onDeleteTrack) onDeleteTrack(tracks.indexOf(t)); };
-        p->onEffectsClick = [this, t] { if (onOpenEffectsPanel) onOpenEffectsPanel(*t); };
+
+        // CORREGIDO: Actualizada la conexión del botón con el nuevo nombre
+        p->onEffectsClick = [this, t] { if (onOpenEffects) onOpenEffects(*t); };
+
         p->onFolderStateChange = [this] {
             recalculateDepthsFromDeltas(); recalculateDeltasFromDepths();
             resized(); repaint(); if (onTracksReordered) onTracksReordered();
             };
 
-        // CONEXIÓN PARA EL REPINTADO AL CAMBIAR LA VISTA DE LA ONDA (L/R)
         p->onWaveformViewChanged = [this] {
             repaint();
             if (getParentComponent()) getParentComponent()->repaint();
