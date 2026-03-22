@@ -2,18 +2,20 @@
 #include <JuceHeader.h>
 #include "PickerPanel.h"
 #include "../Effects/EffectsPanel.h"
-#include "FileBrowserPanel.h" // NUEVO INCLUDE
+#include "FileBrowserPanel.h" 
 
 class LeftSidebar : public juce::Component {
 public:
-    enum Tab { PickerTab, FilesTab, FxTab }; // Añadida nueva pestaña
+    enum Tab { PickerTab, FilesTab, FxTab };
+
+    std::function<void()> onClose; // Callback para avisar que queremos cerrar el panel
 
     LeftSidebar(PickerPanel& picker, EffectsPanel& fx, FileBrowserPanel& files)
         : pickerPanel(picker), effectsPanel(fx), filesPanel(files)
     {
         addAndMakeVisible(pickerPanel);
         addAndMakeVisible(effectsPanel);
-        addAndMakeVisible(filesPanel); // Añadimos el nuevo panel
+        addAndMakeVisible(filesPanel);
 
         // --- BOTÓN PESTAÑA: PICKER ---
         addAndMakeVisible(pickerTabBtn);
@@ -21,10 +23,10 @@ public:
         pickerTabBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(25, 27, 30));
         pickerTabBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(45, 48, 52));
         pickerTabBtn.setClickingTogglesState(true);
-        pickerTabBtn.setRadioGroupId(200); 
+        pickerTabBtn.setRadioGroupId(200);
         pickerTabBtn.onClick = [this] { showTab(PickerTab); };
 
-        // --- BOTÓN PESTAÑA: FILES (NUEVO) ---
+        // --- BOTÓN PESTAÑA: FILES ---
         addAndMakeVisible(filesTabBtn);
         filesTabBtn.setButtonText("FILES");
         filesTabBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(25, 27, 30));
@@ -42,20 +44,28 @@ public:
         fxTabBtn.setRadioGroupId(200);
         fxTabBtn.onClick = [this] { showTab(FxTab); };
 
-        showTab(FilesTab); // Por defecto abriremos en Files porque es el más usado
+        // --- BOTÓN CERRAR [X] ---
+        addAndMakeVisible(closeBtn);
+        closeBtn.setButtonText("X");
+        closeBtn.setTooltip("Cerrar Panel Lateral");
+        closeBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(25, 27, 30));
+        closeBtn.setColour(juce::TextButton::textColourOffId, juce::Colours::lightgrey);
+        closeBtn.onClick = [this] { if (onClose) onClose(); };
+
+        showTab(FilesTab);
     }
 
     void showTab(Tab tab) {
         currentTab = tab;
-        
+
         pickerPanel.setVisible(tab == PickerTab);
         filesPanel.setVisible(tab == FilesTab);
         effectsPanel.setVisible(tab == FxTab);
-        
+
         if (tab == PickerTab) pickerTabBtn.setToggleState(true, juce::dontSendNotification);
         else if (tab == FilesTab) filesTabBtn.setToggleState(true, juce::dontSendNotification);
         else fxTabBtn.setToggleState(true, juce::dontSendNotification);
-        
+
         resized();
     }
 
@@ -65,7 +75,10 @@ public:
         auto area = getLocalBounds();
         auto tabArea = area.removeFromBottom(30);
 
-        // Dividimos el espacio inferior entre los tres botones
+        // Posicionamos la [X] en el extremo derecho
+        closeBtn.setBounds(tabArea.removeFromRight(30).reduced(2));
+
+        // Dividimos el espacio restante entre los tres botones de pestaña
         int tabW = tabArea.getWidth() / 3;
         pickerTabBtn.setBounds(tabArea.removeFromLeft(tabW));
         filesTabBtn.setBounds(tabArea.removeFromLeft(tabW));
@@ -79,9 +92,9 @@ public:
 private:
     PickerPanel& pickerPanel;
     EffectsPanel& effectsPanel;
-    FileBrowserPanel& filesPanel; // Referencia al nuevo panel
-    
-    juce::TextButton pickerTabBtn, filesTabBtn, fxTabBtn;
+    FileBrowserPanel& filesPanel;
+
+    juce::TextButton pickerTabBtn, filesTabBtn, fxTabBtn, closeBtn; // Añadido closeBtn
     Tab currentTab = FilesTab;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LeftSidebar)

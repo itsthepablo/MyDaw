@@ -10,9 +10,9 @@
 #include "UI/ResourceMeter.h"
 #include "UI/PickerPanel.h"
 #include "UI/FileBrowserPanel.h" 
-#include "UI/ChannelRackPanel.h" // NUEVO
+#include "UI/ChannelRackPanel.h" 
 #include "UI/LeftSidebar.h"
-#include "UI/BottomDock.h"       // NUEVO
+#include "UI/BottomDock.h"       
 #include "UI/SidebarResizer.h" 
 #include "Engine/AudioEngine.h"
 
@@ -39,29 +39,32 @@ private:
     TrackContainer trackContainer;
     PlaylistComponent playlistUI;
     PianoRollComponent pianoRollUI;
-    
+
+    // Contenedor Inferior
     MixerComponent mixerUI;
     ChannelRackPanel rackPanelUI;
-    BottomDock bottomDock{mixerUI, rackPanelUI}; // CONTENEDOR INFERIOR
-    
+    BottomDock bottomDock{ mixerUI, rackPanelUI };
+
+    // Contenedor Lateral Izquierdo
     EffectsPanel effectsPanelUI;
-    PickerPanel pickerPanelUI; 
-    FileBrowserPanel fileBrowserPanelUI; 
-    LeftSidebar leftSidebar{pickerPanelUI, effectsPanelUI, fileBrowserPanelUI}; 
-    SidebarResizer sidebarResizer; 
+    PickerPanel pickerPanelUI;
+    FileBrowserPanel fileBrowserPanelUI;
+    LeftSidebar leftSidebar{ pickerPanelUI, effectsPanelUI, fileBrowserPanelUI };
+    SidebarResizer sidebarResizer;
 
     TransportBar transportBar;
     ToolbarButtons toolbarButtons;
     std::unique_ptr<ResourceMeter> resourceMeter;
-    
+
     std::unique_ptr<juce::DocumentWindow> pianoRollWindow;
 
     juce::CriticalSection audioMutex;
     AudioEngine audioEngine;
 
-    bool isBottomDockVisible = true; // CONTROL DEL PANEL INFERIOR
-    bool isLeftSidebarVisible = true; 
-    int leftSidebarWidth = 200; 
-    
+    // Controles de visibilidad
+    bool isBottomDockVisible = true;
+    bool isLeftSidebarVisible = true;
+    int leftSidebarWidth = 200;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

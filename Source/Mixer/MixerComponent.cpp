@@ -13,6 +13,7 @@ MixerStrip::MixerStrip(Track& t) : track(t) {
     volSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 40, 15);
     volSlider.setRange(0.0, 1.0);
     volSlider.setValue(track.getVolume(), juce::dontSendNotification);
+    volSlider.setLookAndFeel(&flLookAndFeel); // <--- NUEVO: Aplicamos el diseño compartido
     volSlider.onValueChange = [this] { track.setVolume((float)volSlider.getValue()); };
 
     addAndMakeVisible(panSlider);
@@ -20,6 +21,7 @@ MixerStrip::MixerStrip(Track& t) : track(t) {
     panSlider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
     panSlider.setRange(-1.0, 1.0);
     panSlider.setValue(track.getBalance(), juce::dontSendNotification);
+    panSlider.setLookAndFeel(&flLookAndFeel); // <--- NUEVO: Aplicamos el diseño compartido
     panSlider.onValueChange = [this] { track.setBalance((float)panSlider.getValue()); };
 
     addAndMakeVisible(nameLabel);
@@ -104,6 +106,7 @@ MixerComponent::MixerComponent() {
     masterVol.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
     masterVol.setRange(0.0, 1.0);
     masterVol.setValue(0.8, juce::dontSendNotification);
+    masterVol.setLookAndFeel(&flLookAndFeel); // <--- NUEVO: Aplicamos el diseño compartido
 
     addAndMakeVisible(masterLabel);
     masterLabel.setText("MASTER", juce::dontSendNotification);

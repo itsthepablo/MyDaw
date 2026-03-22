@@ -2,6 +2,7 @@
 #include <JuceHeader.h>
 #include "Track.h"
 #include "../PluginHost/VSTHost.h" 
+#include "../UI/Knobs/FLKnobLookAndFeel.h" // NUEVO: Importamos tu diseño de Knob
 
 class TrackControlPanel : public juce::Component {
 public:
@@ -16,13 +17,16 @@ public:
         nameLabel.onTextChange = [this] { track.setName(nameLabel.getText()); };
 
         addAndMakeVisible(volSlider); addAndMakeVisible(panSlider);
+        
         volSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
         volSlider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+        volSlider.setLookAndFeel(&flLookAndFeel); // NUEVO: Aplicamos el diseño
         volSlider.onValueChange = [this] { track.setVolume((float)volSlider.getValue()); };
 
         panSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
         panSlider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
         panSlider.setRange(-1.0, 1.0);
+        panSlider.setLookAndFeel(&flLookAndFeel); // NUEVO: Aplicamos el diseño
         panSlider.onValueChange = [this] { track.setBalance((float)panSlider.getValue()); };
 
         addAndMakeVisible(effectsBtn);
@@ -180,5 +184,8 @@ private:
     juce::Label nameLabel; juce::Slider volSlider, panSlider;
     juce::TextButton fxButton, prButton, inlineBtn, effectsBtn, folderBtn, compactBtn;
     juce::OwnedArray<juce::TextButton> pluginButtons;
+    
+    FLKnobLookAndFeel flLookAndFeel; // NUEVO: Instancia del estilo
+    
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TrackControlPanel)
 };

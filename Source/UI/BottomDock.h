@@ -7,6 +7,8 @@ class BottomDock : public juce::Component {
 public:
     enum Tab { MixerTab, RackTab };
 
+    std::function<void()> onClose; // Callback para avisar que queremos cerrar el panel
+
     BottomDock(MixerComponent& mixer, ChannelRackPanel& rack)
         : mixerPanel(mixer), rackPanel(rack)
     {
@@ -31,7 +33,15 @@ public:
         rackTabBtn.setRadioGroupId(300);
         rackTabBtn.onClick = [this] { showTab(RackTab); };
 
-        showTab(RackTab); // Por defecto mostramos el rack para que lo veas al iniciar
+        // --- BOTÓN CERRAR [X] ---
+        addAndMakeVisible(closeBtn);
+        closeBtn.setButtonText("X");
+        closeBtn.setTooltip("Cerrar Panel Inferior");
+        closeBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(25, 27, 30));
+        closeBtn.setColour(juce::TextButton::textColourOffId, juce::Colours::lightgrey);
+        closeBtn.onClick = [this] { if (onClose) onClose(); };
+
+        showTab(RackTab);
     }
 
     void showTab(Tab tab) {
@@ -40,7 +50,8 @@ public:
             mixerTabBtn.setToggleState(true, juce::dontSendNotification);
             mixerPanel.setVisible(true);
             rackPanel.setVisible(false);
-        } else {
+        }
+        else {
             rackTabBtn.setToggleState(true, juce::dontSendNotification);
             mixerPanel.setVisible(false);
             rackPanel.setVisible(true);
@@ -52,29 +63,31 @@ public:
 
     void resized() override {
         auto area = getLocalBounds();
-        
-        // Pestañas a la izquierda, ocupando poco espacio (como en Studio One o Bitwig)
+
         auto tabArea = area.removeFromTop(25);
+
+        // Posicionamos la [X] a la derecha
+        closeBtn.setBounds(tabArea.removeFromRight(30).reduced(2));
+
+        // Pestañas a la izquierda
         mixerTabBtn.setBounds(tabArea.removeFromLeft(100));
         rackTabBtn.setBounds(tabArea.removeFromLeft(120));
 
-        // Separador visual
         juce::Rectangle<int> lineArea(0, 25, getWidth(), 2);
-        
-        // El panel activo ocupa el resto
+
         if (currentTab == MixerTab) mixerPanel.setBounds(area);
         else rackPanel.setBounds(area);
     }
 
     void paint(juce::Graphics& g) override {
-        g.setColour(juce::Colour(20, 22, 25)); // Fondo oscuro debajo de las pestañas
+        g.setColour(juce::Colour(20, 22, 25));
         g.fillRect(0, 0, getWidth(), 25);
     }
 
 private:
     MixerComponent& mixerPanel;
     ChannelRackPanel& rackPanel;
-    juce::TextButton mixerTabBtn, rackTabBtn;
+    juce::TextButton mixerTabBtn, rackTabBtn, closeBtn; // Añadido closeBtn
     Tab currentTab = RackTab;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(BottomDock)

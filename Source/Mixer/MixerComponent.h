@@ -2,6 +2,7 @@
 #include <JuceHeader.h>
 #include "../Tracks/Track.h"
 #include "PeakMeter.h"
+#include "../UI/Knobs/FLKnobLookAndFeel.h" // NUEVO: Importamos el estilo
 
 class MixerStrip : public juce::Component {
 public:
@@ -17,6 +18,9 @@ private:
     juce::Slider volSlider, panSlider;
     juce::Label nameLabel;
     PeakMeter meterL, meterR;
+    
+    FLKnobLookAndFeel flLookAndFeel; // NUEVO: Instancia para la pista del mixer
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MixerStrip)
 };
 
@@ -37,5 +41,8 @@ private:
     juce::Label masterLabel;
     juce::Viewport viewport;
     juce::Component stripContainer;
+    
+    FLKnobLookAndFeel flLookAndFeel; // NUEVO: Instancia para el master del mixer
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MixerComponent)
 };
