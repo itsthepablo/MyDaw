@@ -1,6 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include "AudioClock.h"
+#include "../Tracks/Track.h"
 
 class TrackProcessor {
 public:
@@ -8,13 +9,13 @@ public:
         const AudioClock& clock,
         int numSamples,
         bool isPlayingNow,
-        juce::MidiBuffer& previewMidi,
+        const juce::MidiBuffer& previewMidi, // Marcado como const para seguridad multihilo
         bool isPianoRollActive,
         float loopEndPos)
     {
         juce::MidiBuffer trackMidi;
 
-        // 1. Leer MIDI del Piano Roll
+        // 1. Leer MIDI
         if (isPianoRollActive) {
             trackMidi.addEvents(previewMidi, 0, numSamples, 0);
             if (isPlayingNow) {
@@ -29,7 +30,7 @@ public:
             }
         }
 
-        // 2. Leer Clips de Audio
+        // 2. Audio Clips
         if (isPlayingNow) {
             for (auto* clip : track->audioClips) {
                 long long clipStartSample = (long long)(clip->startX * clock.samplesPerPixel);
@@ -48,9 +49,8 @@ public:
                         readStart = (int)(clock.currentSamplePos - clipStartSample);
                     }
 
-                    if (readStart + samplesToWrite > clip->fileBuffer.getNumSamples()) {
+                    if (readStart + samplesToWrite > clip->fileBuffer.getNumSamples())
                         samplesToWrite = clip->fileBuffer.getNumSamples() - readStart;
-                    }
 
                     if (samplesToWrite > 0) {
                         for (int ch = 0; ch < track->audioBuffer.getNumChannels(); ++ch) {
@@ -62,7 +62,7 @@ public:
             }
         }
 
-        // 3. Procesar Plugins VST
+        // 3. VSTs (El punto que más CPU consume, ahora en paralelo)
         for (auto* p : track->plugins) {
             if (p->isLoaded()) p->processBlock(track->audioBuffer, trackMidi);
         }

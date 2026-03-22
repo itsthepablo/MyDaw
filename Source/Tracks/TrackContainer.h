@@ -13,14 +13,14 @@ public:
     std::function<void(int)> onDeleteTrack;
     std::function<void(Track&)> onOpenEffectsPanel;
     std::function<void()> onTracksReordered;
-    std::function<void()> onTrackAdded; // <--- AGREGADO: Declaración del callback
+    std::function<void()> onTrackAdded;
 
     int vOffset = 0;
 
     TrackContainer() {
-        // Importante: Agregar el fondo primero para que esté atrás
+        // Fondo del encabezado
         addAndMakeVisible(headerBg);
-        headerBg.setInterceptsMouseClicks(false, false); // No bloquea clics
+        headerBg.setInterceptsMouseClicks(false, false);
 
         addAndMakeVisible(addMidiBtn);
         addMidiBtn.setButtonText("+ MIDI");
@@ -31,10 +31,17 @@ public:
         addAudioBtn.onClick = [this] { addTrack(TrackType::Audio); };
     }
 
+    // NUEVO: Método para recibir el Mutex desde MainComponent
+    void setExternalMutex(juce::CriticalSection* mutex) { audioMutex = mutex; }
+
     const juce::OwnedArray<Track>& getTracks() const { return tracks; }
 
     void addTrack(TrackType type) {
-        int id = tracks.size() + 1;
+        // BLOQUEO DE SEGURIDAD: Evita que el motor de audio lea mientras escribimos
+        std::unique_ptr<juce::ScopedLock> lock;
+        if (audioMutex != nullptr) lock = std::make_unique<juce::ScopedLock>(*audioMutex);
+
+        int id = (int)tracks.size() + 1;
         auto* t = new Track(id, (type == TrackType::MIDI ? "Inst " : "Audio ") + juce::String(id), type);
         tracks.add(t);
         auto* p = new TrackControlPanel(*t);
@@ -55,12 +62,14 @@ public:
         resized();
 
         if (onTracksReordered) onTracksReordered();
-
-        // --- AGREGADO: Llamada al callback para el scroll ---
         if (onTrackAdded) onTrackAdded();
     }
 
     void removeTrack(int index) {
+        // BLOQUEO DE SEGURIDAD: Evita crashes al borrar una pista que el motor está procesando
+        std::unique_ptr<juce::ScopedLock> lock;
+        if (audioMutex != nullptr) lock = std::make_unique<juce::ScopedLock>(*audioMutex);
+
         if (index >= 0 && index < tracks.size()) {
             trackPanels.remove(index); tracks.remove(index);
             recalculateDeltasFromDepths(); resized(); repaint();
@@ -112,7 +121,12 @@ public:
     void itemDropped(const SourceDetails&) override {}
 
     bool isInterestedInFileDrag(const juce::StringArray&) override { return true; }
+
     void filesDropped(const juce::StringArray& files, int, int) override {
+        // Bloqueo para evitar colisiones durante el drag and drop masivo
+        std::unique_ptr<juce::ScopedLock> lock;
+        if (audioMutex != nullptr) lock = std::make_unique<juce::ScopedLock>(*audioMutex);
+
         for (auto path : files) {
             juce::File f(path);
             if (f.getFileExtension().containsIgnoreCase("wav")) {
@@ -149,5 +163,9 @@ private:
     juce::TextButton addMidiBtn, addAudioBtn;
     juce::OwnedArray<Track> tracks;
     juce::OwnedArray<TrackControlPanel> trackPanels;
+
+    // Puntero al Mutex del motor de audio para sincronización
+    juce::CriticalSection* audioMutex = nullptr;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TrackContainer)
 };

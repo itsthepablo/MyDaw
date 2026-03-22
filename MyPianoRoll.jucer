@@ -10,6 +10,8 @@
                 file="Source/UI/Buttons/ToolbarButtons.h"/>
         </GROUP>
         <FILE id="NkM4y4" name="TransportBar.h" compile="0" resource="0" file="Source/UI/TransportBar.h"/>
+        <FILE id="ZgzqNL" name="WaveformRenderer.h" compile="0" resource="0"
+              file="Source/UI/WaveformRenderer.h"/>
       </GROUP>
       <GROUP id="{DE716C5C-395E-36B2-27F4-94E8BA4A1B7D}" name="Engine">
         <FILE id="mEx8qf" name="AudioClock.h" compile="0" resource="0" file="Source/Engine/AudioClock.h"/>

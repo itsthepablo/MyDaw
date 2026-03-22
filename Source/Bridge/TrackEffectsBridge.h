@@ -1,5 +1,6 @@
 #pragma once
 #include <JuceHeader.h>
+#include <functional> // REQUERIDO: Para std::function
 #include "../Tracks/TrackContainer.h"
 #include "../Effects/EffectsPanel.h"
 #include "../PluginHost/VSTHost.h"
@@ -38,7 +39,7 @@ public:
 
         // 3. Abrir ventana del plugin desde el panel lateral
         panel.onOpenEffect = [](Track& t, int idx) {
-            if (idx < t.plugins.size()) t.plugins[idx]->showWindow();
+            if (idx < (int)t.plugins.size()) t.plugins[idx]->showWindow();
             };
 
         // 4. Reordenar efectos (Drag and Drop en el panel)
@@ -51,9 +52,9 @@ public:
 
         // 5. CONEXIÓN CLAVE: Abrir el panel desde el botón FX de un track
         container.onOpenEffectsPanel = [&panel, &isVisible, triggerResize](Track& t) {
-            panel.setTrack(&t);     // Enfocamos el panel en esta pista
-            isVisible = true;       // Cambiamos el estado a visible
-            triggerResize();        // Forzamos el redibujado para que la Playlist se encoja
+            panel.setTrack(&t);
+            isVisible = true;
+            triggerResize();
             };
 
         // 6. Cargar Instrumento o FX directamente desde el track

@@ -19,6 +19,9 @@ MainComponent::MainComponent() {
     mixerUI.setVisible(false);
     effectsPanelUI.setVisible(false);
 
+    // AÑADIDO: Conectar el Mutex del motor de audio al contenedor de pistas para evitar crashes
+    trackContainer.setExternalMutex(&audioMutex);
+
     // --- CONEXIONES MEDIANTE BRIDGES ---
     TrackPianoRollBridge::connect(trackContainer, pianoRollUI, pianoRollWindow);
 
