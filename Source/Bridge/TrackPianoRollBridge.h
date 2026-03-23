@@ -11,24 +11,20 @@ public:
         PianoRollComponent& ui,
         std::function<void()> onOpenPianoRoll)
     {
-        // --- MOTOR DE SINCRONIZACIÓN DE CLONES (GHOST COPIES) ---
-        // ¡Esta es la pieza crítica que omití por error en el paso anterior!
-        ui.onPatternEdited = [&container, &playlist](MidiClipData* sourceClip) {
+        // --- MOTOR GLOBAL DE SINCRONIZACIÓN DE CLONES (GHOST COPIES) ---
+        auto syncEngine = [&container, &playlist](MidiClipData* sourceClip) {
             if (!sourceClip) return;
             bool synced = false;
 
             for (auto* track : container.getTracks()) {
                 for (auto* targetClip : track->midiClips) {
 
-                    // Si encontramos otro clip que se llame EXACTAMENTE IGUAL pero es distinto en memoria...
                     if (targetClip != sourceClip && targetClip->name == sourceClip->name) {
                         float timeShift = targetClip->startX - sourceClip->startX;
 
-                        // 1. Clona y desplaza las notas al nuevo clip
                         targetClip->notes = sourceClip->notes;
                         for (auto& note : targetClip->notes) note.x += timeShift;
 
-                        // 2. Clona y desplaza la automatización
                         targetClip->autoVol = sourceClip->autoVol;
                         targetClip->autoPan = sourceClip->autoPan;
                         targetClip->autoPitch = sourceClip->autoPitch;
@@ -49,9 +45,12 @@ public:
                     }
                 }
             }
-            // Si hubo sincronización, forzamos repintado de la Playlist para que se vea reflejado en tiempo real
             if (synced) playlist.repaint();
             };
+
+        // Enlazamos el motor tanto al Piano Roll como a la edición Inline de la Playlist
+        ui.onPatternEdited = syncEngine;
+        playlist.onPatternEdited = syncEngine;
 
 
         container.onOpenPianoRoll = [&container, &playlist, &ui, onOpenPianoRoll](Track& t) {
@@ -61,7 +60,6 @@ public:
                 targetClip = t.midiClips.getFirst();
             }
             else {
-                // Cálculo Global del Nombre
                 int maxPatternNum = 0;
                 for (auto* tr : container.getTracks()) {
                     for (auto* mc : tr->midiClips) {

@@ -30,27 +30,24 @@ public:
             }
         }
 
-        // --- 2. RENDERIZADO VISUAL "ESTRICTO" MULTICAPA DE AUTOMATIZACIÓN ---
+        // --- 2. RENDERIZADO VISUAL MULTICAPA DE AUTOMATIZACIÓN ---
         auto isLaneActive = [](const AutoLane& lane) {
             if (lane.nodes.size() > 1) return true;
             if (lane.nodes.size() == 1 && std::abs(lane.nodes[0].value - lane.defaultValue) > 0.001f) return true;
             return false;
             };
 
-        // Estructura temporal para guardar los carriles activos y sus colores correspondientes
         struct ActiveLane {
             const AutoLane* lane;
             juce::Colour color;
         };
         std::vector<ActiveLane> lanesToDraw;
 
-        // Evaluamos TODOS los carriles de forma independiente (Sin 'else if')
         if (isLaneActive(clipData.autoVol))    lanesToDraw.push_back({ &clipData.autoVol, juce::Colours::limegreen });
         if (isLaneActive(clipData.autoPan))    lanesToDraw.push_back({ &clipData.autoPan, juce::Colours::cyan });
         if (isLaneActive(clipData.autoFilter)) lanesToDraw.push_back({ &clipData.autoFilter, juce::Colours::orange });
         if (isLaneActive(clipData.autoPitch))  lanesToDraw.push_back({ &clipData.autoPitch, juce::Colours::magenta });
 
-        // Dibujamos cada carril activo superponiéndolos
         for (const auto& activeItem : lanesToDraw) {
             if (activeItem.lane->nodes.empty()) continue;
 
@@ -63,25 +60,33 @@ public:
 
             autoPath.startNewSubPath(startScreenX, bottomY);
 
+            // NODO INICIAL (Evaluamos el valor matemático exacto en el borde izquierdo del clip)
+            float valAtStart = activeItem.lane->getValueAt(clipData.startX);
+            autoPath.lineTo(startScreenX, bottomY - (valAtStart * height));
+
             for (const auto& node : nodes) {
-                float clippedNodeX = juce::jlimit(0.0f, clipData.width, node.x);
-                float screenX = startScreenX + (clippedNodeX * hZoom);
+                // --- EL BUG ESTABA AQUÍ: COORDENADAS RELATIVAS AL CLIP ---
+                float localNodeX = node.x - clipData.startX;
+
+                if (localNodeX < 0.0f) continue; // Si el nodo está ANTES del clip, no lo dibujamos
+                if (localNodeX > clipData.width) break; // Si el nodo está DESPUÉS del clip, cortamos la ejecución para ahorrar CPU
+
+                float screenX = startScreenX + (localNodeX * hZoom);
                 float screenY = bottomY - (node.value * height);
 
                 autoPath.lineTo(screenX, screenY);
             }
 
-            float valAtEnd = activeItem.lane->getValueAt(clipData.width);
+            // NODO FINAL (Evaluamos el valor matemático exacto en el borde derecho del clip)
+            float valAtEnd = activeItem.lane->getValueAt(clipData.startX + clipData.width);
             autoPath.lineTo(startScreenX + (clipData.width * hZoom), bottomY - (valAtEnd * height));
 
             autoPath.lineTo(startScreenX + (clipData.width * hZoom), bottomY);
             autoPath.closeSubPath();
 
-            // Rellenamos el fondo con el color específico de la automatización (baja opacidad para permitir superposición)
             g.setColour(activeItem.color.withAlpha(0.12f));
             g.fillPath(autoPath);
 
-            // Dibujamos la línea de contorno más visible con su color respectivo
             g.setColour(activeItem.color.withAlpha(0.5f));
             g.strokePath(autoPath, juce::PathStrokeType(1.2f, juce::PathStrokeType::mitered, juce::PathStrokeType::rounded));
         }

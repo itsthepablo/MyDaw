@@ -26,7 +26,7 @@ public:
     PianoRollComponent();
     ~PianoRollComponent() override;
 
-    // --- NUEVO: Sistema de transmisión para sincronizar clones ---
+    // --- Antena transmisora del Piano Roll ---
     std::function<void(MidiClipData*)> onPatternEdited;
     void notifyPatternEdited() {
         if (onPatternEdited && activeClip) onPatternEdited(activeClip);
@@ -35,6 +35,11 @@ public:
     void setActiveClip(MidiClipData* clip) {
         activeClip = clip;
         automationEditor.setClipReference(clip);
+        if (clip != nullptr) {
+            double newScroll = clip->startX * hZoom;
+            hBar.setCurrentRangeStart(newScroll);
+            automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, (float)getSnapPixels(), playheadAbsPos);
+        }
         repaint();
     }
     MidiClipData* getActiveClip() const { return activeClip; }

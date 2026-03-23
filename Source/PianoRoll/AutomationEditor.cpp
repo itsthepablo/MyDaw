@@ -1,6 +1,6 @@
 #include "AutomationEditor.h"
+#include "PianoRollComponent.h" 
 
-// NO TOCAR NI SIMPLIFICAR HASTA QUE YO LO ORDENE
 AutomationEditor::AutomationEditor() {
     addAndMakeVisible(autoSelector);
     autoSelector.addItem("VOL (Volume)", 1); autoSelector.addItem("PAN (Panning)", 2);
@@ -39,21 +39,23 @@ void AutomationEditor::setClipReference(MidiClipData* clip) {
     clipRef = clip;
 
     if (clipRef != nullptr) {
+        // --- CORREGIDO: INYECTAR NODO EN EL INICIO REAL DEL CLIP, NO EN EL 0.0 ABSOLUTO ---
+        float sX = clipRef->startX;
         if (clipRef->autoVol.nodes.empty()) {
             clipRef->autoVol.defaultValue = 0.8f;
-            clipRef->autoVol.nodes.push_back({ 0.0f, 0.8f, 0.0f, AutomationMath::SingleCurve });
+            clipRef->autoVol.nodes.push_back({ sX, 0.8f, 0.0f, AutomationMath::SingleCurve });
         }
         if (clipRef->autoPan.nodes.empty()) {
             clipRef->autoPan.defaultValue = 0.5f;
-            clipRef->autoPan.nodes.push_back({ 0.0f, 0.5f, 0.0f, AutomationMath::SingleCurve });
+            clipRef->autoPan.nodes.push_back({ sX, 0.5f, 0.0f, AutomationMath::SingleCurve });
         }
         if (clipRef->autoFilter.nodes.empty()) {
             clipRef->autoFilter.defaultValue = 0.5f;
-            clipRef->autoFilter.nodes.push_back({ 0.0f, 0.5f, 0.0f, AutomationMath::SingleCurve });
+            clipRef->autoFilter.nodes.push_back({ sX, 0.5f, 0.0f, AutomationMath::SingleCurve });
         }
         if (clipRef->autoPitch.nodes.empty()) {
             clipRef->autoPitch.defaultValue = 0.5f;
-            clipRef->autoPitch.nodes.push_back({ 0.0f, 0.5f, 0.0f, AutomationMath::SingleCurve });
+            clipRef->autoPitch.nodes.push_back({ sX, 0.5f, 0.0f, AutomationMath::SingleCurve });
         }
     }
     repaint();
@@ -176,7 +178,6 @@ void AutomationEditor::drawShapeAt(float rawAx, float vy) {
     std::sort(lane->nodes.begin(), lane->nodes.end());
 }
 
-// NO TOCAR NI SIMPLIFICAR HASTA QUE YO LO ORDENE
 void AutomationEditor::paint(juce::Graphics& g) {
     juce::Colour bgColor = juce::Colours::black.withAlpha(0.85f);
     g.fillAll(bgColor);
@@ -333,6 +334,21 @@ void AutomationEditor::paint(juce::Graphics& g) {
             }
         }
     }
+
+    // --- NUEVO: SOMBREADO VISUAL DE LOS LÍMITES DEL PATRÓN ---
+    if (clipRef != nullptr) {
+        int startScreenX = (int)(clipRef->startX * hZoom) + keyW - (int)hScroll;
+        int endScreenX = (int)((clipRef->startX + clipRef->width) * hZoom) + keyW - (int)hScroll;
+
+        g.setColour(juce::Colours::black.withAlpha(0.5f));
+        if (startScreenX > keyW) {
+            g.fillRect(keyW, toolbarH, startScreenX - keyW, getHeight() - toolbarH);
+        }
+        if (endScreenX < getWidth() - 16) {
+            g.fillRect(endScreenX, toolbarH, getWidth() - endScreenX, getHeight() - toolbarH);
+        }
+    }
+
     g.restoreState();
 
     if (isDraggingNode) {
@@ -450,6 +466,7 @@ void AutomationEditor::mouseDown(const juce::MouseEvent& e) {
         isDraggingNode = true;
         tooltipPos = e.position; tooltipValue = vy;
         currentPreviewCellIdx = -1;
+        if (auto* pr = findParentComponentOfClass<PianoRollComponent>()) pr->notifyPatternEdited();
         repaint();
         return;
     }
@@ -497,6 +514,7 @@ void AutomationEditor::mouseDown(const juce::MouseEvent& e) {
                 else if (result == 10) { copiedNodeValue = currentLane->nodes[clickedNodeIdx].value; }
                 else if (result == 11) { if (copiedNodeValue >= 0.0f) { currentLane->nodes[clickedNodeIdx].value = copiedNodeValue; } }
                 else { currentLane->nodes[clickedNodeIdx].curveType = result; }
+                if (auto* pr = findParentComponentOfClass<PianoRollComponent>()) pr->notifyPatternEdited();
                 repaint();
                 });
             return;
@@ -516,6 +534,7 @@ void AutomationEditor::mouseDown(const juce::MouseEvent& e) {
         }
         isDraggingNode = true; tooltipPos = e.position; tooltipValue = vy;
     }
+    if (auto* pr = findParentComponentOfClass<PianoRollComponent>()) pr->notifyPatternEdited();
     repaint();
 }
 
@@ -530,6 +549,7 @@ void AutomationEditor::mouseDrag(const juce::MouseEvent& e) {
         drawShapeAt(rawAx, vy);
         tooltipPos = e.position; tooltipValue = vy;
         currentPreviewCellIdx = -1;
+        if (auto* pr = findParentComponentOfClass<PianoRollComponent>()) pr->notifyPatternEdited();
         repaint();
         return;
     }
@@ -556,6 +576,7 @@ void AutomationEditor::mouseDrag(const juce::MouseEvent& e) {
         lane->nodes[draggedAutoNodeIdx].x = juce::jlimit(minX, maxX, finalAx);
         isDraggingNode = true; tooltipPos = e.position; tooltipValue = vy;
     }
+    if (auto* pr = findParentComponentOfClass<PianoRollComponent>()) pr->notifyPatternEdited();
     repaint();
 }
 

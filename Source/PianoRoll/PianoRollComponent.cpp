@@ -101,7 +101,6 @@ void PianoRollComponent::updateScrollBars() {
     vBar.setRangeLimits(0.0, contentH); vBar.setCurrentRange(vBar.getCurrentRangeStart(), visibleH);
 }
 
-// --- MODIFICADO: Transmitir a clones al guardar el historial ---
 void PianoRollComponent::commitHistory() {
     if (activeClip == nullptr) return;
     if (currentHistoryIndex < (int)undoHistory.size() - 1) undoHistory.resize(currentHistoryIndex + 1);
@@ -109,7 +108,7 @@ void PianoRollComponent::commitHistory() {
     currentHistoryIndex++;
     if (undoHistory.size() > 50) { undoHistory.erase(undoHistory.begin()); currentHistoryIndex--; }
     automationEditor.repaint();
-    notifyPatternEdited(); // Sincronizar clones!
+    notifyPatternEdited();
 }
 
 void PianoRollComponent::undo() { if (activeClip == nullptr || currentHistoryIndex <= 0) return; currentHistoryIndex--; activeClip->notes = undoHistory[currentHistoryIndex]; selectedNotes.clear(); automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, (float)getSnapPixels(), playheadAbsPos); notifyPatternEdited(); repaint(); }
@@ -213,6 +212,20 @@ void PianoRollComponent::paint(juce::Graphics& g) {
         else {
             juce::Rectangle<float> r(xPos, yPos + 1, sW - 1, getRowHeight() - 2);
             g.setColour(juce::Colours::white.withAlpha(anim.alpha * 0.8f)); g.fillRoundedRectangle(r, 2.0f);
+        }
+    }
+
+    // --- NUEVO: SOMBREADO VISUAL DE LOS LÍMITES DEL PATRÓN ---
+    if (activeClip != nullptr) {
+        int startScreenX = (int)(activeClip->startX * hZoom) + keyW - (int)hS;
+        int endScreenX = (int)((activeClip->startX + activeClip->width) * hZoom) + keyW - (int)hS;
+
+        g.setColour(juce::Colours::black.withAlpha(0.4f));
+        if (startScreenX > keyW) {
+            g.fillRect(keyW, gSY, startScreenX - keyW, pH);
+        }
+        if (endScreenX < getWidth() - scrollBarSize) {
+            g.fillRect(endScreenX, gSY, (getWidth() - scrollBarSize) - endScreenX, pH);
         }
     }
 
@@ -337,7 +350,7 @@ void PianoRollComponent::mouseDown(const juce::MouseEvent& event) {
                 animations.push_back({ activeClip->notes[clickedIdx].pitch, activeClip->notes[clickedIdx].x, activeClip->notes[clickedIdx].width, 1.0f, true }); activeClip->notes.erase(activeClip->notes.begin() + clickedIdx);
             }
             selectedNotes.clear(); repaint(); automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, (float)getSnapPixels(), playheadAbsPos);
-            notifyPatternEdited(); // <-- Transmitir borrado a los clones
+            notifyPatternEdited();
         }
         return;
     }
@@ -383,7 +396,7 @@ void PianoRollComponent::mouseDrag(const juce::MouseEvent& event) {
     }
     if (linkAutoBtn.getToggleState() && snappedDX != 0 && !isResizing) { automationEditor.moveLinkedNodes((float)snappedDX); }
 
-    notifyPatternEdited(); // <-- Transmitir movimiento a clones en tiempo real
+    notifyPatternEdited();
     repaint(); automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, (float)getSnapPixels(), playheadAbsPos);
 }
 

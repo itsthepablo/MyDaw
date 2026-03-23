@@ -13,7 +13,6 @@ public:
         p.selectedClipIndex = cIdx;
 
         if (cIdx != -1) {
-            // --- MENÚ CONTEXTUAL INTEGRADO ---
             if (e.mods.isRightButtonDown()) {
                 auto* linkedMidi = p.clips[cIdx].linkedMidi;
 
@@ -38,7 +37,6 @@ public:
                     MidiClipData* sourceMidi = p.clips[cIdx].linkedMidi;
                     Track* targetTrack = p.clips[cIdx].trackPtr;
 
-                    // --- Lógica: Make Unique ---
                     if (result == 1 && sourceMidi && targetTrack) {
                         MidiClipData* newMidiClip = new MidiClipData(*sourceMidi);
 
@@ -60,7 +58,6 @@ public:
                         p.clips[cIdx].name = newMidiClip->name;
                         p.repaint();
                     }
-                    // --- Lógica: Rename (CORREGIDA PARA RENOMBRADO GLOBAL) ---
                     else if (result == 2 && sourceMidi) {
                         juce::MessageManager::callAsync([&p, sourceMidi]() {
                             auto* alert = new juce::AlertWindow("Rename Pattern", "Enter new name:", juce::AlertWindow::QuestionIcon);
@@ -76,23 +73,15 @@ public:
                                     juce::String oldName = sourceMidi->name;
 
                                     if (newName.isNotEmpty() && newName != oldName) {
-
-                                        // 1. Buscamos TODOS los clones en memoria que se llamen igual y los renombramos
                                         if (p.tracksRef) {
                                             for (auto* tr : *p.tracksRef) {
                                                 for (auto* mc : tr->midiClips) {
-                                                    if (mc->name == oldName) {
-                                                        mc->name = newName;
-                                                    }
+                                                    if (mc->name == oldName) mc->name = newName;
                                                 }
                                             }
                                         }
-
-                                        // 2. Sincronizamos las etiquetas visuales en la Playlist
                                         for (auto& cv : p.clips) {
-                                            if (cv.name == oldName) {
-                                                cv.name = newName;
-                                            }
+                                            if (cv.name == oldName) cv.name = newName;
                                         }
                                         p.repaint();
                                     }
@@ -102,10 +91,9 @@ public:
                             });
                     }
                     });
-                return; // Bloqueamos el arrastre
+                return;
             }
 
-            // --- Lógica Existente de Edición y Movimiento ---
             auto& clip = p.clips[cIdx];
             float hS = (float)p.hBar.getCurrentRangeStart();
 
@@ -153,6 +141,7 @@ public:
         float absX = (e.x + (float)p.hBar.getCurrentRangeStart()) / p.hZoom;
         float diff = absX - p.dragStartAbsX;
 
+        // --- EDICIÓN INLINE DE NOTAS ---
         if (p.draggingNoteIndex != -1) {
             auto* midiClip = p.clips[p.draggingClipIndex].linkedMidi;
             auto& note = midiClip->notes[p.draggingNoteIndex];
@@ -165,10 +154,14 @@ public:
             else {
                 note.x = juce::jmax(midiClip->startX, snappedX);
             }
+
+            // --- NUEVO: Transmitir el cambio inline a todos los clones del proyecto
+            p.notifyPatternEdited(midiClip);
             p.repaint();
             return;
         }
 
+        // ... (El resto del código de movimiento de clips se mantiene idéntico)
         int newTrackIdx = p.getTrackAtY(e.y);
         if (newTrackIdx != -1 && (*p.tracksRef)[newTrackIdx] != p.clips[p.draggingClipIndex].trackPtr && !p.isResizingClip) {
             Track* newTrack = (*p.tracksRef)[newTrackIdx];
@@ -213,9 +206,7 @@ public:
                 }
 
                 auto shiftAutoLane = [timeShift](AutoLane& lane) {
-                    for (auto& node : lane.nodes) {
-                        node.x += timeShift;
-                    }
+                    for (auto& node : lane.nodes) node.x += timeShift;
                     };
                 shiftAutoLane(p.clips[p.draggingClipIndex].linkedMidi->autoVol);
                 shiftAutoLane(p.clips[p.draggingClipIndex].linkedMidi->autoPan);
