@@ -9,7 +9,7 @@ public:
 
     void prepare(int maximumSamplesPerBlock)
     {
-        // Guardamos los últimos 1024 samples para dibujar (efecto de persistencia visual)
+        // Guardamos los Ãºltimos 1024 samples para dibujar (efecto de persistencia visual)
         sampleBuffer.setSize(2, 1024);
         sampleBuffer.clear();
         writePtr = 0;

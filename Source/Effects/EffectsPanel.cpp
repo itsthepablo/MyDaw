@@ -4,8 +4,7 @@
 std::map<void*, bool> EffectsPanel::pluginIsInstrumentMap;
 
 EffectsPanel::EffectsPanel() {
-
-    // --- BOTÓN BYPASS GLOBAL ---
+    
     addAndMakeVisible(bypassAllBtn);
     bypassAllBtn.setButtonText("BYPASS");
     bypassAllBtn.setClickingTogglesState(true);
@@ -15,22 +14,34 @@ EffectsPanel::EffectsPanel() {
     bypassAllBtn.onClick = [this] {
         if (activeTrack) {
             bool isBypassed = bypassAllBtn.getToggleState();
-
-            // Recorremos todos los VSTs de la pista y forzamos su estado
             for (auto* p : activeTrack->plugins) {
                 if (p) p->setBypassed(isBypassed);
             }
-            // Refrescamos visualmente todas las cajas para que coincidan
-            updateSlots();
+            updateSlots(); 
         }
-        };
+    };
 
     addAndMakeVisible(addEffectBtn);
-    addEffectBtn.setButtonText("+ VST3");
+    addEffectBtn.setButtonText("+ PLUGIN");
     addEffectBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(70, 75, 80));
-    addEffectBtn.onClick = [this] { if (onAddEffect && activeTrack) onAddEffect(*activeTrack); };
-    addEffectBtn.setVisible(false);
-
+    
+    // --- MENÚ DESPLEGABLE PARA ELEGIR VST O NATIVO ---
+    addEffectBtn.onClick = [this] { 
+        if (activeTrack) {
+            juce::PopupMenu m;
+            m.addItem(1, "Native: Utility (Gain/Pan)");
+            m.addSeparator();
+            m.addItem(2, "External VST3...");
+            
+            m.showMenuAsync(juce::PopupMenu::Options(), [this](int result) {
+                if (result == 1 && onAddNativeUtility) onAddNativeUtility(*activeTrack);
+                if (result == 2 && onAddVST3) onAddVST3(*activeTrack);
+            });
+        }
+    };
+    
+    addEffectBtn.setVisible(false); 
+    
     addAndMakeVisible(loudnessMeter);
 }
 
@@ -41,8 +52,8 @@ void EffectsPanel::setTrack(Track* t) {
 }
 
 void EffectsPanel::updateSlots() {
-    devices.clear();
-    addEffectBtn.setVisible(activeTrack != nullptr);
+    devices.clear(); 
+    addEffectBtn.setVisible(activeTrack != nullptr); 
     bypassAllBtn.setVisible(activeTrack != nullptr);
 
     bool allBypassed = true;
@@ -50,31 +61,30 @@ void EffectsPanel::updateSlots() {
 
     if (activeTrack) {
         for (int i = 0; i < activeTrack->plugins.size(); ++i) {
-            auto* host = activeTrack->plugins[i];
-
-            if (host) {
+            auto* effectRef = activeTrack->plugins[i];
+            
+            if (effectRef) {
                 hasPlugins = true;
-                // Si encontramos al menos un plugin encendido, la cadena no está 100% en bypass
-                if (!host->isBypassed()) allBypassed = false;
+                if (!effectRef->isBypassed()) allBypassed = false;
             }
-
+            
             bool isInst = false;
-            if (activeTrack->getType() == TrackType::MIDI) {
-                isInst = pluginIsInstrumentMap[(void*)host];
+            if (activeTrack->getType() == TrackType::MIDI && !effectRef->isNative()) {
+                isInst = pluginIsInstrumentMap[(void*)effectRef];
             }
 
-            juce::String name = isInst ? "VSTi Synth" : "VST3 Plugin";
-            if (host != nullptr && host->isLoaded()) name = host->getLoadedPluginName();
+            juce::String name = isInst ? "VSTi Synth" : "Plugin";
+            if (effectRef != nullptr && effectRef->isLoaded()) name = effectRef->getLoadedPluginName();
 
-            bool isBypassed = host != nullptr ? host->isBypassed() : false;
+            bool isBypassed = effectRef != nullptr ? effectRef->isBypassed() : false;
 
-            auto* device = new EffectDevice(i, name, isInst, isBypassed, *this);
+            // Pasamos effectRef al EffectDevice
+            auto* device = new EffectDevice(i, name, isInst, isBypassed, effectRef, *this);
             devices.add(device);
             addAndMakeVisible(device);
         }
     }
-
-    // Sincronizamos el estado del botón Bypass Global al abrir la pista
+    
     if (hasPlugins && allBypassed) bypassAllBtn.setToggleState(true, juce::dontSendNotification);
     else bypassAllBtn.setToggleState(false, juce::dontSendNotification);
 
@@ -94,13 +104,12 @@ void EffectsPanel::paint(juce::Graphics& g) {
         g.setColour(juce::Colours::white.withAlpha(0.3f));
         g.setFont(juce::Font(18.0f, juce::Font::bold));
         g.drawText("SELECCIONA PISTA", 0, 0, getWidth(), getHeight(), juce::Justification::centred);
-        return;
+        return; 
     }
 
-    g.setColour(juce::Colours::white.withAlpha(0.5f));
-    g.setFont(juce::Font(12.0f, juce::Font::bold));
-    // Reducimos el ancho del texto para dejarle espacio al botón de Bypass
-    g.drawText("EFFECTS", 15, 10, 60, 30, juce::Justification::centredLeft);
+    g.setColour(juce::Colours::white.withAlpha(0.5f)); 
+    g.setFont(juce::Font(12.0f, juce::Font::bold));    
+    g.drawText("EFFECTS", 15, 10, 60, 30, juce::Justification::centredLeft); 
 
     g.setColour(juce::Colours::white.withAlpha(0.6f));
     g.setFont(juce::Font(14.0f));
@@ -116,18 +125,16 @@ void EffectsPanel::resized() {
     int leftWidth = 130;
     int bottomY = getHeight() - leftPadding;
 
-    // Colocamos el botón de Bypass Global en el panel oscuro, al lado de la palabra "EFFECTS"
     bypassAllBtn.setBounds(85, 15, 55, 20);
-
     loudnessMeter.setBounds(leftPadding, currentY, leftWidth, bottomY - currentY);
-
+    
     if (!activeTrack) return;
 
     int padding = 10;
-    int x = 160;
-    int y = 20;
+    int x = 160; 
+    int y = 20; 
     int slotWidth = 140;
-    int slotHeight = getHeight() - 40;
+    int slotHeight = getHeight() - 40; 
     if (slotHeight < 50) slotHeight = 50;
 
     for (auto* device : devices) {
@@ -135,5 +142,5 @@ void EffectsPanel::resized() {
         x += slotWidth + padding;
     }
 
-    addEffectBtn.setBounds(x, y + (slotHeight / 2) - 20, 80, 40);
+    addEffectBtn.setBounds(x, y + (slotHeight/2) - 20, 80, 40);
 }

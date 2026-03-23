@@ -2,6 +2,7 @@
 #include <JuceHeader.h>
 #include "../Tracks/TrackContainer.h"
 #include "../Effects/EffectsPanel.h"
+#include "../Native_Plugins/UtilityPlugin.h" // <-- Inclusión vital
 
 class TrackEffectsBridge {
 public:
@@ -15,41 +16,56 @@ public:
         container.onOpenEffects = [&ui, onEffectsOpened](Track& t) {
             ui.setTrack(&t);
             if (onEffectsOpened) onEffectsOpened();
-            };
+        };
 
         container.onActiveTrackChanged = [&ui](Track* t) {
             ui.setTrack(t);
-            };
+        };
 
-        ui.onAddEffect = [&audioMutex, &sampleRate, &blockSize, &ui](Track& t) {
+        // --- SEÑAL 1: Carga VST3 (Anterior onAddEffect) ---
+        ui.onAddVST3 = [&audioMutex, &sampleRate, &blockSize, &ui](Track& t) {
             auto* host = new VSTHost();
-
+            
             host->loadPluginAsync(sampleRate, [host, &t, &audioMutex, &sampleRate, &blockSize, &ui](bool success) {
                 if (success) {
-                    juce::MessageManager::callAsync([host, &t, &audioMutex, &sampleRate, &blockSize, &ui]() {
+                    juce::MessageManager::callAsync([host, &t, &audioMutex, sampleRate, blockSize, &ui]() {
                         juce::ScopedLock sl(audioMutex);
-
                         int currentBlockSize = blockSize > 0 ? blockSize : 512;
                         host->prepareToPlay(sampleRate, currentBlockSize);
-
+                        
                         t.plugins.add(host);
                         EffectsPanel::pluginIsInstrumentMap[(void*)host] = (t.getType() == TrackType::MIDI && t.plugins.size() == 1);
                         ui.updateSlots();
-                        });
+                    });
+                } else {
+                    delete host; 
                 }
-                else {
-                    delete host;
-                }
-                });
-            };
+            });
+        };
+
+        // --- SEÑAL 2: Carga Plugin Nativo ---
+        ui.onAddNativeUtility = [&audioMutex, &sampleRate, &blockSize, &ui](Track& t) {
+            juce::MessageManager::callAsync([&t, &audioMutex, sampleRate, blockSize, &ui]() {
+                juce::ScopedLock sl(audioMutex);
+                
+                // Instanciamos directamente nuestra clase nativa
+                auto* utility = new UtilityPlugin();
+                int currentBlockSize = blockSize > 0 ? blockSize : 512;
+                utility->prepareToPlay(sampleRate, currentBlockSize);
+                
+                t.plugins.add(utility);
+                // No actualizamos pluginIsInstrumentMap porque Utility siempre es un Efecto
+                ui.updateSlots();
+            });
+        };
 
         ui.onOpenEffect = [](Track& t, int idx) {
             if (idx >= 0 && idx < t.plugins.size()) {
                 if (auto* plugin = t.plugins[idx]) {
-                    plugin->showWindow();
+                    plugin->showWindow(); 
                 }
             }
-            };
+        };
 
         ui.onBypassChanged = [&audioMutex](Track& t, int idx, bool bypassed) {
             juce::ScopedLock sl(audioMutex);
@@ -58,7 +74,7 @@ public:
                     plugin->setBypassed(bypassed);
                 }
             }
-            };
+        };
 
         ui.onReorderEffects = [&audioMutex, &ui](Track& t, int oldIdx, int newIdx) {
             juce::ScopedLock sl(audioMutex);
@@ -66,24 +82,18 @@ public:
                 t.plugins.move(oldIdx, newIdx);
                 juce::MessageManager::callAsync([&ui]() {
                     ui.updateSlots();
-                    });
+                });
             }
-            };
+        };
 
-        // --- NUEVO: Logica de eliminacion de VST ---
         ui.onDeleteEffect = [&audioMutex, &ui](Track& t, int idx) {
-            // Bloqueamos el mutex de audio, porque si borramos el VST mientras
-            // la placa de sonido pide datos, causaria un crash severo.
             juce::ScopedLock sl(audioMutex);
             if (idx >= 0 && idx < t.plugins.size()) {
-                // remove() de OwnedArray automaticamente libera y borra el VST de la RAM
-                t.plugins.remove(idx);
-
-                // Pedimos al hilo de la interfaz que repinte las cajas
+                t.plugins.remove(idx); 
                 juce::MessageManager::callAsync([&ui]() {
                     ui.updateSlots();
-                    });
+                });
             }
-            };
+        };
     }
 };

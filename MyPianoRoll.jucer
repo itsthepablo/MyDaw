@@ -4,6 +4,10 @@
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1">
   <MAINGROUP id="OgOeCb" name="MyPianoRoll">
     <GROUP id="{832B9725-4498-E7CC-3428-6D1D4B31D6DB}" name="Source">
+      <GROUP id="{1F0EA522-B943-AF42-C851-3209A0EC109F}" name="Native_Plugins">
+        <FILE id="fK5R3n" name="BaseEffect.h" compile="0" resource="0" file="Source/Native_Plugins/BaseEffect.h"/>
+        <FILE id="ghMFvY" name="UtilityPlugin.h" compile="0" resource="0" file="Source/Native_Plugins/UtilityPlugin.h"/>
+      </GROUP>
       <GROUP id="{721FC522-4CF1-05D4-BC36-D97CDC4B59FC}" name="UI">
         <GROUP id="{BBB205AE-7F6B-3B00-30AE-2BAC363F4EF5}" name="Knobs">
           <FILE id="vKUjPw" name="FLKnobLookAndFeel.h" compile="0" resource="0"

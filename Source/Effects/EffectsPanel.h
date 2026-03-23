@@ -11,7 +11,7 @@
 class LoudnessDualMeter : public juce::Component, private juce::Timer {
 public:
     LoudnessDualMeter() {
-        startTimerHz(15);
+        startTimerHz(15); 
     }
 
     void setTrack(Track* t) {
@@ -24,7 +24,7 @@ public:
     }
 
     void paint(juce::Graphics& g) override {
-        g.fillAll(juce::Colour(25, 28, 31));
+        g.fillAll(juce::Colour(25, 28, 31)); 
         g.setColour(juce::Colour(50, 53, 56));
         g.drawRect(getLocalBounds());
 
@@ -38,7 +38,7 @@ public:
         auto formatLufs = [](float lufs) {
             if (lufs <= -69.0f) return juce::String("--.-");
             return juce::String(lufs, 1);
-            };
+        };
 
         int halfH = getHeight() / 2;
         auto preArea = getLocalBounds().removeFromTop(halfH).reduced(5);
@@ -59,7 +59,7 @@ public:
             g.setColour(color.withAlpha(0.6f));
             g.setFont(juce::Font("Sans-Serif", 11.0f, juce::Font::plain));
             g.drawText("LUFS", area.removeFromTop(15), juce::Justification::centredTop);
-            };
+        };
 
         drawSection(preArea, "INPUT PRE-FX", activeTrack->preLoudness.getShortTerm(), juce::Colours::white);
         drawSection(postArea, "OUTPUT POST-FX", activeTrack->postLoudness.getShortTerm(), juce::Colours::orange);
@@ -86,20 +86,19 @@ public:
 
     static std::map<void*, bool> pluginIsInstrumentMap;
 
-    std::function<void(Track&)> onAddEffect;
+    std::function<void(Track&)> onAddVST3;           // <-- Para cargar VST3 normal
+    std::function<void(Track&)> onAddNativeUtility;  // <-- NUEVO: Carga el Utility nativo
     std::function<void(Track&, int)> onOpenEffect;
     std::function<void(Track&, int, bool)> onBypassChanged;
     std::function<void(Track&, int, int)> onReorderEffects;
-
-    // --- NUEVA FIRMA: Para conectarse al motor de eliminación ---
     std::function<void(Track&, int)> onDeleteEffect;
 
 private:
     Track* activeTrack = nullptr;
-
+    
     juce::TextButton bypassAllBtn;
     juce::TextButton addEffectBtn;
-    juce::OwnedArray<EffectDevice> devices;
+    juce::OwnedArray<EffectDevice> devices; 
     LoudnessDualMeter loudnessMeter;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EffectsPanel)

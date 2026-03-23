@@ -1,6 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include <functional>
+#include "../Native_Plugins/BaseEffect.h"
 
 class VSTCustomHeader : public juce::Component {
 public:
@@ -76,27 +77,27 @@ public:
     void closeButtonPressed() override { setVisible(false); }
 };
 
-class VSTHost {
+// --- AHORA HEREDA DE BaseEffect ---
+class VSTHost : public BaseEffect {
 public:
     VSTHost();
     ~VSTHost();
     void loadPluginAsync(double sampleRate, std::function<void(bool)> callback);
-    bool isLoaded() const;
-    void showWindow();
-    void prepareToPlay(double sampleRate, int maximumExpectedSamplesPerBlock);
-    void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages);
+    
+    // --- MÉTODOS OBLIGATORIOS (Overrides) ---
+    bool isLoaded() const override;
+    void showWindow() override;
+    void prepareToPlay(double sampleRate, int maximumExpectedSamplesPerBlock) override;
+    void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override;
+    juce::String getLoadedPluginName() const override;
 
-    juce::String getLoadedPluginName() const;
-
-    // --- NUEVO: Control de Bypass ---
-    bool isBypassed() const { return bypassed; }
-    void setBypassed(bool shouldBypass) { bypassed = shouldBypass; }
+    bool isBypassed() const override { return bypassed; }
+    void setBypassed(bool shouldBypass) override { bypassed = shouldBypass; }
 
 private:
     juce::AudioPluginFormatManager formatManager;
     std::unique_ptr<juce::AudioPluginInstance> vstPlugin;
     std::unique_ptr<VSTWindow> vstWindow;
     std::unique_ptr<juce::FileChooser> fileChooser;
-
-    bool bypassed = false; // Estado interno del bypass
+    bool bypassed = false;
 };

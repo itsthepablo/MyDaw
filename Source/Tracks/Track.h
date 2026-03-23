@@ -1,6 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include "../GlobalData.h" 
+#include "../Native_Plugins/BaseEffect.h" // <-- Inclusión maestra
 #include "../PluginHost/VSTHost.h" 
 #include "../Engine/SimpleLoudness.h"
 #include <vector>
@@ -52,14 +53,11 @@ struct AudioClipData {
                 for (int s = 0; s < numSamplesInPoint; ++s) {
                     float l = lData[s];
                     float r = rData[s];
-
                     pL = std::max(pL, std::abs(l));
                     pR = std::max(pR, std::abs(r));
-
                     pMid = std::max(pMid, std::abs((l + r) * 0.5f));
                     pSide = std::max(pSide, std::abs((l - r) * 0.5f));
                 }
-
                 cachedPeaksL.push_back(pL);
                 cachedPeaksR.push_back(pR);
                 cachedPeaksMid.push_back(pMid);
@@ -111,7 +109,9 @@ public:
     void addPluginName(juce::String n) { pluginNames.add(n); }
 
     std::vector<Note> notes;
-    juce::OwnedArray<VSTHost> plugins;
+    
+    // --- CAMBIO CLAVE: Ahora acepta BaseEffect para alojar Nativos y VST3 ---
+    juce::OwnedArray<BaseEffect> plugins;
 
     juce::OwnedArray<AudioClipData> audioClips;
     juce::OwnedArray<MidiClipData> midiClips;
@@ -132,7 +132,6 @@ public:
     float currentPeakLevelL = 0.0f;
     float currentPeakLevelR = 0.0f;
 
-    // --- INSTANCIAS DSP DE ANALISIS ---
     SimpleLoudness preLoudness;
     SimpleLoudness postLoudness;
     bool isAnalyzersPrepared = false;

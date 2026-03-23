@@ -1,6 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include <functional>
+#include "../Native_Plugins/BaseEffect.h"
 
 class EffectsPanel;
 
@@ -9,7 +10,7 @@ class EffectsPanel;
 // ==============================================================================
 class EffectDevice : public juce::Component, public juce::DragAndDropTarget {
 public:
-    EffectDevice(int index, juce::String name, bool isInst, bool isBypassed, EffectsPanel& p);
+    EffectDevice(int index, juce::String name, bool isInst, bool isBypassed, BaseEffect* effectRef, EffectsPanel& p);
 
     void paint(juce::Graphics& g) override;
     void resized() override;
@@ -19,7 +20,7 @@ public:
     // --- DragAndDropTarget ---
     bool isInterestedInDragSource(const SourceDetails& details) override;
     void itemDragEnter(const SourceDetails& details) override;
-    void itemDragMove(const SourceDetails& details) override;
+    void itemDragMove(const SourceDetails& details) override; 
     void itemDragExit(const SourceDetails& details) override;
     void itemDropped(const SourceDetails& details) override;
 
@@ -29,12 +30,12 @@ private:
     bool isInstrument;
     bool isBypassed;
     EffectsPanel& panel;
+    
+    // --- Puntero al editor embebido (solo si es Nativo) ---
+    juce::Component* nativeEditor = nullptr;
 
-    // --- Visuals ---
     juce::TextButton bypassBtn;
-    int dragHoverMode = 0;
-
-    // Identificador unico para el arrastre
+    int dragHoverMode = 0; 
     const juce::String dragID = "EFFECT_DEVICE_SLOT";
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EffectDevice)
