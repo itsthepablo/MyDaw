@@ -14,7 +14,8 @@
 #include "UI/LeftSidebar.h"
 #include "UI/BottomDock.h"       
 #include "UI/SidebarResizer.h" 
-#include "UI/BottomDockResizer.h" // NUEVO INCLUDE
+#include "UI/BottomDockResizer.h" 
+#include "UI/HintPanel.h" // <--- NUEVO INCLUDE
 #include "Engine/AudioEngine.h"
 
 class MainComponent : public juce::AudioAppComponent, public juce::ApplicationCommandTarget {
@@ -37,17 +38,17 @@ private:
     juce::ApplicationCommandManager commandManager;
     const juce::CommandID playStopCommand = 1;
 
+    HintPanel hintPanel; // <--- NUEVO: EL PANEL DE SUGERENCIAS
+
     TrackContainer trackContainer;
     PlaylistComponent playlistUI;
     PianoRollComponent pianoRollUI;
     
-    // Contenedor Inferior
     MixerComponent mixerUI;
     ChannelRackPanel rackPanelUI; 
     BottomDock bottomDock{mixerUI, rackPanelUI}; 
-    BottomDockResizer bottomDockResizer; // NUEVA BARRA DIVISORIA INFERIOR
+    BottomDockResizer bottomDockResizer; 
     
-    // Contenedor Lateral Izquierdo
     EffectsPanel effectsPanelUI;
     PickerPanel pickerPanelUI; 
     FileBrowserPanel fileBrowserPanelUI; 
@@ -63,9 +64,8 @@ private:
     juce::CriticalSection audioMutex;
     AudioEngine audioEngine;
 
-    // Controles de visibilidad y TAMAÑO
     bool isBottomDockVisible = true; 
-    int bottomDockHeight = 250; // NUEVA MEMORIA DE ALTURA (valor inicial por defecto)
+    int bottomDockHeight = 250; 
 
     bool isLeftSidebarVisible = true; 
     int leftSidebarWidth = 200; 

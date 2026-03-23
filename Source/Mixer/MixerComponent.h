@@ -1,8 +1,8 @@
 #pragma once
 #include <JuceHeader.h>
 #include "../Tracks/Track.h"
-#include "PeakMeter.h"
-#include "../UI/Knobs/FLKnobLookAndFeel.h" // NUEVO: Importamos el estilo
+#include "../UI/LevelMeter.h" // NUEVO: Importamos el Medidor Estándar
+#include "../UI/Knobs/FLKnobLookAndFeel.h"
 
 class MixerStrip : public juce::Component {
 public:
@@ -17,9 +17,9 @@ public:
 private:
     juce::Slider volSlider, panSlider;
     juce::Label nameLabel;
-    PeakMeter meterL, meterR;
     
-    FLKnobLookAndFeel flLookAndFeel; // NUEVO: Instancia para la pista del mixer
+    LevelMeter levelMeter; // NUEVO: Usamos el medidor estéreo en un solo componente
+    FLKnobLookAndFeel flLookAndFeel; 
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MixerStrip)
 };
@@ -42,7 +42,7 @@ private:
     juce::Viewport viewport;
     juce::Component stripContainer;
     
-    FLKnobLookAndFeel flLookAndFeel; // NUEVO: Instancia para el master del mixer
+    FLKnobLookAndFeel flLookAndFeel; 
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MixerComponent)
 };

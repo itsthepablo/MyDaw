@@ -13,7 +13,7 @@ MixerStrip::MixerStrip(Track& t) : track(t) {
     volSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 40, 15);
     volSlider.setRange(0.0, 1.0);
     volSlider.setValue(track.getVolume(), juce::dontSendNotification);
-    volSlider.setLookAndFeel(&flLookAndFeel); // <--- NUEVO: Aplicamos el diseño compartido
+    volSlider.setLookAndFeel(&flLookAndFeel);
     volSlider.onValueChange = [this] { track.setVolume((float)volSlider.getValue()); };
 
     addAndMakeVisible(panSlider);
@@ -21,7 +21,7 @@ MixerStrip::MixerStrip(Track& t) : track(t) {
     panSlider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
     panSlider.setRange(-1.0, 1.0);
     panSlider.setValue(track.getBalance(), juce::dontSendNotification);
-    panSlider.setLookAndFeel(&flLookAndFeel); // <--- NUEVO: Aplicamos el diseño compartido
+    panSlider.setLookAndFeel(&flLookAndFeel);
     panSlider.onValueChange = [this] { track.setBalance((float)panSlider.getValue()); };
 
     addAndMakeVisible(nameLabel);
@@ -29,13 +29,10 @@ MixerStrip::MixerStrip(Track& t) : track(t) {
     nameLabel.setJustificationType(juce::Justification::centred);
     nameLabel.setFont(juce::Font(13.0f, juce::Font::bold));
 
-    // Agregamos los medidores estéreo
-    addAndMakeVisible(meterL);
-    addAndMakeVisible(meterR);
+    addAndMakeVisible(levelMeter);
 }
 
 void MixerStrip::syncWithTrack() {
-    // Sincronización de interfaz
     if (nameLabel.getText() != track.getName())
         nameLabel.setText(track.getName(), juce::dontSendNotification);
 
@@ -45,11 +42,14 @@ void MixerStrip::syncWithTrack() {
     if (panSlider.getValue() != track.getBalance())
         panSlider.setValue(track.getBalance(), juce::dontSendNotification);
 
-    // Sincronización de niveles de audio para los vúmetros
-    meterL.setLevel(track.currentPeakLevelL);
-    meterR.setLevel(track.currentPeakLevelR);
+    // --- MATEMÁTICA POST-FADER Y POST-PAN ---
+    float vol = track.getVolume();
+    float pan = track.getBalance();
+    float leftGain = vol * (pan < 0.0f ? 1.0f : 1.0f - pan);
+    float rightGain = vol * (pan > 0.0f ? 1.0f : 1.0f + pan);
 
-    // Detección de cambios estructurales (Carpetas/Colores)
+    levelMeter.setLevel(track.currentPeakLevelL * leftGain, track.currentPeakLevelR * rightGain);
+
     if (lastDepth != track.folderDepth || lastColor != track.getColor()) {
         lastDepth = track.folderDepth;
         lastColor = track.getColor();
@@ -60,7 +60,6 @@ void MixerStrip::syncWithTrack() {
 void MixerStrip::paint(juce::Graphics& g) {
     g.fillAll(juce::Colour(35, 38, 42));
 
-    // Dibujo visual de profundidad de carpeta
     if (track.folderDepth > 0) {
         g.setColour(juce::Colours::black.withAlpha(0.2f));
         g.fillRect(getLocalBounds());
@@ -68,11 +67,9 @@ void MixerStrip::paint(juce::Graphics& g) {
         g.drawVerticalLine(0, 0, (float)getHeight());
     }
 
-    // Indicador de color de pista
     g.setColour(track.getColor());
     g.fillRect(0, getHeight() - 5, getWidth(), 5);
 
-    // Borde del canal
     g.setColour(juce::Colour(20, 22, 25));
     g.drawRect(getLocalBounds(), 1);
 }
@@ -86,13 +83,10 @@ void MixerStrip::resized() {
     panSlider.setBounds(area.removeFromTop(45).reduced(5));
     area.removeFromTop(5);
 
-    // Espacio para los vúmetros a la derecha del fader
     auto meterArea = area.removeFromRight(14);
-    meterR.setBounds(meterArea.removeFromRight(6));
-    meterArea.removeFromRight(2);
-    meterL.setBounds(meterArea.removeFromRight(6));
+    levelMeter.setBounds(meterArea.reduced(0, 2));
 
-    area.removeFromRight(5); // Margen
+    area.removeFromRight(5);
     volSlider.setBounds(area);
 }
 
@@ -100,23 +94,21 @@ void MixerStrip::resized() {
 // CONSOLA PRINCIPAL (MixerComponent)
 // ==========================================================
 MixerComponent::MixerComponent() {
-    // Configuración Master
     addAndMakeVisible(masterVol);
     masterVol.setSliderStyle(juce::Slider::LinearVertical);
     masterVol.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
     masterVol.setRange(0.0, 1.0);
     masterVol.setValue(0.8, juce::dontSendNotification);
-    masterVol.setLookAndFeel(&flLookAndFeel); // <--- NUEVO: Aplicamos el diseño compartido
+    masterVol.setLookAndFeel(&flLookAndFeel);
 
     addAndMakeVisible(masterLabel);
     masterLabel.setText("MASTER", juce::dontSendNotification);
     masterLabel.setJustificationType(juce::Justification::centred);
     masterLabel.setFont(juce::Font(14.0f, juce::Font::bold));
 
-    // Configuración del Viewport para Scroll Horizontal
     addAndMakeVisible(viewport);
     viewport.setViewedComponent(&stripContainer, false);
-    viewport.setScrollBarsShown(false, true); // Solo horizontal
+    viewport.setScrollBarsShown(false, true);
 
     startTimerHz(30);
 }
@@ -149,7 +141,6 @@ void MixerComponent::updateStrips() {
 void MixerComponent::timerCallback() {
     if (!tracksRef) return;
 
-    // Verificar si el número de pistas cambió para reconstruir
     bool needsRebuild = (tracksRef->size() != strips.size());
     if (!needsRebuild) {
         for (int i = 0; i < tracksRef->size(); ++i) {
@@ -168,7 +159,6 @@ void MixerComponent::timerCallback() {
         for (int i = 0; i < strips.size(); ++i) {
             auto* t = (*tracksRef)[i];
 
-            // Si cambió la visibilidad (colapso de carpeta), marcamos para resized()
             if (strips[i]->lastVis != t->isShowingInChildren || strips[i]->lastDepth != t->folderDepth) {
                 strips[i]->lastVis = t->isShowingInChildren;
                 strips[i]->lastDepth = t->folderDepth;
@@ -190,20 +180,17 @@ void MixerComponent::paint(juce::Graphics& g) {
 void MixerComponent::resized() {
     if (tracksRef && tracksRef->size() != strips.size()) return;
 
-    // 1. Master Fader (Posición fija)
     int masterW = 90;
     auto masterArea = getLocalBounds().removeFromLeft(masterW);
     masterLabel.setBounds(masterArea.removeFromBottom(30));
     masterArea.removeFromBottom(5);
     masterVol.setBounds(masterArea.reduced(5));
 
-    // 2. Viewport (Ocupa el resto)
     viewport.setBounds(getLocalBounds().withTrimmedLeft(masterW));
 
     int x = 0;
     int stripW = 80;
 
-    // Calcular ancho total necesario
     int totalExpectedWidth = 0;
     if (tracksRef) {
         for (auto* t : *tracksRef) {
@@ -218,7 +205,6 @@ void MixerComponent::resized() {
 
     containerH = juce::jmax(0, containerH);
 
-    // 3. Posicionar canales dentro del stripContainer
     if (tracksRef) {
         for (int i = 0; i < tracksRef->size(); ++i) {
             if (i >= strips.size()) break;
@@ -243,6 +229,5 @@ void MixerComponent::resized() {
         }
     }
 
-    // Actualizar tamaño del contenedor interno para activar el scroll
     stripContainer.setBounds(0, 0, x, containerH);
 }

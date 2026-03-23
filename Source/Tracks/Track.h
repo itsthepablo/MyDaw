@@ -115,7 +115,10 @@ public:
     bool isCollapsed = false;
     bool isShowingInChildren = true;
 
-    // NUEVO: Estado del Track para la edición Inline
+    // ESTADO DE MUTE Y SOLO (NUEVO)
+    bool isMuted = false;
+    bool isSoloed = false;
+
     bool isInlineEditingActive = false;
 
     juce::AudioBuffer<float> audioBuffer;

@@ -5,16 +5,22 @@
   <MAINGROUP id="OgOeCb" name="MyPianoRoll">
     <GROUP id="{832B9725-4498-E7CC-3428-6D1D4B31D6DB}" name="Source">
       <GROUP id="{721FC522-4CF1-05D4-BC36-D97CDC4B59FC}" name="UI">
-        <FILE id="kfwxKj" name="BottomDockResizer.h" compile="0" resource="0"
-              file="Source/UI/BottomDockResizer.h"/>
         <GROUP id="{BBB205AE-7F6B-3B00-30AE-2BAC363F4EF5}" name="Knobs">
           <FILE id="vKUjPw" name="FLKnobLookAndFeel.h" compile="0" resource="0"
                 file="Source/UI/Knobs/FLKnobLookAndFeel.h"/>
+          <FILE id="Co8Wml" name="FloatingValueBox.h" compile="0" resource="0"
+                file="Source/UI/Knobs/FloatingValueBox.h"/>
+          <FILE id="yopgjo" name="FloatingValueSlider.h" compile="0" resource="0"
+                file="Source/UI/Knobs/FloatingValueSlider.h"/>
         </GROUP>
         <GROUP id="{FD3485E8-2ED3-CBA4-AC86-E28D7D16B2D7}" name="Buttons">
           <FILE id="DNLFnt" name="ToolbarButtons.h" compile="0" resource="0"
                 file="Source/UI/Buttons/ToolbarButtons.h"/>
         </GROUP>
+        <FILE id="D6vTfs" name="HintPanel.h" compile="0" resource="0" file="Source/UI/HintPanel.h"/>
+        <FILE id="B6VI8M" name="LevelMeter.h" compile="0" resource="0" file="Source/UI/LevelMeter.h"/>
+        <FILE id="kfwxKj" name="BottomDockResizer.h" compile="0" resource="0"
+              file="Source/UI/BottomDockResizer.h"/>
         <FILE id="G1m4fc" name="BottomDock.h" compile="0" resource="0" file="Source/UI/BottomDock.h"/>
         <FILE id="mmFN15" name="ChannelRackPanel.h" compile="0" resource="0"
               file="Source/UI/ChannelRackPanel.h"/>
@@ -62,7 +68,6 @@
               file="Source/Mixer/MixerComponent.cpp"/>
         <FILE id="uNkpr9" name="MixerComponent.h" compile="0" resource="0"
               file="Source/Mixer/MixerComponent.h"/>
-        <FILE id="UNUqtc" name="PeakMeter.h" compile="0" resource="0" file="Source/Mixer/PeakMeter.h"/>
       </GROUP>
       <GROUP id="{EBD30F33-E7EC-16DD-C806-2D1CD1306523}" name="Playlist">
         <GROUP id="{361B1AF3-F0CC-2376-25A1-51065AF40789}" name="Tools">
