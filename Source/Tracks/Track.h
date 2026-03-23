@@ -2,7 +2,7 @@
 #include <JuceHeader.h>
 #include "../GlobalData.h" 
 #include "../PluginHost/VSTHost.h" 
-#include "../Engine/SimpleLoudness.h" // <-- TU DSP
+#include "../Engine/SimpleLoudness.h"
 #include <vector>
 #include <algorithm>
 #include <cmath>
@@ -132,10 +132,10 @@ public:
     float currentPeakLevelL = 0.0f;
     float currentPeakLevelR = 0.0f;
 
-    // --- NUEVO: INSTANCIAS DE TU DSP DE LUFS ---
+    // --- INSTANCIAS DSP DE ANALISIS ---
     SimpleLoudness preLoudness;
     SimpleLoudness postLoudness;
-    bool isLoudnessPrepared = false;
+    bool isAnalyzersPrepared = false;
 
 private:
     int trackId;

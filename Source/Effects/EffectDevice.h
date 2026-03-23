@@ -19,10 +19,7 @@ public:
     // --- DragAndDropTarget ---
     bool isInterestedInDragSource(const SourceDetails& details) override;
     void itemDragEnter(const SourceDetails& details) override;
-
-    // --- NUEVO: Detecta el movimiento interno para saber a que lado soltar ---
     void itemDragMove(const SourceDetails& details) override;
-
     void itemDragExit(const SourceDetails& details) override;
     void itemDropped(const SourceDetails& details) override;
 
@@ -35,8 +32,6 @@ private:
 
     // --- Visuals ---
     juce::TextButton bypassBtn;
-
-    // 0 = Ninguno, 1 = Mitad Izquierda, 2 = Mitad Derecha
     int dragHoverMode = 0;
 
     // Identificador unico para el arrastre

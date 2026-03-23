@@ -9,8 +9,7 @@ public:
 
     void prepare(int maximumSamplesPerBlock)
     {
-        // Guardamos los ultimos N samples para dibujar (efecto de persistencia "foforo")
-        // 1024 samples es un buen equilibrio entre detalle y CPU
+        // Guardamos los últimos 1024 samples para dibujar (efecto de persistencia visual)
         sampleBuffer.setSize(2, 1024);
         sampleBuffer.clear();
         writePtr = 0;
@@ -26,7 +25,7 @@ public:
     {
         int numSamples = buffer.getNumSamples();
         int bufferSize = sampleBuffer.getNumSamples();
-        
+
         const float* inputL = buffer.getReadPointer(0);
         const float* inputR = buffer.getReadPointer(juce::jmin(1, buffer.getNumChannels() - 1));
 
@@ -34,12 +33,11 @@ public:
         {
             sampleBuffer.setSample(0, writePtr, inputL[i]);
             sampleBuffer.setSample(1, writePtr, inputR[i]);
-            
+
             writePtr = (writePtr + 1) % bufferSize;
         }
     }
 
-    // Retorna el buffer interno para que la UI dibuje
     const juce::AudioBuffer<float>& getHistoryBuffer() const { return sampleBuffer; }
     int getCurrentWritePtr() const { return writePtr; }
 

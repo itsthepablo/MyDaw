@@ -21,7 +21,6 @@ public:
             ui.setTrack(t);
             };
 
-        // --- CORREGIDO: Capturamos el blockSize real del motor de audio ---
         ui.onAddEffect = [&audioMutex, &sampleRate, &blockSize, &ui](Track& t) {
             auto* host = new VSTHost();
 
@@ -30,8 +29,6 @@ public:
                     juce::MessageManager::callAsync([host, &t, &audioMutex, &sampleRate, &blockSize, &ui]() {
                         juce::ScopedLock sl(audioMutex);
 
-                        // --- LA CLAVE ---
-                        // Despertamos al plugin pasandole la configuracion exacta en la que esta corriendo el DAW
                         int currentBlockSize = blockSize > 0 ? blockSize : 512;
                         host->prepareToPlay(sampleRate, currentBlockSize);
 
@@ -67,6 +64,22 @@ public:
             juce::ScopedLock sl(audioMutex);
             if (oldIdx >= 0 && oldIdx < t.plugins.size() && newIdx >= 0 && newIdx < t.plugins.size() && oldIdx != newIdx) {
                 t.plugins.move(oldIdx, newIdx);
+                juce::MessageManager::callAsync([&ui]() {
+                    ui.updateSlots();
+                    });
+            }
+            };
+
+        // --- NUEVO: Logica de eliminacion de VST ---
+        ui.onDeleteEffect = [&audioMutex, &ui](Track& t, int idx) {
+            // Bloqueamos el mutex de audio, porque si borramos el VST mientras
+            // la placa de sonido pide datos, causaria un crash severo.
+            juce::ScopedLock sl(audioMutex);
+            if (idx >= 0 && idx < t.plugins.size()) {
+                // remove() de OwnedArray automaticamente libera y borra el VST de la RAM
+                t.plugins.remove(idx);
+
+                // Pedimos al hilo de la interfaz que repinte las cajas
                 juce::MessageManager::callAsync([&ui]() {
                     ui.updateSlots();
                     });

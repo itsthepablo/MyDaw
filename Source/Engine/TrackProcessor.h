@@ -14,10 +14,10 @@ public:
         float loopEndPos)
     {
         // --- INICIALIZAR DSP SI NO ESTA LISTO ---
-        if (!track->isLoudnessPrepared) {
-            track->preLoudness.prepare(44100.0, 512); 
+        if (!track->isAnalyzersPrepared) {
+            track->preLoudness.prepare(44100.0, 512);
             track->postLoudness.prepare(44100.0, 512);
-            track->isLoudnessPrepared = true;
+            track->isAnalyzersPrepared = true;
         }
 
         juce::MidiBuffer trackMidi;
@@ -26,6 +26,7 @@ public:
             trackMidi.addEvents(previewMidi, 0, numSamples, 0);
         }
 
+        // --- LECTURA DE NOTAS MIDI ---
         if (isPlayingNow) {
             for (const auto& note : track->notes) {
                 bool triggerOn = clock.looped ? ((note.x >= clock.currentPh && note.x < loopEndPos) || (note.x >= 0 && note.x < clock.nextPh)) : (note.x >= clock.currentPh && note.x < clock.nextPh);
@@ -48,6 +49,7 @@ public:
             }
         }
 
+        // --- AUDIO CLIPS ---
         if (isPlayingNow) {
             for (auto* clip : track->audioClips) {
                 long long clipStartSample = (long long)(clip->startX * clock.samplesPerPixel);
@@ -80,15 +82,15 @@ public:
         }
 
         // ==============================================================================
-        // --- 1. LECTURA PRE-FX (Señal cruda) ---
+        // 1. LECTURA PRE-FX
         track->preLoudness.process(track->audioBuffer);
 
-        // --- 2. PROCESAMIENTO VST ---
+        // 2. PROCESAMIENTO VST
         for (auto* p : track->plugins) {
             if (p->isLoaded()) p->processBlock(track->audioBuffer, trackMidi);
         }
 
-        // --- 3. LECTURA POST-FX (Señal final) ---
+        // 3. LECTURA POST-FX
         track->postLoudness.process(track->audioBuffer);
         // ==============================================================================
     }

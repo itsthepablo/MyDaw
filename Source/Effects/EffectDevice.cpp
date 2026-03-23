@@ -56,14 +56,11 @@ void EffectDevice::paint(juce::Graphics& g) {
         g.drawText("BYPASS", area, juce::Justification::centred);
     }
 
-    // --- NUEVO: INDICADOR VISUAL DE INSERCION (Lineas Naranjas) ---
     if (dragHoverMode == 1) {
-        // Linea gruesa en el borde izquierdo
         g.setColour(juce::Colours::orange);
         g.fillRoundedRectangle(2.0f, 2.0f, 4.0f, (float)getHeight() - 4.0f, 2.0f);
     }
     else if (dragHoverMode == 2) {
-        // Linea gruesa en el borde derecho
         g.setColour(juce::Colours::orange);
         g.fillRoundedRectangle((float)getWidth() - 6.0f, 2.0f, 4.0f, (float)getHeight() - 4.0f, 2.0f);
     }
@@ -78,6 +75,25 @@ void EffectDevice::resized() {
 void EffectDevice::mouseDown(const juce::MouseEvent& e) {
     if (bypassBtn.getBounds().contains(e.getPosition())) return;
 
+    // Obtenemos dinamicamente el area de la cabecera (los primeros 24 pixeles)
+    juce::Rectangle<int> area = getLocalBounds().reduced(2);
+    juce::Rectangle<int> headerArea = area.removeFromTop(24);
+
+    // --- NUEVO: Clic derecho (PopupMenu) EXCLUSIVO en la cabecera ---
+    if (e.mods.isPopupMenu() && headerArea.contains(e.getPosition())) {
+        juce::PopupMenu m;
+        m.addItem(1, "Eliminar Plugin");
+        m.showMenuAsync(juce::PopupMenu::Options(), [this](int result) {
+            if (result == 1) {
+                if (panel.onDeleteEffect && panel.getActiveTrack()) {
+                    panel.onDeleteEffect(*panel.getActiveTrack(), idx);
+                }
+            }
+            });
+        return; // Salimos para no detonar otras acciones
+    }
+
+    // Doble clic para abrir ventana
     if (e.getNumberOfClicks() == 2) {
         if (panel.onOpenEffect && panel.getActiveTrack()) {
             panel.onOpenEffect(*panel.getActiveTrack(), idx);
@@ -89,25 +105,15 @@ void EffectDevice::mouseDrag(const juce::MouseEvent& e) {
     if (bypassBtn.getBounds().contains(e.getPosition())) return;
 
     if (auto* dragContainer = juce::DragAndDropContainer::findParentDragContainerFor(this)) {
-
-        // --- NUEVO: CREAR LA IMAGEN FANTASMA (GHOST) ---
-        // Tomamos una "fotografia" del componente exacto como se ve ahora
         juce::Image snapshot = createComponentSnapshot(getLocalBounds());
-
-        // Creamos una nueva imagen con transparencia (opacidad al 60%)
         juce::Image ghost(juce::Image::ARGB, snapshot.getWidth(), snapshot.getHeight(), true);
         juce::Graphics g(ghost);
         g.setOpacity(0.6f);
         g.drawImageAt(snapshot, 0, 0);
 
-        // Le pasamos la imagen fantasma al contenedor de arrastre
         dragContainer->startDragging(dragID, this, ghost, true);
     }
 }
-
-// ==============================================================================
-// Drag & Drop (Reordenacion de la cadena)
-// ==============================================================================
 
 bool EffectDevice::isInterestedInDragSource(const SourceDetails& details) {
     return details.description == dragID && details.sourceComponent != this;
@@ -119,17 +125,8 @@ void EffectDevice::itemDragEnter(const SourceDetails& details) {
 
 void EffectDevice::itemDragMove(const SourceDetails& details) {
     int oldMode = dragHoverMode;
-
-    // Si el raton esta en la mitad izquierda, iluminamos la izquierda (insertar ANTES)
-    // Si esta en la mitad derecha, iluminamos la derecha (insertar DESPUES)
-    if (details.localPosition.x < getWidth() / 2) {
-        dragHoverMode = 1;
-    }
-    else {
-        dragHoverMode = 2;
-    }
-
-    // Solo repintamos si cambiamos de mitad para ahorrar CPU
+    if (details.localPosition.x < getWidth() / 2) dragHoverMode = 1;
+    else dragHoverMode = 2;
     if (oldMode != dragHoverMode) repaint();
 }
 
@@ -146,16 +143,8 @@ void EffectDevice::itemDropped(const SourceDetails& details) {
     if (auto* sourceDevice = dynamic_cast<EffectDevice*>(details.sourceComponent.get())) {
         if (panel.onReorderEffects && panel.getActiveTrack()) {
             int targetIdx = this->idx;
-
-            // Ajuste matematico de indices
-            if (finalMode == 2) {
-                targetIdx++; // Insertar DESPUES de esta caja
-            }
-
-            if (sourceDevice->idx < targetIdx) {
-                targetIdx--; // Compensar el desplazamiento si venia de atras
-            }
-
+            if (finalMode == 2) targetIdx++;
+            if (sourceDevice->idx < targetIdx) targetIdx--;
             panel.onReorderEffects(*panel.getActiveTrack(), sourceDevice->idx, targetIdx);
         }
     }
