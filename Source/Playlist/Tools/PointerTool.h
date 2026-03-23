@@ -141,7 +141,7 @@ public:
         float absX = (e.x + (float)p.hBar.getCurrentRangeStart()) / p.hZoom;
         float diff = absX - p.dragStartAbsX;
 
-        // --- EDICIÓN INLINE DE NOTAS ---
+        // --- EDICIN INLINE DE NOTAS ---
         if (p.draggingNoteIndex != -1) {
             auto* midiClip = p.clips[p.draggingClipIndex].linkedMidi;
             auto& note = midiClip->notes[p.draggingNoteIndex];
@@ -161,7 +161,7 @@ public:
             return;
         }
 
-        // ... (El resto del código de movimiento de clips se mantiene idéntico)
+        // ... (El resto del cdigo de movimiento de clips se mantiene id	ntico)
         int newTrackIdx = p.getTrackAtY(e.y);
         if (newTrackIdx != -1 && (*p.tracksRef)[newTrackIdx] != p.clips[p.draggingClipIndex].trackPtr && !p.isResizingClip) {
             Track* newTrack = (*p.tracksRef)[newTrackIdx];

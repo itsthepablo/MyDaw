@@ -42,12 +42,14 @@ MainComponent::MainComponent() {
 
     trackContainer.setExternalMutex(&audioMutex);
 
-    // --- NUEVAS CONEXIONES DE PUNTEROS ---
     playlistUI.setExternalMutex(&audioMutex);
     playlistUI.setTrackContainer(&trackContainer);
     pickerPanelUI.setTrackContainer(&trackContainer);
 
-    // --- NUEVO: Cableado del Borrado Permanente ---
+    playlistUI.onNewTrackRequested = [this](TrackType type) {
+        trackContainer.addTrack(type);
+        };
+
     pickerPanelUI.onDeleteRequested = [this](juce::String name, bool isMidi) {
         playlistUI.deleteClipsByName(name, isMidi);
         trackContainer.deleteUnusedClipsByName(name, isMidi);
@@ -75,8 +77,9 @@ MainComponent::MainComponent() {
         audioEngine.clock.sampleRate, audioEngine.clock.blockSize,
         [this] {
             if (isPianoRollVisible) closePianoRoll();
-            isLeftSidebarVisible = true;
-            leftSidebar.showTab(LeftSidebar::FxTab);
+            // AHORA SE ABRE EL BOTTOM DOCK, NO EL LEFT SIDEBAR
+            isBottomDockVisible = true;
+            bottomDock.showTab(BottomDock::EffectsTab);
             resized();
         });
 
@@ -91,7 +94,6 @@ MainComponent::MainComponent() {
             Track* trackToDelete = trackContainer.getTracks()[index];
             TrackPianoRollBridge::cleanup(pianoRollUI, [this] { closePianoRoll(); }, trackToDelete);
 
-            // Purgamos la vista sin perder la memoria
             playlistUI.purgeClipsOfTrack(trackToDelete);
             trackContainer.removeTrack(index);
 
@@ -99,7 +101,9 @@ MainComponent::MainComponent() {
             playlistUI.repaint();
             pickerPanelUI.refreshList();
 
-            if (leftSidebar.getCurrentTab() == LeftSidebar::FxTab) isLeftSidebarVisible = false;
+            if (bottomDock.getCurrentTab() == BottomDock::EffectsTab) {
+                effectsPanelUI.setTrack(nullptr);
+            }
             resized();
         }
         };
@@ -130,9 +134,7 @@ void MainComponent::closePianoRoll() {
         isPianoRollVisible = false;
         isLeftSidebarVisible = prePianoRollLeftSidebar;
         isBottomDockVisible = prePianoRollBottomDock;
-
         pianoRollUI.setActiveClip(nullptr);
-
         resized();
     }
 }

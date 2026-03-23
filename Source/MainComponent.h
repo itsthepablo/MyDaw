@@ -19,7 +19,6 @@
 #include "UI/TopMenuBar.h" 
 #include "Engine/AudioEngine.h"
 
-// <-- SOLUCIÓN CRÍTICA: Se añade juce::DragAndDropContainer a la herencia múltiple -->
 class MainComponent : public juce::AudioAppComponent,
     public juce::ApplicationCommandTarget,
     public juce::DragAndDropContainer
@@ -40,7 +39,6 @@ public:
     bool perform(const juce::ApplicationCommandTarget::InvocationInfo& info) override;
 
 private:
-    // --- NUEVOS MÉTODOS DE MODO ENFOQUE ---
     void openPianoRoll();
     void closePianoRoll();
 
@@ -53,19 +51,19 @@ private:
     TrackContainer trackContainer;
     PlaylistComponent playlistUI;
 
-    // Piano Roll + Botón para cerrarlo
     PianoRollComponent pianoRollUI;
     juce::TextButton closePianoRollBtn;
 
+    // --- REORGANIZACIÓN ARQUITECTÓNICA ---
     MixerComponent mixerUI;
     ChannelRackPanel rackPanelUI;
-    BottomDock bottomDock{ mixerUI, rackPanelUI };
+    EffectsPanel effectsPanelUI; // AHORA PERTENECE AL BOTTOM DOCK
+    BottomDock bottomDock{ mixerUI, rackPanelUI, effectsPanelUI };
     BottomDockResizer bottomDockResizer;
 
-    EffectsPanel effectsPanelUI;
     PickerPanel pickerPanelUI;
     FileBrowserPanel fileBrowserPanelUI;
-    LeftSidebar leftSidebar{ pickerPanelUI, effectsPanelUI, fileBrowserPanelUI };
+    LeftSidebar leftSidebar{ pickerPanelUI, fileBrowserPanelUI };
     SidebarResizer sidebarResizer;
 
     TransportBar transportBar;
@@ -81,7 +79,6 @@ private:
     bool isLeftSidebarVisible = true;
     int leftSidebarWidth = 200;
 
-    // --- VARIABLES DE MEMORIA (Para restaurar la interfaz al salir del Piano Roll) ---
     bool isPianoRollVisible = false;
     bool prePianoRollLeftSidebar = true;
     bool prePianoRollBottomDock = true;

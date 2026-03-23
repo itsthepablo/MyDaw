@@ -39,7 +39,6 @@ void AutomationEditor::setClipReference(MidiClipData* clip) {
     clipRef = clip;
 
     if (clipRef != nullptr) {
-        // --- CORREGIDO: INYECTAR NODO EN EL INICIO REAL DEL CLIP, NO EN EL 0.0 ABSOLUTO ---
         float sX = clipRef->startX;
         if (clipRef->autoVol.nodes.empty()) {
             clipRef->autoVol.defaultValue = 0.8f;
@@ -335,7 +334,7 @@ void AutomationEditor::paint(juce::Graphics& g) {
         }
     }
 
-    // --- NUEVO: SOMBREADO VISUAL DE LOS LÍMITES DEL PATRÓN ---
+    // --- NUEVO: SOMBREADO VISUAL DE LOS LIMITES DEL PATRON ---
     if (clipRef != nullptr) {
         int startScreenX = (int)(clipRef->startX * hZoom) + keyW - (int)hScroll;
         int endScreenX = (int)((clipRef->startX + clipRef->width) * hZoom) + keyW - (int)hScroll;

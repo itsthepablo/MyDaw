@@ -215,7 +215,7 @@ void PianoRollComponent::paint(juce::Graphics& g) {
         }
     }
 
-    // --- NUEVO: SOMBREADO VISUAL DE LOS LÍMITES DEL PATRÓN ---
+    // --- NUEVO: SOMBREADO VISUAL DE LOS LIMITES DEL PATRON ---
     if (activeClip != nullptr) {
         int startScreenX = (int)(activeClip->startX * hZoom) + keyW - (int)hS;
         int endScreenX = (int)((activeClip->startX + activeClip->width) * hZoom) + keyW - (int)hS;

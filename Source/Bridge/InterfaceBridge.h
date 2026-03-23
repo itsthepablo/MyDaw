@@ -14,35 +14,38 @@ public:
         TrackContainer& trackContainer,
         std::function<void()> triggerResize)
     {
-        // IZQUIERDA
         toolbar.onTogglePicker = [&isLeftSidebarVisible, &leftSidebar, triggerResize] {
             if (!isLeftSidebarVisible) {
                 isLeftSidebarVisible = true; leftSidebar.showTab(LeftSidebar::PickerTab);
-            } else {
-                if (leftSidebar.getCurrentTab() == LeftSidebar::PickerTab) isLeftSidebarVisible = false; 
-                else leftSidebar.showTab(LeftSidebar::PickerTab); 
+            }
+            else {
+                if (leftSidebar.getCurrentTab() == LeftSidebar::PickerTab) isLeftSidebarVisible = false;
+                else leftSidebar.showTab(LeftSidebar::PickerTab);
             }
             triggerResize();
-        };
+            };
 
         toolbar.onToggleFiles = [&isLeftSidebarVisible, &leftSidebar, triggerResize] {
             if (!isLeftSidebarVisible) {
                 isLeftSidebarVisible = true; leftSidebar.showTab(LeftSidebar::FilesTab);
-            } else {
+            }
+            else {
                 if (leftSidebar.getCurrentTab() == LeftSidebar::FilesTab) isLeftSidebarVisible = false;
                 else leftSidebar.showTab(LeftSidebar::FilesTab);
             }
             triggerResize();
-        };
+            };
 
-        toolbar.onToggleFx = [&isLeftSidebarVisible, &leftSidebar, triggerResize, &effectsPanelUI, &trackContainer] {
-            if (!isLeftSidebarVisible) {
-                isLeftSidebarVisible = true; leftSidebar.showTab(LeftSidebar::FxTab);
-            } else {
-                if (leftSidebar.getCurrentTab() == LeftSidebar::FxTab) isLeftSidebarVisible = false;
-                else leftSidebar.showTab(LeftSidebar::FxTab);
+        // --- CORREGIDO: FxTab ahora vive en el BottomDock ---
+        toolbar.onToggleFx = [&isBottomDockVisible, &bottomDock, triggerResize, &effectsPanelUI, &trackContainer] {
+            if (!isBottomDockVisible) {
+                isBottomDockVisible = true; bottomDock.showTab(BottomDock::EffectsTab);
             }
-            if (isLeftSidebarVisible && leftSidebar.getCurrentTab() == LeftSidebar::FxTab) {
+            else {
+                if (bottomDock.getCurrentTab() == BottomDock::EffectsTab) isBottomDockVisible = false;
+                else bottomDock.showTab(BottomDock::EffectsTab);
+            }
+            if (isBottomDockVisible && bottomDock.getCurrentTab() == BottomDock::EffectsTab) {
                 bool found = false;
                 for (auto* t : trackContainer.getTracks()) {
                     if (t->getType() == TrackType::Audio || t->getType() == TrackType::MIDI) {
@@ -52,27 +55,28 @@ public:
                 if (!found) effectsPanelUI.setTrack(nullptr);
             }
             triggerResize();
-        };
+            };
 
-        // ABAJO
         toolbar.onToggleMixer = [&isBottomDockVisible, &bottomDock, triggerResize] {
             if (!isBottomDockVisible) {
                 isBottomDockVisible = true; bottomDock.showTab(BottomDock::MixerTab);
-            } else {
+            }
+            else {
                 if (bottomDock.getCurrentTab() == BottomDock::MixerTab) isBottomDockVisible = false;
                 else bottomDock.showTab(BottomDock::MixerTab);
             }
             triggerResize();
-        };
+            };
 
         toolbar.onToggleRack = [&isBottomDockVisible, &bottomDock, triggerResize] {
             if (!isBottomDockVisible) {
                 isBottomDockVisible = true; bottomDock.showTab(BottomDock::RackTab);
-            } else {
+            }
+            else {
                 if (bottomDock.getCurrentTab() == BottomDock::RackTab) isBottomDockVisible = false;
                 else bottomDock.showTab(BottomDock::RackTab);
             }
             triggerResize();
-        };
+            };
     }
 };

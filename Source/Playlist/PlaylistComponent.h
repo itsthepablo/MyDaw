@@ -27,7 +27,9 @@ public:
     PlaylistComponent();
     ~PlaylistComponent() override;
 
-    std::function<void()> onNewTrackRequested;
+    // --- MODIFICADO: Ahora exige saber si debe crear un Track de Audio o MIDI ---
+    std::function<void(TrackType)> onNewTrackRequested;
+
     std::function<void(int)> onVerticalScroll;
     std::function<void(Track*, MidiClipData*)> onMidiClipDoubleClicked;
     std::function<void(MidiClipData*)> onMidiClipDeleted;
@@ -38,7 +40,7 @@ public:
     }
 
     const juce::OwnedArray<Track>* tracksRef = nullptr;
-    TrackContainer* trackContainer = nullptr; // <-- Conexión directa al Pool
+    TrackContainer* trackContainer = nullptr;
 
     void setTrackContainer(TrackContainer* tc) {
         trackContainer = tc;
@@ -125,8 +127,8 @@ public:
     int getTrackY(Track* targetTrack) const;
 
     void deleteClip(int index);
-    void deleteClipsByName(const juce::String& name, bool isMidi); // <-- Para borrar permanentemente
-    void purgeClipsOfTrack(Track* track); // <-- Para limpiar vista sin borrar datos
+    void deleteClipsByName(const juce::String& name, bool isMidi);
+    void purgeClipsOfTrack(Track* track);
 
     bool isPlaying = false;
 

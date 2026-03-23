@@ -48,7 +48,6 @@ void VSTHost::loadPluginAsync(double sampleRate, std::function<void(bool)> callb
                             if (vstPlugin != nullptr)
                             {
                                 vstWindow = std::make_unique<VSTWindow>(vstPlugin.get());
-                                vstWindow->setVisible(true);
                                 callback(true);
                                 return;
                             }
@@ -86,11 +85,23 @@ void VSTHost::prepareToPlay(double sampleRate, int maximumExpectedSamplesPerBloc
 
 void VSTHost::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
-    if (vstPlugin != nullptr)
-        vstPlugin->processBlock(buffer, midiMessages);
+    if (vstPlugin != nullptr && !bypassed) {
+        // --- SOLUCION DE ENRUTAMIENTO (CHANNEL MISMATCH BUG) ---
+        // Forzamos al buffer a usar solo los canales que el plugin admite (usualmente 2).
+        // Crear un alias (pluginBuffer) no copia la memoria RAM, solo disfraza el tamano.
+        int reqChans = juce::jmax(2, juce::jmax(vstPlugin->getTotalNumInputChannels(), vstPlugin->getTotalNumOutputChannels()));
+        int safeChans = juce::jmin(reqChans, buffer.getNumChannels());
+
+        if (safeChans > 0) {
+            juce::AudioBuffer<float> pluginBuffer(buffer.getArrayOfWritePointers(), safeChans, buffer.getNumSamples());
+            vstPlugin->processBlock(pluginBuffer, midiMessages);
+        }
+        else {
+            vstPlugin->processBlock(buffer, midiMessages);
+        }
+    }
 }
 
-// AÑADIDO: Extrae el nombre del plugin cargado
 juce::String VSTHost::getLoadedPluginName() const
 {
     if (vstPlugin != nullptr) return vstPlugin->getName();

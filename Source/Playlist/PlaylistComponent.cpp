@@ -70,7 +70,6 @@ int PlaylistComponent::getTrackAtY(int y) const {
     return -1;
 }
 
-// --- MODIFICADO: Borrar ahora MUEVE el clip al Pool en lugar de destruirlo ---
 void PlaylistComponent::deleteClip(int index) {
     if (index < 0 || index >= (int)clips.size()) return;
 
@@ -83,7 +82,7 @@ void PlaylistComponent::deleteClip(int index) {
 
     if (trackContainer) {
         if (tc.linkedAudio) {
-            tc.trackPtr->audioClips.removeObject(tc.linkedAudio, false); // false = no destruir
+            tc.trackPtr->audioClips.removeObject(tc.linkedAudio, false);
             trackContainer->unusedAudioPool.add(tc.linkedAudio);
         }
         if (tc.linkedMidi) {
@@ -104,7 +103,6 @@ void PlaylistComponent::deleteClip(int index) {
     repaint();
 }
 
-// --- NUEVO: Para borrar completamente un clip desde el Picker ---
 void PlaylistComponent::deleteClipsByName(const juce::String& name, bool isMidi) {
     std::unique_ptr<juce::ScopedLock> lock;
     if (audioMutex != nullptr) lock = std::make_unique<juce::ScopedLock>(*audioMutex);
@@ -113,7 +111,7 @@ void PlaylistComponent::deleteClipsByName(const juce::String& name, bool isMidi)
         auto& c = clips[i];
         if (isMidi && c.linkedMidi && c.linkedMidi->name == name) {
             if (onMidiClipDeleted) onMidiClipDeleted(c.linkedMidi);
-            c.trackPtr->midiClips.removeObject(c.linkedMidi, true); // true = Destrucción Nuclear
+            c.trackPtr->midiClips.removeObject(c.linkedMidi, true);
             clips.erase(clips.begin() + i);
         }
         else if (!isMidi && c.linkedAudio && c.linkedAudio->name == name) {
@@ -126,7 +124,6 @@ void PlaylistComponent::deleteClipsByName(const juce::String& name, bool isMidi)
     repaint();
 }
 
-// --- NUEVO: Limpia la vista sin borrar la memoria (útil al borrar un Track) ---
 void PlaylistComponent::purgeClipsOfTrack(Track* track) {
     clips.erase(std::remove_if(clips.begin(), clips.end(),
         [track](const TrackClip& c) { return c.trackPtr == track; }),
@@ -222,7 +219,7 @@ void PlaylistComponent::paint(juce::Graphics& g) {
     if (isExternalFileDragging || isInternalDragging) {
         g.fillAll(juce::Colours::dodgerblue.withAlpha(0.2f));
         g.setColour(juce::Colours::white);
-        juce::String overlayText = isInternalDragging ? "SUELTA EL CLIP AQUÍ" : "SUELTA TU AUDIO AQUI";
+        juce::String overlayText = isInternalDragging ? "SUELTA EL CLIP AQUI" : "SUELTA TU AUDIO AQUI";
         g.drawText(overlayText, getLocalBounds(), juce::Justification::centred);
     }
 }
@@ -282,10 +279,14 @@ void PlaylistComponent::mouseDoubleClick(const juce::MouseEvent& e) {
             float timeShift = snappedX - sourceClip->startX;
             newMidiClip->startX = snappedX;
 
-            for (auto& note : newMidiClip->notes) note.x += timeShift;
+            for (auto& note : newMidiClip->notes) {
+                note.x += timeShift;
+            }
 
             auto shiftAutoLane = [timeShift](AutoLane& lane) {
-                for (auto& node : lane.nodes) node.x += timeShift;
+                for (auto& node : lane.nodes) {
+                    node.x += timeShift;
+                }
                 };
             shiftAutoLane(newMidiClip->autoVol);
             shiftAutoLane(newMidiClip->autoPan);
@@ -340,34 +341,49 @@ void PlaylistComponent::fileDragExit(const juce::StringArray&) { isExternalFileD
 void PlaylistComponent::filesDropped(const juce::StringArray& files, int x, int y) {
     isExternalFileDragging = false;
     int tIdx = getTrackAtY(y);
+
+    bool isMidiFile = false;
+    for (auto path : files) {
+        if (path.endsWithIgnoreCase(".mid") || path.endsWithIgnoreCase(".midi")) {
+            isMidiFile = true; break;
+        }
+    }
+
+    TrackType requiredType = isMidiFile ? TrackType::MIDI : TrackType::Audio;
+
+    if (tIdx != -1 && tracksRef && (*tracksRef)[tIdx]->getType() != requiredType) {
+        tIdx = -1;
+    }
+
     if (tIdx == -1 && onNewTrackRequested) {
-        onNewTrackRequested();
+        onNewTrackRequested(requiredType);
         if (tracksRef) tIdx = (int)tracksRef->size() - 1;
     }
     if (tIdx == -1) return;
 
     float absX = (x + (float)hBar.getCurrentRangeStart()) / hZoom;
-
     absX = std::round(absX / snapPixels) * snapPixels;
     absX = juce::jmax(0.0f, absX);
 
-    juce::AudioFormatManager fmt; fmt.registerBasicFormats();
-    for (auto path : files) {
-        juce::File f(path);
-        std::unique_ptr<juce::AudioFormatReader> reader(fmt.createReaderFor(f));
-        if (reader) {
-            auto* data = new AudioClipData();
-            data->name = f.getFileNameWithoutExtension();
-            data->startX = absX;
-            data->fileBuffer.setSize((int)reader->numChannels, (int)reader->lengthInSamples);
-            reader->read(&data->fileBuffer, 0, (int)reader->lengthInSamples, 0, true, true);
+    if (!isMidiFile) {
+        juce::AudioFormatManager fmt; fmt.registerBasicFormats();
+        for (auto path : files) {
+            juce::File f(path);
+            std::unique_ptr<juce::AudioFormatReader> reader(fmt.createReaderFor(f));
+            if (reader) {
+                auto* data = new AudioClipData();
+                data->name = f.getFileNameWithoutExtension();
+                data->startX = absX;
+                data->fileBuffer.setSize((int)reader->numChannels, (int)reader->lengthInSamples);
+                reader->read(&data->fileBuffer, 0, (int)reader->lengthInSamples, 0, true, true);
 
-            data->generateCache();
+                data->generateCache();
 
-            data->width = (float)(reader->lengthInSamples / reader->sampleRate) * (120.0f / 60.0f) * 80.0f;
-            (*tracksRef)[tIdx]->audioClips.add(data);
-            clips.push_back({ (*tracksRef)[tIdx], absX, data->width, data->name, data, nullptr });
-            absX += data->width;
+                data->width = (float)(reader->lengthInSamples / reader->sampleRate) * (120.0f / 60.0f) * 80.0f;
+                (*tracksRef)[tIdx]->audioClips.add(data);
+                clips.push_back({ (*tracksRef)[tIdx], absX, data->width, data->name, data, nullptr });
+                absX += data->width;
+            }
         }
     }
     updateScrollBars(); repaint();
@@ -387,7 +403,6 @@ void PlaylistComponent::itemDragExit(const juce::DragAndDropTarget::SourceDetail
     repaint();
 }
 
-// --- MODIFICADO: Lee del Track y también del Pool de Reciclaje si no está en Track ---
 void PlaylistComponent::itemDropped(const juce::DragAndDropTarget::SourceDetails& dragSourceDetails) {
     isInternalDragging = false;
     juce::String desc = dragSourceDetails.description.toString();
@@ -402,9 +417,18 @@ void PlaylistComponent::itemDropped(const juce::DragAndDropTarget::SourceDetails
         int y = dragSourceDetails.localPosition.y;
 
         int tIdx = getTrackAtY(y);
+        TrackType requiredType = isMidi ? TrackType::MIDI : TrackType::Audio;
 
-        if (tIdx == -1 && tracksRef && !tracksRef->isEmpty()) {
-            tIdx = tracksRef->size() - 1;
+        // Si soltamos sobre un track de tipo incorrecto o en el vacio
+        if (tIdx != -1 && tracksRef && (*tracksRef)[tIdx]->getType() != requiredType) {
+            tIdx = -1;
+        }
+
+        if (tIdx == -1 && onNewTrackRequested) {
+            onNewTrackRequested(requiredType);
+            if (tracksRef && !tracksRef->isEmpty()) {
+                tIdx = tracksRef->size() - 1;
+            }
         }
 
         if (tIdx == -1) {
@@ -414,23 +438,18 @@ void PlaylistComponent::itemDropped(const juce::DragAndDropTarget::SourceDetails
 
         Track* targetTrack = (*tracksRef)[tIdx];
 
-        if (isMidi && targetTrack->getType() != TrackType::MIDI) { repaint(); return; }
-        if (!isMidi && targetTrack->getType() != TrackType::Audio) { repaint(); return; }
-
         float absX = (x + (float)hBar.getCurrentRangeStart()) / hZoom;
         float snappedX = std::round(absX / snapPixels) * snapPixels;
         snappedX = juce::jmax(0.0f, snappedX);
 
         if (isMidi) {
             MidiClipData* sourceMidi = nullptr;
-            // 1. Buscamos en las pistas activas
             for (auto* tr : *tracksRef) {
                 for (auto* mc : tr->midiClips) {
                     if (mc->name == itemName) { sourceMidi = mc; break; }
                 }
                 if (sourceMidi) break;
             }
-            // 2. Si no está en ninguna pista (fue borrado), buscamos en el Pool de reciclaje
             if (!sourceMidi && trackContainer) {
                 for (auto* mc : trackContainer->unusedMidiPool) {
                     if (mc->name == itemName) { sourceMidi = mc; break; }
@@ -460,14 +479,12 @@ void PlaylistComponent::itemDropped(const juce::DragAndDropTarget::SourceDetails
         }
         else {
             AudioClipData* sourceAudio = nullptr;
-            // 1. Buscamos en pistas activas
             for (auto* tr : *tracksRef) {
                 for (auto* ac : tr->audioClips) {
                     if (ac->name == itemName) { sourceAudio = ac; break; }
                 }
                 if (sourceAudio) break;
             }
-            // 2. Si no está, buscamos en el pool
             if (!sourceAudio && trackContainer) {
                 for (auto* ac : trackContainer->unusedAudioPool) {
                     if (ac->name == itemName) { sourceAudio = ac; break; }

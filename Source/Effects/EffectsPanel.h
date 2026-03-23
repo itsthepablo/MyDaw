@@ -3,34 +3,84 @@
 #include "../Tracks/Track.h"
 #include <functional>
 #include <map> 
+#include "EffectDevice.h"
 
-class EffectsPanel;
-
-// --- COMPONENTE INDIVIDUAL PARA CADA EFECTO EN LA LISTA ---
-class EffectSlot : public juce::Component, public juce::DragAndDropTarget {
+// ==============================================================================
+// COMPONENTE ACTUALIZADO: Medidor Numérico Dual LUFS (Disposición Vertical)
+// ==============================================================================
+class LoudnessDualMeter : public juce::Component, private juce::Timer {
 public:
-    EffectSlot(int index, juce::String name, bool isInst, EffectsPanel& p);
+    LoudnessDualMeter() {
+        startTimerHz(15); // 15 FPS es ideal para leer números fluidamente
+    }
 
-    void paint(juce::Graphics& g) override;
-    void mouseDown(const juce::MouseEvent& e) override;
-    void mouseDrag(const juce::MouseEvent& e) override;
+    void setTrack(Track* t) {
+        activeTrack = t;
+        repaint();
+    }
 
-    bool isInterestedInDragSource(const SourceDetails& dragSourceDetails) override;
-    void itemDragEnter(const SourceDetails& dragSourceDetails) override;
-    void itemDragExit(const SourceDetails& dragSourceDetails) override;
-    void itemDropped(const SourceDetails& dragSourceDetails) override;
+    void timerCallback() override {
+        if (activeTrack) repaint();
+    }
 
-    int idx;
-    juce::String fxName;
-    bool isInstrument;
-    EffectsPanel& panel;
+    void paint(juce::Graphics& g) override {
+        // Fondo oscuro del medidor
+        g.fillAll(juce::Colour(25, 28, 31));
+        g.setColour(juce::Colour(50, 53, 56));
+        g.drawRect(getLocalBounds());
 
-    bool isDragHovering = false;
+        if (!activeTrack) {
+            g.setColour(juce::Colours::white.withAlpha(0.3f));
+            g.setFont(14.0f);
+            g.drawText("No Track", getLocalBounds(), juce::Justification::centred);
+            return;
+        }
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EffectSlot)
+        // Función para formatear el número (muestra "--.-" si hay silencio total)
+        auto formatLufs = [](float lufs) {
+            if (lufs <= -69.0f) return juce::String("--.-");
+            return juce::String(lufs, 1);
+            };
+
+        // --- DISPOSICIÓN VERTICAL ---
+        // Partimos la altura por la mitad, dándole el ancho completo a cada número
+        int halfH = getHeight() / 2;
+        auto preArea = getLocalBounds().removeFromTop(halfH).reduced(5);
+        auto postArea = getLocalBounds().removeFromBottom(halfH).reduced(5);
+
+        // Separador horizontal en el medio
+        g.setColour(juce::Colour(50, 53, 56));
+        g.drawHorizontalLine(halfH, 10, getWidth() - 10);
+
+        auto drawSection = [&](juce::Rectangle<int> area, juce::String title, float lufs, juce::Colour color) {
+            // Título (INPUT / OUTPUT)
+            g.setColour(juce::Colours::white.withAlpha(0.6f));
+            g.setFont(juce::Font("Sans-Serif", 11.0f, juce::Font::bold));
+            g.drawText(title, area.removeFromTop(15), juce::Justification::centred);
+
+            // NÚMERO GIGANTE (Ahora tiene los 120 píxeles completos para dibujarse)
+            g.setColour(color);
+            g.setFont(juce::Font("Sans-Serif", 28.0f, juce::Font::bold));
+            g.drawText(formatLufs(lufs), area.removeFromTop(32), juce::Justification::centred);
+
+            // Etiqueta LUFS
+            g.setColour(color.withAlpha(0.6f));
+            g.setFont(juce::Font("Sans-Serif", 11.0f, juce::Font::plain));
+            g.drawText("LUFS", area.removeFromTop(15), juce::Justification::centredTop);
+            };
+
+        // Pintar las dos secciones 
+        // (La señal bruta MIDI siempre mostrará --.- en el INPUT porque el VSTi es el que genera el audio, es comportamiento correcto)
+        drawSection(preArea, "INPUT PRE-FX", activeTrack->preLoudness.getShortTerm(), juce::Colours::white);
+        drawSection(postArea, "OUTPUT POST-FX", activeTrack->postLoudness.getShortTerm(), juce::Colours::orange);
+    }
+
+private:
+    Track* activeTrack = nullptr;
 };
 
-// --- PANEL LATERAL DE EFECTOS ---
+// ==============================================================================
+
 class EffectsPanel : public juce::Component {
 public:
     EffectsPanel();
@@ -48,6 +98,7 @@ public:
     std::function<void()> onClose;
     std::function<void(Track&)> onAddEffect;
     std::function<void(Track&, int)> onOpenEffect;
+    std::function<void(Track&, int, bool)> onBypassChanged;
     std::function<void(Track&, int, int)> onReorderEffects;
 
 private:
@@ -55,11 +106,9 @@ private:
     juce::TextButton closeBtn;
     juce::TextButton addEffectBtn;
 
-    juce::OwnedArray<EffectSlot> slots;
+    juce::OwnedArray<EffectDevice> devices;
 
-    // NUEVO: Coordenadas físicas para separar la interfaz
-    int instHeaderY = 0;
-    int fxHeaderY = 0;
+    LoudnessDualMeter loudnessMeter;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EffectsPanel)
 };

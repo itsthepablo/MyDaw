@@ -13,15 +13,20 @@ public:
         bool isPianoRollActive,
         float loopEndPos)
     {
+        // --- INICIALIZAR DSP SI NO ESTA LISTO ---
+        if (!track->isLoudnessPrepared) {
+            track->preLoudness.prepare(44100.0, 512); 
+            track->postLoudness.prepare(44100.0, 512);
+            track->isLoudnessPrepared = true;
+        }
+
         juce::MidiBuffer trackMidi;
 
         if (isPianoRollActive) {
             trackMidi.addEvents(previewMidi, 0, numSamples, 0);
         }
 
-        // --- LECTURA DE NOTAS MIDI ---
         if (isPlayingNow) {
-            // A. Notas Globales (Scratchpad/Legacy)
             for (const auto& note : track->notes) {
                 bool triggerOn = clock.looped ? ((note.x >= clock.currentPh && note.x < loopEndPos) || (note.x >= 0 && note.x < clock.nextPh)) : (note.x >= clock.currentPh && note.x < clock.nextPh);
                 if (triggerOn) trackMidi.addEvent(juce::MidiMessage::noteOn(1, note.pitch, 0.8f), 0);
@@ -31,7 +36,6 @@ public:
                 if (triggerOff) trackMidi.addEvent(juce::MidiMessage::noteOff(1, note.pitch), 0);
             }
 
-            // B. Notas por Clips/Patterns (NUEVO)
             for (auto* clip : track->midiClips) {
                 for (const auto& note : clip->notes) {
                     bool triggerOn = clock.looped ? ((note.x >= clock.currentPh && note.x < loopEndPos) || (note.x >= 0 && note.x < clock.nextPh)) : (note.x >= clock.currentPh && note.x < clock.nextPh);
@@ -44,7 +48,6 @@ public:
             }
         }
 
-        // --- AUDIO CLIPS ---
         if (isPlayingNow) {
             for (auto* clip : track->audioClips) {
                 long long clipStartSample = (long long)(clip->startX * clock.samplesPerPixel);
@@ -76,9 +79,17 @@ public:
             }
         }
 
-        // VSTs
+        // ==============================================================================
+        // --- 1. LECTURA PRE-FX (Señal cruda) ---
+        track->preLoudness.process(track->audioBuffer);
+
+        // --- 2. PROCESAMIENTO VST ---
         for (auto* p : track->plugins) {
             if (p->isLoaded()) p->processBlock(track->audioBuffer, trackMidi);
         }
+
+        // --- 3. LECTURA POST-FX (Señal final) ---
+        track->postLoudness.process(track->audioBuffer);
+        // ==============================================================================
     }
 };

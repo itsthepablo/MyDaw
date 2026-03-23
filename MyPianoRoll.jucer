@@ -44,6 +44,10 @@
         <FILE id="kbAMkm" name="MasterMixer.h" compile="0" resource="0" file="Source/Engine/MasterMixer.h"/>
         <FILE id="YPFnVd" name="SafetyProcessors.h" compile="0" resource="0"
               file="Source/Engine/SafetyProcessors.h"/>
+        <FILE id="f8Nvgg" name="SimpleLoudness.h" compile="0" resource="0"
+              file="Source/Engine/SimpleLoudness.h"/>
+        <FILE id="RaIB7b" name="StereoAnalyzer.h" compile="0" resource="0"
+              file="Source/Engine/StereoAnalyzer.h"/>
         <FILE id="EvutIs" name="TrackProcessor.h" compile="0" resource="0"
               file="Source/Engine/TrackProcessor.h"/>
       </GROUP>
@@ -60,6 +64,9 @@
               file="Source/Bridge/TransportBridge.h"/>
       </GROUP>
       <GROUP id="{73F36168-2865-EFB5-E542-4C7CFFA91F73}" name="Effects">
+        <FILE id="KgutWf" name="EffectDevice.cpp" compile="1" resource="0"
+              file="Source/Effects/EffectDevice.cpp"/>
+        <FILE id="YxiXoJ" name="EffectDevice.h" compile="0" resource="0" file="Source/Effects/EffectDevice.h"/>
         <FILE id="LzcHep" name="EffectsPanel.cpp" compile="1" resource="0"
               file="Source/Effects/EffectsPanel.cpp"/>
         <FILE id="RbHrXU" name="EffectsPanel.h" compile="0" resource="0" file="Source/Effects/EffectsPanel.h"/>

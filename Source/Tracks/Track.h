@@ -1,7 +1,8 @@
-﻿#pragma once
+#pragma once
 #include <JuceHeader.h>
 #include "../GlobalData.h" 
 #include "../PluginHost/VSTHost.h" 
+#include "../Engine/SimpleLoudness.h" // <-- TU DSP
 #include <vector>
 #include <algorithm>
 #include <cmath>
@@ -80,7 +81,6 @@ struct MidiClipData {
     std::vector<Note> notes;
     juce::Colour color;
 
-    // --- CARRILES DE AUTOMATIZACIÓN DEL CLIP ---
     AutoLane autoVol;
     AutoLane autoPan;
     AutoLane autoPitch;
@@ -116,7 +116,6 @@ public:
     juce::OwnedArray<AudioClipData> audioClips;
     juce::OwnedArray<MidiClipData> midiClips;
 
-    // --- VARIABLES DE CARPETAS Y JERARQUÍA ---
     int folderDepthChange = 0;
     int folderDepth = 0;
     bool isCollapsed = false;
@@ -124,16 +123,19 @@ public:
     bool isFolderStart = false;
     bool isFolderEnd = false;
 
-    // --- VARIABLES DE ESTADO Y SELECCIÓN ---
     bool isMuted = false;
     bool isSoloed = false;
     bool isSelected = false;
     bool isInlineEditingActive = false;
 
-    // --- MOTOR DE AUDIO ---
     juce::AudioBuffer<float> audioBuffer;
     float currentPeakLevelL = 0.0f;
     float currentPeakLevelR = 0.0f;
+
+    // --- NUEVO: INSTANCIAS DE TU DSP DE LUFS ---
+    SimpleLoudness preLoudness;
+    SimpleLoudness postLoudness;
+    bool isLoudnessPrepared = false;
 
 private:
     int trackId;

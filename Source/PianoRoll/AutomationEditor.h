@@ -39,7 +39,7 @@ public:
 
     void updateView(float hS, float hZ, float vS, float vZ, double snap, float ph);
 
-    // <-- AQUÍ ESTÁ LA FUNCIÓN QUE EL COMPILADOR NO ENCUENTRA. ASEGÚRATE DE PEGAR ESTO:
+    // <-- AQUÃ ESTÃ LA FUNCIÃ“N QUE EL COMPILADOR NO ENCUENTRA. ASEGÃšRATE DE PEGAR ESTO:
     void setClipReference(MidiClipData* clip);
 
     void grabNodesUnderNotes(const std::set<int>& selectedIndices);

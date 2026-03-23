@@ -1,4 +1,3 @@
-// [VSTHost.h Completo]
 #pragma once
 #include <JuceHeader.h>
 #include <functional>
@@ -87,12 +86,17 @@ public:
     void prepareToPlay(double sampleRate, int maximumExpectedSamplesPerBlock);
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages);
 
-    // AÑADIDO: Para poder poner el nombre en la caja del Track
     juce::String getLoadedPluginName() const;
+
+    // --- NUEVO: Control de Bypass ---
+    bool isBypassed() const { return bypassed; }
+    void setBypassed(bool shouldBypass) { bypassed = shouldBypass; }
 
 private:
     juce::AudioPluginFormatManager formatManager;
     std::unique_ptr<juce::AudioPluginInstance> vstPlugin;
     std::unique_ptr<VSTWindow> vstWindow;
     std::unique_ptr<juce::FileChooser> fileChooser;
+
+    bool bypassed = false; // Estado interno del bypass
 };
