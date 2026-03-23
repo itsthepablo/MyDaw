@@ -79,6 +79,12 @@ struct MidiClipData {
     float width = 320.0f;
     std::vector<Note> notes;
     juce::Colour color;
+
+    // --- CARRILES DE AUTOMATIZACIÓN DEL CLIP ---
+    AutoLane autoVol;
+    AutoLane autoPan;
+    AutoLane autoPitch;
+    AutoLane autoFilter;
 };
 
 class Track {
@@ -110,17 +116,21 @@ public:
     juce::OwnedArray<AudioClipData> audioClips;
     juce::OwnedArray<MidiClipData> midiClips;
 
+    // --- VARIABLES DE CARPETAS Y JERARQUÍA ---
     int folderDepthChange = 0;
     int folderDepth = 0;
     bool isCollapsed = false;
     bool isShowingInChildren = true;
+    bool isFolderStart = false;
+    bool isFolderEnd = false;
 
-    // ESTADO DE MUTE Y SOLO (NUEVO)
+    // --- VARIABLES DE ESTADO Y SELECCIÓN ---
     bool isMuted = false;
     bool isSoloed = false;
-
+    bool isSelected = false;
     bool isInlineEditingActive = false;
 
+    // --- MOTOR DE AUDIO ---
     juce::AudioBuffer<float> audioBuffer;
     float currentPeakLevelL = 0.0f;
     float currentPeakLevelR = 0.0f;

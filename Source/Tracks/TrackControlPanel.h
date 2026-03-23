@@ -12,21 +12,25 @@ public:
     std::function<void()> onWaveformViewChanged;
     std::function<void(int)> onPluginClick;
 
+    // <-- MODIFICADO: Ahora el callback envía el estado de las teclas modificadoras -->
+    std::function<void(const juce::ModifierKeys&)> onTrackSelected;
+
+    int dragHoverMode = 0; // 0 = nada, 1 = linea arriba, 2 = highlight carpeta, 3 = linea abajo (dentro), 4 = linea roja (extraer)
+
     TrackControlPanel(Track& t) : track(t) {
         addAndMakeVisible(nameLabel);
         nameLabel.setText(track.getName(), juce::dontSendNotification);
         nameLabel.setEditable(true);
-        nameLabel.setTooltip("Nombre de Pista: Haz doble clic para renombrar."); // TEXTO NUEVO
+        nameLabel.setTooltip("Nombre de Pista: Haz doble clic para renombrar.");
         nameLabel.onTextChange = [this] { track.setName(nameLabel.getText()); };
 
-        // --- BOTONES DE MUTE Y SOLO ---
         addAndMakeVisible(muteBtn);
         muteBtn.setButtonText("M");
         muteBtn.setClickingTogglesState(true);
         muteBtn.setToggleState(track.isMuted, juce::dontSendNotification);
         muteBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(45, 48, 52));
         muteBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colours::red.darker(0.2f));
-        muteBtn.setTooltip("Mute: Silencia el audio de esta pista."); // TEXTO NUEVO
+        muteBtn.setTooltip("Mute: Silencia el audio de esta pista.");
         muteBtn.onClick = [this] { track.isMuted = muteBtn.getToggleState(); };
 
         addAndMakeVisible(soloBtn);
@@ -35,54 +39,60 @@ public:
         soloBtn.setToggleState(track.isSoloed, juce::dontSendNotification);
         soloBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(45, 48, 52));
         soloBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colours::yellow.darker(0.2f));
-        soloBtn.setColour(juce::TextButton::textColourOnId, juce::Colours::black); 
-        soloBtn.setTooltip("Solo: Reproduce solo esta pista silenciando las demás."); // TEXTO NUEVO
+        soloBtn.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
+        soloBtn.setTooltip("Solo: Reproduce solo esta pista silenciando las demás.");
         soloBtn.onClick = [this] { track.isSoloed = soloBtn.getToggleState(); };
 
-        // --- KNOBS PROFESIONALES ---
         addAndMakeVisible(volKnob); addAndMakeVisible(panKnob);
-        
+
         volKnob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-        volKnob.setLookAndFeel(&flLookAndFeel); 
-        volKnob.setRange(0.0, 1.0); 
+        volKnob.setLookAndFeel(&flLookAndFeel);
+        volKnob.setRange(0.0, 1.0);
         volKnob.setValue(track.getVolume(), juce::dontSendNotification);
-        volKnob.setTooltip("Volumen: Ajusta la ganancia principal del canal."); // TEXTO NUEVO
+        volKnob.setTooltip("Volumen: Ajusta la ganancia principal del canal.");
         volKnob.onValueChange = [this] { track.setVolume((float)volKnob.getValue()); };
 
         volKnob.valueToTextFormattingCallback = [](double rawGain) -> juce::String {
             float db = juce::Decibels::gainToDecibels((float)rawGain, -100.0f);
             if (db <= -100.0f) return "-inf dB";
-            return juce::String(db, 1) + " dB"; 
-        };
+            return juce::String(db, 1) + " dB";
+            };
 
         panKnob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-        panKnob.setLookAndFeel(&flLookAndFeel); 
-        panKnob.setRange(-1.0, 1.0); 
+        panKnob.setLookAndFeel(&flLookAndFeel);
+        panKnob.setRange(-1.0, 1.0);
         panKnob.setValue(track.getBalance(), juce::dontSendNotification);
-        panKnob.setTooltip("Paneo / Balance: Ajusta la posición estéreo L/R."); // TEXTO NUEVO
+        panKnob.setTooltip("Paneo / Balance: Ajusta la posición estéreo L/R.");
         panKnob.onValueChange = [this] { track.setBalance((float)panKnob.getValue()); };
 
         panKnob.valueToTextFormattingCallback = [](double value) -> juce::String {
-            if (std::abs(value) < 0.01) return "Center"; 
+            if (std::abs(value) < 0.01) return "Center";
             int percent = (int)(std::abs(value) * 100.0);
-            return juce::String(percent) + (value < 0.0 ? "% L" : "% R"); 
-        };
+            return juce::String(percent) + (value < 0.0 ? "% L" : "% R");
+            };
 
         addAndMakeVisible(effectsBtn);
         effectsBtn.setButtonText("Effects");
         effectsBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(60, 65, 70));
-        effectsBtn.setTooltip("Efectos: Muestra el rack de plugins insertados."); // TEXTO NUEVO
+        effectsBtn.setTooltip("Efectos: Muestra el rack de plugins insertados.");
         effectsBtn.onClick = [this] { if (onEffectsClick) onEffectsClick(); };
 
         addAndMakeVisible(folderBtn);
-        folderBtn.setTooltip("Carpeta: Agrupa las pistas inferiores dentro de esta."); // TEXTO NUEVO
+        folderBtn.setTooltip("Carpeta: Cambia el estado (Normal -> Padre -> Fin de Carpeta).");
         addAndMakeVisible(compactBtn);
-        compactBtn.setTooltip("Expandir/Contraer las pistas hijas."); // TEXTO NUEVO
+        compactBtn.setTooltip("Expandir/Contraer las pistas hijas.");
 
         folderBtn.onClick = [this] {
-            if (track.folderDepthChange == 0) track.folderDepthChange = 1;
-            else if (track.folderDepthChange > 0) track.folderDepthChange = -1;
-            else track.folderDepthChange = 0;
+            if (!track.isFolderStart && !track.isFolderEnd) {
+                track.isFolderStart = true;
+            }
+            else if (track.isFolderStart) {
+                track.isFolderStart = false;
+                track.isFolderEnd = true;
+            }
+            else if (track.isFolderEnd) {
+                track.isFolderEnd = false;
+            }
 
             updateFolderBtnVisuals();
             if (onFolderStateChange) onFolderStateChange();
@@ -96,7 +106,7 @@ public:
 
         if (track.getType() == TrackType::MIDI) {
             addAndMakeVisible(prButton); prButton.setButtonText("PIANO ROLL");
-            prButton.setTooltip("Piano Roll: Abre el editor MIDI principal."); // TEXTO NUEVO
+            prButton.setTooltip("Piano Roll: Abre el editor MIDI principal.");
             prButton.onClick = [this] { if (onPianoRollClick) onPianoRollClick(); };
 
             addAndMakeVisible(inlineBtn);
@@ -104,20 +114,20 @@ public:
             inlineBtn.setClickingTogglesState(true);
             inlineBtn.setToggleState(track.isInlineEditingActive, juce::dontSendNotification);
             inlineBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colours::orange);
-            inlineBtn.setTooltip("Inline Editor: Edita notas directamente en la Playlist."); // TEXTO NUEVO
+            inlineBtn.setTooltip("Inline Editor: Edita notas directamente en la Playlist.");
             inlineBtn.onClick = [this] {
                 track.isInlineEditingActive = inlineBtn.getToggleState();
-                if (onWaveformViewChanged) onWaveformViewChanged(); 
+                if (onWaveformViewChanged) onWaveformViewChanged();
                 };
 
             addAndMakeVisible(fxButton); fxButton.setButtonText("+ VSTi");
-            fxButton.setTooltip("Añadir Instrumento VSTi a esta pista."); // TEXTO NUEVO
+            fxButton.setTooltip("Añadir Instrumento VSTi a esta pista.");
             fxButton.onClick = [this] { if (onFxClick) onFxClick(); };
         }
 
         addAndMakeVisible(levelMeter);
-        levelMeter.setTooltip("Medidor de Nivel: Muestra la salida de audio. Clic para reiniciar pico."); // TEXTO NUEVO
-        startTimerHz(30); 
+        levelMeter.setTooltip("Medidor de Nivel: Muestra la salida de audio. Clic para reiniciar pico.");
+        startTimerHz(30);
 
         updateFolderBtnVisuals();
     }
@@ -136,13 +146,13 @@ public:
     }
 
     void updateFolderBtnVisuals() {
-        if (track.folderDepthChange > 0) {
+        if (track.isFolderStart) {
             folderBtn.setButtonText("P");
             folderBtn.setColour(juce::TextButton::buttonColourId, juce::Colours::orange);
             compactBtn.setVisible(true);
             compactBtn.setButtonText(track.isCollapsed ? ">" : "v");
         }
-        else if (track.folderDepthChange < 0) {
+        else if (track.isFolderEnd) {
             folderBtn.setButtonText("L");
             folderBtn.setColour(juce::TextButton::buttonColourId, juce::Colours::dodgerblue);
             compactBtn.setVisible(false);
@@ -160,7 +170,7 @@ public:
             juce::String name = "VST3";
             if (track.plugins[i] != nullptr && track.plugins[i]->isLoaded()) name = track.plugins[i]->getLoadedPluginName();
             auto* btn = new juce::TextButton(name);
-            btn->setTooltip("Abre la interfaz del plugin insertado."); // TEXTO NUEVO
+            btn->setTooltip("Abre la interfaz del plugin insertado.");
             btn->onClick = [this, i] { if (onPluginClick) onPluginClick(i); };
             pluginButtons.add(btn); addAndMakeVisible(btn);
         }
@@ -169,10 +179,50 @@ public:
 
     void paint(juce::Graphics& g) override {
         g.fillAll(juce::Colour(30, 32, 35));
+
         int indent = track.folderDepth * 20;
         auto area = getLocalBounds().reduced(2).withTrimmedLeft(indent);
+
         g.setColour(juce::Colour(40, 42, 46));
         g.fillRoundedRectangle(area.toFloat(), 4.0f);
+
+        if (track.folderDepth > 0) {
+            g.setColour(juce::Colours::white.withAlpha(0.2f));
+            for (int i = 1; i <= track.folderDepth; ++i) {
+                float lineX = (float)(i * 20 - 10);
+                g.drawVerticalLine((int)lineX, 0.0f, (float)getHeight());
+                if (i == track.folderDepth) {
+                    g.drawHorizontalLine(getHeight() / 2, lineX, (float)(track.folderDepth * 20));
+                }
+            }
+        }
+
+        if (track.isSelected) {
+            g.setColour(juce::Colours::white.withAlpha(0.15f));
+            g.fillRoundedRectangle(area.toFloat(), 4.0f);
+            g.setColour(juce::Colours::white.withAlpha(0.6f));
+            g.drawRoundedRectangle(area.toFloat(), 4.0f, 1.5f);
+        }
+
+        if (dragHoverMode == 1) {
+            g.setColour(juce::Colours::white);
+            g.fillRect(0, 0, getWidth(), 3);
+        }
+        else if (dragHoverMode == 3) {
+            g.setColour(juce::Colours::white);
+            g.fillRect(indent, getHeight() - 3, getWidth() - indent, 3);
+        }
+        else if (dragHoverMode == 4) {
+            g.setColour(juce::Colours::red);
+            g.fillRect(0, getHeight() - 3, getWidth(), 3);
+        }
+        else if (dragHoverMode == 2) {
+            g.setColour(juce::Colours::cyan.withAlpha(0.4f));
+            g.fillRoundedRectangle(area.toFloat(), 4.0f);
+            g.setColour(juce::Colours::cyan);
+            g.drawRoundedRectangle(area.toFloat(), 4.0f, 2.0f);
+        }
+
         g.setColour(track.getColor());
         g.fillRect(area.removeFromLeft(6));
     }
@@ -180,20 +230,20 @@ public:
     void resized() override {
         int indent = track.folderDepth * 20;
         auto area = getLocalBounds().reduced(6).withTrimmedLeft(indent);
-        
+
         auto leftCol = area.removeFromLeft(125);
         auto topRow = leftCol.removeFromTop(20);
-        if (track.folderDepthChange > 0) compactBtn.setBounds(topRow.removeFromLeft(20).reduced(2));
+        if (track.isFolderStart) compactBtn.setBounds(topRow.removeFromLeft(20).reduced(2));
         nameLabel.setBounds(topRow);
         leftCol.removeFromTop(2);
-        
+
         auto kRow = leftCol.removeFromTop(30);
-        
+
         muteBtn.setBounds(kRow.removeFromLeft(20).reduced(2));
         soloBtn.setBounds(kRow.removeFromLeft(20).reduced(2));
         panKnob.setBounds(kRow.removeFromLeft(35));
         volKnob.setBounds(kRow.removeFromLeft(35));
-        
+
         leftCol.removeFromTop(2);
 
         if (track.getType() == TrackType::MIDI) {
@@ -206,10 +256,10 @@ public:
         auto botRow = leftCol.removeFromTop(18);
         folderBtn.setBounds(botRow.removeFromLeft(18));
         effectsBtn.setBounds(botRow.withTrimmedLeft(4));
-        
-        auto meterArea = area.removeFromRight(10); 
-        levelMeter.setBounds(meterArea.reduced(0, 4)); 
-        area.removeFromRight(5); 
+
+        auto meterArea = area.removeFromRight(10);
+        levelMeter.setBounds(meterArea.reduced(0, 4));
+        area.removeFromRight(5);
 
         auto fxArea = area.removeFromRight(120);
 
@@ -225,6 +275,11 @@ public:
     }
 
     void mouseDown(const juce::MouseEvent& e) override {
+        if (e.mods.isLeftButtonDown()) {
+            // <-- MODIFICADO: Enviamos el estado de las teclas (Ctrl, Shift, etc) -->
+            if (onTrackSelected) onTrackSelected(e.mods);
+        }
+
         if (e.mods.isRightButtonDown()) {
             juce::PopupMenu m;
             m.addItem(1, "Eliminar Pista");
@@ -247,7 +302,9 @@ public:
 
     void mouseDrag(const juce::MouseEvent& e) override {
         if (auto* dragC = juce::DragAndDropContainer::findParentDragContainerFor(this)) {
-            dragC->startDragging("TRACK", this, juce::Image(), true);
+            juce::Image invisibleGhost(juce::Image::ARGB, 1, 1, true);
+            invisibleGhost.clear(juce::Rectangle<int>(0, 0, 1, 1), juce::Colours::transparentBlack);
+            dragC->startDragging("TRACK", this, invisibleGhost, true);
         }
     }
 
@@ -255,12 +312,12 @@ public:
 private:
     juce::Label nameLabel;
     juce::TextButton muteBtn, soloBtn;
-    FloatingValueSlider volKnob, panKnob; 
+    FloatingValueSlider volKnob, panKnob;
     juce::TextButton fxButton, prButton, inlineBtn, effectsBtn, folderBtn, compactBtn;
     juce::OwnedArray<juce::TextButton> pluginButtons;
-    
-    FLKnobLookAndFeel flLookAndFeel; 
-    LevelMeter levelMeter; 
-    
+
+    FLKnobLookAndFeel flLookAndFeel;
+    LevelMeter levelMeter;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TrackControlPanel)
 };

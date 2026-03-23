@@ -3,16 +3,16 @@
 #include "../UI/MidiClipRenderer.h"
 #include "Tools/PointerTool.h" 
 #include "Tools/ScissorTool.h" 
-#include "Tools/EraserTool.h" // NUEVO: Importamos el Borrador
+#include "Tools/EraserTool.h" 
 #include <cmath>
 #include <algorithm>
 
 PlaylistComponent::PlaylistComponent() {
-    setWantsKeyboardFocus(true); 
-    addKeyListener(this);        
-    
+    setWantsKeyboardFocus(true);
+    addKeyListener(this);
+
     activeTool = std::make_unique<PointerTool>();
-    
+
     addAndMakeVisible(hBar); hBar.addListener(this);
     addAndMakeVisible(vBar); vBar.addListener(this);
     vBar.setAlwaysOnTop(true);
@@ -20,9 +20,9 @@ PlaylistComponent::PlaylistComponent() {
     startTimerHz(30);
 }
 
-PlaylistComponent::~PlaylistComponent() { 
+PlaylistComponent::~PlaylistComponent() {
     removeKeyListener(this);
-    stopTimer(); 
+    stopTimer();
 }
 
 void PlaylistComponent::timerCallback() { repaint(); }
@@ -72,9 +72,9 @@ int PlaylistComponent::getTrackAtY(int y) const {
 
 void PlaylistComponent::deleteClip(int index) {
     if (index < 0 || index >= (int)clips.size()) return;
-    
+
     auto& tc = clips[index];
-    
+
     if (tc.linkedMidi && onMidiClipDeleted) {
         onMidiClipDeleted(tc.linkedMidi);
     }
@@ -84,20 +84,19 @@ void PlaylistComponent::deleteClip(int index) {
 
     if (tc.linkedAudio) tc.trackPtr->audioClips.removeObject(tc.linkedAudio, true);
     if (tc.linkedMidi) tc.trackPtr->midiClips.removeObject(tc.linkedMidi, true);
-    
+
     clips.erase(clips.begin() + index);
-    
+
     if (selectedClipIndex == index) selectedClipIndex = -1;
     else if (selectedClipIndex > index) selectedClipIndex--;
-    
+
     repaint();
 }
 
 void PlaylistComponent::setTool(int toolId) {
     if (toolId == 1) activeTool = std::make_unique<PointerTool>();
-    // else if (toolId == 2) activeTool = std::make_unique<DrawTool>(); // Lapiz pendiente
     else if (toolId == 3) activeTool = std::make_unique<ScissorTool>();
-    else if (toolId == 4) activeTool = std::make_unique<EraserTool>(); // CORREGIDO: Ahora carga el Borrador
+    else if (toolId == 4) activeTool = std::make_unique<EraserTool>();
 }
 
 bool PlaylistComponent::keyPressed(const juce::KeyPress& key, juce::Component*) {
@@ -121,17 +120,18 @@ void PlaylistComponent::paint(juce::Graphics& g) {
     g.reduceClipRegion(0, viewAreaY, getWidth() - (vBar.isVisible() ? scrollBarSize : 0), viewAreaH);
 
     double visualSnap = (snapPixels < 10.0) ? 80.0 : snapPixels;
-    
+
     for (double i = 0; i <= 32 * 320; i += visualSnap) {
         int dx = (int)(i * hZoom) - (int)hS;
         if (dx < 0) continue;
-        
+
         if (std::fmod(i, 80.0) == 0.0) {
-            g.setColour(juce::Colours::white.withAlpha(0.1f)); 
-        } else {
-            g.setColour(juce::Colours::white.withAlpha(0.04f)); 
+            g.setColour(juce::Colours::white.withAlpha(0.1f));
         }
-        
+        else {
+            g.setColour(juce::Colours::white.withAlpha(0.04f));
+        }
+
         g.drawVerticalLine(dx, (float)viewAreaY, (float)getHeight());
     }
 
@@ -149,7 +149,7 @@ void PlaylistComponent::paint(juce::Graphics& g) {
         const auto& clip = clips[i];
         int yPos = getTrackY(clip.trackPtr);
         if (yPos < timelineH - 100 || yPos > getHeight()) continue;
-        
+
         int xPos = (int)(clip.startX * hZoom) - (int)hS;
         int wPos = (int)(clip.width * hZoom);
         juce::Rectangle<int> clipRect(xPos, yPos + 2, wPos - 1, (int)trackHeight - 4);
@@ -160,7 +160,7 @@ void PlaylistComponent::paint(juce::Graphics& g) {
         if (clip.linkedAudio != nullptr) {
             WaveformRenderer::drawWaveform(g, *clip.linkedAudio, clipRect, clip.trackPtr->getColor(), clip.trackPtr->getWaveformViewMode());
         }
-        
+
         if (clip.linkedMidi != nullptr) {
             MidiClipRenderer::drawMidiClip(g, *clip.linkedMidi, clipRect, clip.trackPtr->getColor(), clip.trackPtr->isInlineEditingActive, hZoom, hS);
         }
@@ -215,10 +215,11 @@ int PlaylistComponent::getClipAt(int x, int y) const {
     return -1;
 }
 
+// --- MODIFICADO: DOBLE CLIC INTELIGENTE (COPIA PROFUNDA) ---
 void PlaylistComponent::mouseDoubleClick(const juce::MouseEvent& e) {
     if (!tracksRef) return;
     int cIdx = getClipAt(e.x, e.y);
-    
+
     if (cIdx != -1 && clips[cIdx].linkedMidi != nullptr) {
         if (onMidiClipDoubleClicked) {
             onMidiClipDoubleClicked(clips[cIdx].trackPtr, clips[cIdx].linkedMidi);
@@ -229,16 +230,60 @@ void PlaylistComponent::mouseDoubleClick(const juce::MouseEvent& e) {
     int tIdx = getTrackAtY(e.y);
     if (tIdx != -1 && (*tracksRef)[tIdx]->getType() == TrackType::MIDI && cIdx == -1) {
         float absX = (e.x + (float)hBar.getCurrentRangeStart()) / hZoom;
-        float snappedX = std::round(absX / snapPixels) * snapPixels; 
+        float snappedX = std::round(absX / snapPixels) * snapPixels;
 
-        auto* newMidiClip = new MidiClipData();
-        newMidiClip->name = "Pattern " + juce::String((*tracksRef)[tIdx]->midiClips.size() + 1);
-        newMidiClip->startX = snappedX;
-        newMidiClip->width = 320.0f; 
-        newMidiClip->color = (*tracksRef)[tIdx]->getColor();
+        Track* targetTrack = (*tracksRef)[tIdx];
+        MidiClipData* newMidiClip = nullptr;
 
-        (*tracksRef)[tIdx]->midiClips.add(newMidiClip);
-        clips.push_back({ (*tracksRef)[tIdx], snappedX, 320.0f, newMidiClip->name, nullptr, newMidiClip });
+        // ¿EL TRACK YA TIENE UN PATRÓN PREVIO?
+        if (!targetTrack->midiClips.isEmpty()) {
+            // SÍ: Clonamos el último patrón editado (Copia Profunda para evitar colisión de coordenadas)
+            MidiClipData* sourceClip = targetTrack->midiClips.getLast();
+            newMidiClip = new MidiClipData(*sourceClip);
+
+            float timeShift = snappedX - sourceClip->startX;
+            newMidiClip->startX = snappedX;
+
+            // Desplazamos las coordenadas absolutas de las notas para que coincidan con la nueva posición
+            for (auto& note : newMidiClip->notes) {
+                note.x += timeShift;
+            }
+
+            // Desplazamos las coordenadas absolutas de los nodos de automatización
+            auto shiftAutoLane = [timeShift](AutoLane& lane) {
+                for (auto& node : lane.nodes) {
+                    node.x += timeShift;
+                }
+                };
+            shiftAutoLane(newMidiClip->autoVol);
+            shiftAutoLane(newMidiClip->autoPan);
+            shiftAutoLane(newMidiClip->autoPitch);
+            shiftAutoLane(newMidiClip->autoFilter);
+
+            // Nota: El nombre se mantiene igual (ej. "Pattern 1"), por lo que el Picker no lo duplicará.
+        }
+        else {
+            // NO: El track está vacío. Creamos un patrón completamente nuevo
+            int maxPatternNum = 0;
+            for (auto* tr : *tracksRef) {
+                for (auto* mc : tr->midiClips) {
+                    if (mc->name.startsWith("Pattern ")) {
+                        int num = mc->name.substring(8).getIntValue();
+                        if (num > maxPatternNum) maxPatternNum = num;
+                    }
+                }
+            }
+            int nextPatternNum = maxPatternNum + 1;
+
+            newMidiClip = new MidiClipData();
+            newMidiClip->name = "Pattern " + juce::String(nextPatternNum);
+            newMidiClip->startX = snappedX;
+            newMidiClip->width = 320.0f;
+            newMidiClip->color = targetTrack->getColor();
+        }
+
+        targetTrack->midiClips.add(newMidiClip);
+        clips.push_back({ targetTrack, snappedX, newMidiClip->width, newMidiClip->name, nullptr, newMidiClip });
         repaint();
     }
 }
@@ -251,7 +296,7 @@ void PlaylistComponent::mouseDrag(const juce::MouseEvent& e) {
     if (activeTool) activeTool->mouseDrag(e, *this);
 }
 
-void PlaylistComponent::mouseUp(const juce::MouseEvent& e) { 
+void PlaylistComponent::mouseUp(const juce::MouseEvent& e) {
     if (activeTool) activeTool->mouseUp(e, *this);
 }
 
@@ -273,7 +318,7 @@ void PlaylistComponent::filesDropped(const juce::StringArray& files, int x, int 
     if (tIdx == -1) return;
 
     float absX = (x + (float)hBar.getCurrentRangeStart()) / hZoom;
-    
+
     absX = std::round(absX / snapPixels) * snapPixels;
     absX = juce::jmax(0.0f, absX);
 

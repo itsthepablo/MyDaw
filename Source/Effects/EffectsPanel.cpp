@@ -92,6 +92,7 @@ EffectsPanel::EffectsPanel() {
     addEffectBtn.setButtonText("Add effect");
     addEffectBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(70, 75, 80));
     addEffectBtn.onClick = [this] { if (onAddEffect && activeTrack) onAddEffect(*activeTrack); };
+    addEffectBtn.setVisible(false); // <-- NUEVO: Oculto por defecto hasta seleccionar pista
 }
 
 void EffectsPanel::setTrack(Track* t) {
@@ -101,6 +102,8 @@ void EffectsPanel::setTrack(Track* t) {
 
 void EffectsPanel::updateSlots() {
     slots.clear();
+    addEffectBtn.setVisible(activeTrack != nullptr); // <-- NUEVO: Control de visibilidad del botón
+
     if (activeTrack) {
         for (int i = 0; i < activeTrack->plugins.size(); ++i) {
             auto* host = activeTrack->plugins[i];
@@ -149,6 +152,14 @@ void EffectsPanel::paint(juce::Graphics& g) {
 
     g.setColour(juce::Colours::black.withAlpha(0.5f));
     g.drawVerticalLine(getWidth() - 1, 0.0f, (float)getHeight());
+
+    // <-- NUEVO: ESTADO VACÍO CUANDO NO HAY PISTA SELECCIONADA -->
+    if (!activeTrack) {
+        g.setColour(juce::Colours::white.withAlpha(0.3f));
+        g.setFont(juce::Font(18.0f, juce::Font::bold));
+        g.drawText("SELECCIONA UNA PISTA", 0, 80, getWidth(), getHeight() - 80, juce::Justification::centred);
+        return; // Detenemos el pintado de subtítulos si no hay pista
+    }
 
     // --- DIBUJO EXPLÍCITO DE SUBTÍTULOS BASADO EN TRACKTYPE ---
     if (activeTrack) {

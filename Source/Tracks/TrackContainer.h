@@ -11,12 +11,10 @@ public:
     std::function<void(Track&, int)> onOpenFx;
     std::function<void(Track&)> onOpenPianoRoll;
     std::function<void(int)> onDeleteTrack;
-
-    // CORREGIDO: Renombrado a onOpenEffects para que coincida con el Bridge
     std::function<void(Track&)> onOpenEffects;
-
     std::function<void()> onTracksReordered;
     std::function<void()> onTrackAdded;
+    std::function<void(Track*)> onActiveTrackChanged;
 
     int vOffset = 0;
 
@@ -37,6 +35,48 @@ public:
 
     const juce::OwnedArray<Track>& getTracks() const { return tracks; }
 
+    // <-- NUEVO: LÓGICA DE SELECCIÓN MÚLTIPLE (Ctrl / Shift) -->
+    void selectTrack(Track* selectedTrack, const juce::ModifierKeys& mods) {
+        int clickedIndex = tracks.indexOf(selectedTrack);
+        if (clickedIndex < 0) return;
+
+        // 1. CTRL / CMD: Toggle de la selección actual
+        if (mods.isCommandDown() || mods.isCtrlDown()) {
+            selectedTrack->isSelected = !selectedTrack->isSelected;
+            lastSelectedTrackIndex = clickedIndex;
+        }
+        // 2. SHIFT: Selección en Rango (Desde el último clic hasta este)
+        else if (mods.isShiftDown()) {
+            if (lastSelectedTrackIndex >= 0 && lastSelectedTrackIndex < tracks.size()) {
+                int start = std::min(lastSelectedTrackIndex, clickedIndex);
+                int end = std::max(lastSelectedTrackIndex, clickedIndex);
+                for (int i = start; i <= end; ++i) {
+                    tracks[i]->isSelected = true;
+                }
+            }
+            else {
+                selectedTrack->isSelected = true;
+                lastSelectedTrackIndex = clickedIndex;
+            }
+        }
+        // 3. NORMAL: Limpia el resto, selecciona solo esta
+        else {
+            for (auto* t : tracks) {
+                t->isSelected = false;
+            }
+            selectedTrack->isSelected = true;
+            lastSelectedTrackIndex = clickedIndex;
+        }
+
+        // Repintar UI visible
+        for (auto* p : trackPanels) {
+            p->repaint();
+        }
+
+        // Siempre enviamos la última pista clickeada como "activa" para el Panel de Efectos
+        if (onActiveTrackChanged) onActiveTrackChanged(selectedTrack);
+    }
+
     void addTrack(TrackType type) {
         std::unique_ptr<juce::ScopedLock> lock;
         if (audioMutex != nullptr) lock = std::make_unique<juce::ScopedLock>(*audioMutex);
@@ -50,12 +90,13 @@ public:
         p->onPluginClick = [this, t](int i) { if (onOpenFx) onOpenFx(*t, i); };
         p->onPianoRollClick = [this, t] { if (onOpenPianoRoll) onOpenPianoRoll(*t); };
         p->onDeleteClick = [this, t] { if (onDeleteTrack) onDeleteTrack(tracks.indexOf(t)); };
-
-        // CORREGIDO: Actualizada la conexión del botón con el nuevo nombre
         p->onEffectsClick = [this, t] { if (onOpenEffects) onOpenEffects(*t); };
 
+        // <-- MODIFICADO: Pasamos las teclas a la función de selección -->
+        p->onTrackSelected = [this, t](const juce::ModifierKeys& mods) { selectTrack(t, mods); };
+
         p->onFolderStateChange = [this] {
-            recalculateDepthsFromDeltas(); recalculateDeltasFromDepths();
+            recalculateFolderHierarchy();
             resized(); repaint(); if (onTracksReordered) onTracksReordered();
             };
 
@@ -66,7 +107,7 @@ public:
 
         trackPanels.add(p);
         addAndMakeVisible(p);
-        recalculateDeltasFromDepths();
+        recalculateFolderHierarchy();
         resized();
 
         if (onTracksReordered) onTracksReordered();
@@ -79,7 +120,16 @@ public:
 
         if (index >= 0 && index < tracks.size()) {
             trackPanels.remove(index); tracks.remove(index);
-            recalculateDeltasFromDepths(); resized(); repaint();
+
+            // <-- PARCHE DE SEGURIDAD: Evitar desbordes del Pivot de selección al borrar
+            if (index == lastSelectedTrackIndex) lastSelectedTrackIndex = -1;
+            else if (index < lastSelectedTrackIndex) lastSelectedTrackIndex--;
+
+            recalculateFolderHierarchy(); resized(); repaint();
+        }
+
+        if (tracks.isEmpty() && onActiveTrackChanged) {
+            onActiveTrackChanged(nullptr);
         }
     }
 
@@ -88,33 +138,37 @@ public:
         resized();
     }
 
-    void recalculateDepthsFromDeltas() {
+    void recalculateFolderHierarchy() {
         int currentDepth = 0;
-        for (auto* t : tracks) {
-            t->folderDepth = currentDepth;
-            if (t->folderDepthChange > 0) currentDepth++;
-            else if (t->folderDepthChange < 0) { currentDepth += t->folderDepthChange; if (currentDepth < 0) currentDepth = 0; }
-        }
-    }
-
-    void recalculateDeltasFromDepths() {
-        for (int i = 0; i < tracks.size(); ++i) {
-            int currentD = tracks[i]->folderDepth;
-            int nextD = (i + 1 < tracks.size()) ? tracks[i + 1]->folderDepth : 0;
-            tracks[i]->folderDepthChange = nextD - currentD;
-        }
-
         std::vector<bool> collapseStack;
+
         for (int i = 0; i < tracks.size(); ++i) {
             auto* t = tracks[i];
+
+            t->folderDepth = currentDepth;
+
             t->isShowingInChildren = true;
-            for (bool isC : collapseStack) { if (isC) { t->isShowingInChildren = false; break; } }
-            trackPanels[i]->setVisible(t->isShowingInChildren);
-            if (t->folderDepthChange == 1) collapseStack.push_back(t->isCollapsed);
-            else if (t->folderDepthChange < 0) {
-                int drops = -t->folderDepthChange;
-                for (int d = 0; d < drops; ++d) { if (!collapseStack.empty()) collapseStack.pop_back(); }
+            for (bool isCollapsed : collapseStack) {
+                if (isCollapsed) {
+                    t->isShowingInChildren = false;
+                    break;
+                }
             }
+            trackPanels[i]->setVisible(t->isShowingInChildren);
+
+            if (t->isFolderStart) {
+                currentDepth++;
+                collapseStack.push_back(t->isCollapsed);
+            }
+
+            if (t->isFolderEnd) {
+                currentDepth--;
+                if (currentDepth < 0) currentDepth = 0;
+                if (!collapseStack.empty()) {
+                    collapseStack.pop_back();
+                }
+            }
+
             trackPanels[i]->updateFolderBtnVisuals();
         }
     }
@@ -122,10 +176,156 @@ public:
     void refreshTrackPanels() { for (auto* p : trackPanels) p->updatePlugins(); }
 
     bool isInterestedInDragSource(const SourceDetails& d) override { return d.description == "TRACK"; }
-    void itemDragEnter(const SourceDetails&) override {}
-    void itemDragExit(const SourceDetails&) override {}
-    void itemDragMove(const SourceDetails&) override { repaint(); }
-    void itemDropped(const SourceDetails&) override {}
+
+    void itemDragMove(const SourceDetails& d) override {
+        if (d.description != "TRACK") return;
+        auto* draggedPanel = dynamic_cast<TrackControlPanel*>(d.sourceComponent.get());
+        if (!draggedPanel) return;
+
+        draggedPanelForGhost = draggedPanel;
+        if (ghostSnapshot.isNull()) {
+            ghostSnapshot = draggedPanel->createComponentSnapshot(draggedPanel->getLocalBounds());
+        }
+        ghostY = d.localPosition.y - (draggedPanel->getHeight() / 2);
+
+        for (auto* p : trackPanels) {
+            if (!p->isVisible()) continue;
+
+            int oldMode = p->dragHoverMode;
+
+            if (p->getBounds().contains(d.localPosition) && p != draggedPanel) {
+                float normY = (float)(d.localPosition.y - p->getY()) / (float)p->getHeight();
+
+                if (normY < 0.25f) p->dragHoverMode = 1;
+                else if (normY > 0.75f) {
+                    if (p->track.folderDepth > 0 && d.localPosition.x < 40) {
+                        p->dragHoverMode = 4;
+                    }
+                    else {
+                        p->dragHoverMode = 3;
+                    }
+                }
+                else p->dragHoverMode = 2;
+            }
+            else {
+                p->dragHoverMode = 0;
+            }
+
+            if (oldMode != p->dragHoverMode) {
+                p->repaint();
+            }
+        }
+
+        repaint();
+    }
+
+    void itemDragExit(const SourceDetails& d) override {
+        if (d.description != "TRACK") return;
+
+        draggedPanelForGhost = nullptr;
+        ghostSnapshot = juce::Image();
+
+        for (auto* p : trackPanels) {
+            if (p->dragHoverMode != 0) {
+                p->dragHoverMode = 0;
+                p->repaint();
+            }
+        }
+        repaint();
+    }
+
+    void itemDropped(const SourceDetails& d) override {
+        if (d.description != "TRACK") return;
+
+        draggedPanelForGhost = nullptr;
+        ghostSnapshot = juce::Image();
+
+        auto* draggedPanel = dynamic_cast<TrackControlPanel*>(d.sourceComponent.get());
+        if (!draggedPanel) return;
+
+        int sourceIndex = tracks.indexOf(&draggedPanel->track);
+        if (sourceIndex < 0) return;
+
+        int targetIndex = -1;
+        int mode = 0;
+
+        for (int i = 0; i < trackPanels.size(); ++i) {
+            auto* p = trackPanels[i];
+            if (p->isVisible() && p->getBounds().contains(d.localPosition)) {
+                targetIndex = i;
+                float normY = (float)(d.localPosition.y - p->getY()) / (float)p->getHeight();
+
+                if (normY < 0.25f) mode = 1;
+                else if (normY > 0.75f) {
+                    if (p->track.folderDepth > 0 && d.localPosition.x < 40) mode = 4;
+                    else mode = 3;
+                }
+                else mode = 2;
+                break;
+            }
+        }
+
+        for (auto* p : trackPanels) {
+            p->dragHoverMode = 0;
+            p->repaint();
+        }
+
+        if (targetIndex >= 0 && targetIndex != sourceIndex) {
+            std::unique_ptr<juce::ScopedLock> lock;
+            if (audioMutex != nullptr) lock = std::make_unique<juce::ScopedLock>(*audioMutex);
+
+            bool wasFolderEnd = tracks[sourceIndex]->isFolderEnd;
+
+            auto trackToMove = tracks.removeAndReturn(sourceIndex);
+            auto panelToMove = trackPanels.removeAndReturn(sourceIndex);
+
+            if (wasFolderEnd && sourceIndex > 0) {
+                tracks[sourceIndex - 1]->isFolderEnd = true;
+            }
+
+            trackToMove->isFolderEnd = false;
+
+            if (sourceIndex < targetIndex) {
+                targetIndex--;
+            }
+
+            if (mode == 1) {
+                tracks.insert(targetIndex, trackToMove);
+                trackPanels.insert(targetIndex, panelToMove);
+            }
+            else if (mode == 3) {
+                tracks.insert(targetIndex + 1, trackToMove);
+                trackPanels.insert(targetIndex + 1, panelToMove);
+            }
+            else if (mode == 2) {
+                bool wasFolder = tracks[targetIndex]->isFolderStart;
+                tracks[targetIndex]->isFolderStart = true;
+
+                if (!wasFolder) {
+                    trackToMove->isFolderEnd = true;
+                }
+
+                tracks.insert(targetIndex + 1, trackToMove);
+                trackPanels.insert(targetIndex + 1, panelToMove);
+            }
+            else if (mode == 4) {
+                tracks[targetIndex]->isFolderEnd = true;
+                tracks.insert(targetIndex + 1, trackToMove);
+                trackPanels.insert(targetIndex + 1, panelToMove);
+            }
+
+            // <-- PARCHE DE SEGURIDAD: Limpiamos el Pivot tras alterar el array
+            lastSelectedTrackIndex = -1;
+
+            recalculateFolderHierarchy();
+            resized();
+            repaint();
+            if (onTracksReordered) onTracksReordered();
+        }
+        else {
+            repaint();
+        }
+    }
 
     bool isInterestedInFileDrag(const juce::StringArray&) override { return true; }
 
@@ -145,6 +345,13 @@ public:
 
     void paint(juce::Graphics& g) override {
         g.fillAll(juce::Colour(25, 27, 30));
+    }
+
+    void paintOverChildren(juce::Graphics& g) override {
+        if (draggedPanelForGhost != nullptr && !ghostSnapshot.isNull()) {
+            g.setOpacity(0.6f);
+            g.drawImageAt(ghostSnapshot, 0, ghostY);
+        }
     }
 
     void resized() override {
@@ -171,6 +378,13 @@ private:
     juce::OwnedArray<TrackControlPanel> trackPanels;
 
     juce::CriticalSection* audioMutex = nullptr;
+
+    TrackControlPanel* draggedPanelForGhost = nullptr;
+    int ghostY = 0;
+    juce::Image ghostSnapshot;
+
+    // <-- NUEVO: Pivot (anclaje) para la selección múltiple con Shift
+    int lastSelectedTrackIndex = -1;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TrackContainer)
 };

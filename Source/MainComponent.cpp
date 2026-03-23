@@ -26,15 +26,14 @@ MainComponent::MainComponent() {
     addAndMakeVisible(bottomDockResizer);
     addAndMakeVisible(bottomDock);
 
-    // --- NUEVO: Piano Roll y Botón de Volver ---
     addAndMakeVisible(pianoRollUI);
     addAndMakeVisible(closePianoRollBtn);
 
-    pianoRollUI.setVisible(false); // Oculto por defecto
+    pianoRollUI.setVisible(false);
     closePianoRollBtn.setVisible(false);
 
     closePianoRollBtn.setButtonText("Cerrar Piano Roll");
-    closePianoRollBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(200, 70, 70)); // Rojo destacado
+    closePianoRollBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(200, 70, 70));
     closePianoRollBtn.setTooltip("Vuelve a la vista de Playlist y restaura tus paneles.");
     closePianoRollBtn.onClick = [this] { closePianoRoll(); };
 
@@ -54,19 +53,18 @@ MainComponent::MainComponent() {
     toolbarButtons.onToolChanged = [this](int toolId) { playlistUI.setTool(toolId); };
 
     playlistUI.onMidiClipDeleted = [this](MidiClipData* deletedClip) {
-        if (pianoRollUI.getActiveNotesPointer() == &(deletedClip->notes)) {
-            closePianoRoll(); // Cerramos si borramos el clip activo
+        // <-- CORREGIDO: Comparamos directamente los punteros de los clips
+        if (pianoRollUI.getActiveClip() == deletedClip) {
+            closePianoRoll();
         }
         };
 
-    // --- CONEXIONES MODIFICADAS PARA LLAMAR AL MODO ENFOQUE ---
     TrackPianoRollBridge::connect(trackContainer, playlistUI, pianoRollUI, [this] { openPianoRoll(); });
     TrackPianoRollBridge::connectPlaylist(playlistUI, pianoRollUI, [this] { openPianoRoll(); });
 
     TrackEffectsBridge::connect(trackContainer, effectsPanelUI, audioMutex,
         audioEngine.clock.sampleRate, audioEngine.clock.blockSize,
         [this] {
-            // Si abrimos un efecto, nos aseguramos de salir del Piano Roll para verlo
             if (isPianoRollVisible) closePianoRoll();
             isLeftSidebarVisible = true;
             leftSidebar.showTab(LeftSidebar::FxTab);
@@ -102,10 +100,8 @@ void MainComponent::releaseResources() { audioEngine.releaseResources(); }
 
 void MainComponent::paint(juce::Graphics& g) { g.fillAll(juce::Colour(30, 32, 35)); }
 
-// --- LÓGICA DE APERTURA Y CIERRE DEL MODO ENFOQUE ---
 void MainComponent::openPianoRoll() {
     if (!isPianoRollVisible) {
-        // Guardamos cómo tenía el usuario su DAW antes de entrar
         prePianoRollLeftSidebar = isLeftSidebarVisible;
         prePianoRollBottomDock = isBottomDockVisible;
         isPianoRollVisible = true;
@@ -116,10 +112,12 @@ void MainComponent::openPianoRoll() {
 void MainComponent::closePianoRoll() {
     if (isPianoRollVisible) {
         isPianoRollVisible = false;
-        // Restauramos los paneles tal cual estaban
         isLeftSidebarVisible = prePianoRollLeftSidebar;
         isBottomDockVisible = prePianoRollBottomDock;
-        pianoRollUI.setActiveNotes(nullptr);
+
+        // <-- CORREGIDO: Llamamos a setActiveClip para vaciarlo
+        pianoRollUI.setActiveClip(nullptr);
+
         resized();
     }
 }
@@ -127,30 +125,21 @@ void MainComponent::closePianoRoll() {
 void MainComponent::resized() {
     auto area = getLocalBounds();
 
-    // 1. Barras maestras inamovibles (Cabecera y Hint Panel)
     topMenuBar.setBounds(area.removeFromTop(30));
     hintPanel.setBounds(area.removeFromBottom(28));
 
-    // 2. Barra de Transporte (Play/Stop siempre debe verse)
     auto topArea = area.removeFromTop(45);
     toolbarButtons.setBounds(topArea.removeFromRight(550));
     resourceMeter->setBounds(topArea.removeFromRight(100).reduced(8, 10));
     transportBar.setBounds(topArea);
 
     if (isPianoRollVisible) {
-        // =======================================================
-        // MODO ENFOQUE: PIANO ROLL OCUPA TODO EL RESTO
-        // =======================================================
         pianoRollUI.setVisible(true);
         closePianoRollBtn.setVisible(true);
 
-        // El Piano Roll ocupa todo el espacio central masivo
         pianoRollUI.setBounds(area);
-
-        // Flotamos el botón de cerrar en la esquina superior derecha del Piano Roll
         closePianoRollBtn.setBounds(area.getRight() - 160, area.getY() + 10, 140, 25);
 
-        // Ocultamos todo lo demás
         trackContainer.setVisible(false);
         playlistUI.setVisible(false);
         bottomDock.setVisible(false);
@@ -159,9 +148,6 @@ void MainComponent::resized() {
         sidebarResizer.setVisible(false);
     }
     else {
-        // =======================================================
-        // MODO PLAYLIST (NORMAL)
-        // =======================================================
         pianoRollUI.setVisible(false);
         closePianoRollBtn.setVisible(false);
 

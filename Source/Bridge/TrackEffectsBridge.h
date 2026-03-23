@@ -16,6 +16,11 @@ public:
             ui.setTrack(&t);
             // Llamamos al callback para que el MainComponent despliegue el Sidebar
             if (onEffectsOpened) onEffectsOpened();
-        };
+            };
+
+        // <-- NUEVA CONEXIÓN REACTIVA: Actualiza el panel automáticamente al seleccionar pista -->
+        container.onActiveTrackChanged = [&ui](Track* t) {
+            ui.setTrack(t);
+            };
     }
 };

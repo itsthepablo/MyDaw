@@ -19,9 +19,7 @@ AutomationEditor::AutomationEditor() {
     pencilBtn.setToggleState(true, juce::dontSendNotification);
     currentDrawTool = AutoDrawTool::Pencil;
 
-    autoVol.defaultValue = 0.8f; autoPan.defaultValue = 0.5f; autoFilter.defaultValue = 0.5f; autoPitch.defaultValue = 0.5f;
-    autoVol.nodes.push_back({ 0.0f, 0.8f, 0.0f, AutomationMath::SingleCurve }); autoPan.nodes.push_back({ 0.0f, 0.5f, 0.0f, AutomationMath::SingleCurve });
-    autoFilter.nodes.push_back({ 0.0f, 0.5f, 0.0f, AutomationMath::SingleCurve }); autoPitch.nodes.push_back({ 0.0f, 0.5f, 0.0f, AutomationMath::SingleCurve });
+    dummyLane.defaultValue = 0.5f;
 }
 
 void AutomationEditor::buttonClicked(juce::Button* button) {
@@ -36,21 +34,49 @@ void AutomationEditor::buttonClicked(juce::Button* button) {
     }
 }
 
-void AutomationEditor::setNotesReference(const std::vector<Note>* trackNotes) { notesRef = trackNotes; repaint(); }
+void AutomationEditor::setClipReference(MidiClipData* clip) {
+    juce::ScopedLock sl(dataLock);
+    clipRef = clip;
+
+    if (clipRef != nullptr) {
+        if (clipRef->autoVol.nodes.empty()) {
+            clipRef->autoVol.defaultValue = 0.8f;
+            clipRef->autoVol.nodes.push_back({ 0.0f, 0.8f, 0.0f, AutomationMath::SingleCurve });
+        }
+        if (clipRef->autoPan.nodes.empty()) {
+            clipRef->autoPan.defaultValue = 0.5f;
+            clipRef->autoPan.nodes.push_back({ 0.0f, 0.5f, 0.0f, AutomationMath::SingleCurve });
+        }
+        if (clipRef->autoFilter.nodes.empty()) {
+            clipRef->autoFilter.defaultValue = 0.5f;
+            clipRef->autoFilter.nodes.push_back({ 0.0f, 0.5f, 0.0f, AutomationMath::SingleCurve });
+        }
+        if (clipRef->autoPitch.nodes.empty()) {
+            clipRef->autoPitch.defaultValue = 0.5f;
+            clipRef->autoPitch.nodes.push_back({ 0.0f, 0.5f, 0.0f, AutomationMath::SingleCurve });
+        }
+    }
+    repaint();
+}
 
 void AutomationEditor::updateView(float hS, float hZ, float vS, float vZ, double snap, float ph) {
     hScroll = hS; hZoom = hZ; vScroll = vS; vZoom = vZ; snapPixels = snap; currentPlayheadX = ph;
     repaint();
 }
 
-float AutomationEditor::getVolumeAt(float px) { juce::ScopedLock sl(dataLock); return autoVol.getValueAt(px); }
-float AutomationEditor::getPanAt(float px) { juce::ScopedLock sl(dataLock); return autoPan.getValueAt(px); }
-float AutomationEditor::getFilterAt(float px) { juce::ScopedLock sl(dataLock); return autoFilter.getValueAt(px); }
-float AutomationEditor::getPitchAt(float px) { juce::ScopedLock sl(dataLock); return autoPitch.getValueAt(px); }
+float AutomationEditor::getVolumeAt(float px) { juce::ScopedLock sl(dataLock); return clipRef ? clipRef->autoVol.getValueAt(px) : 0.8f; }
+float AutomationEditor::getPanAt(float px) { juce::ScopedLock sl(dataLock); return clipRef ? clipRef->autoPan.getValueAt(px) : 0.5f; }
+float AutomationEditor::getFilterAt(float px) { juce::ScopedLock sl(dataLock); return clipRef ? clipRef->autoFilter.getValueAt(px) : 0.5f; }
+float AutomationEditor::getPitchAt(float px) { juce::ScopedLock sl(dataLock); return clipRef ? clipRef->autoPitch.getValueAt(px) : 0.5f; }
 
 AutoLane* AutomationEditor::getCurrentAutoLane() { return getLaneById(autoSelector.getSelectedId()); }
 AutoLane* AutomationEditor::getLaneById(int id) {
-    if (id == 1) return &autoVol; if (id == 2) return &autoPan; if (id == 3) return &autoFilter; if (id == 4) return &autoPitch; return &autoVol;
+    if (!clipRef) return &dummyLane;
+    if (id == 1) return &clipRef->autoVol;
+    if (id == 2) return &clipRef->autoPan;
+    if (id == 3) return &clipRef->autoFilter;
+    if (id == 4) return &clipRef->autoPitch;
+    return &clipRef->autoVol;
 }
 
 juce::Colour AutomationEditor::getLaneColor() {
@@ -73,14 +99,14 @@ float AutomationEditor::getYForValue(float val) { float pH = getHeight() - toolb
 float AutomationEditor::getValueForY(float y) { float pH = getHeight() - toolbarH; if (y < toolbarH) y = toolbarH; float center = toolbarH + pH / 2.0f; return juce::jlimit(0.0f, 1.0f, 0.5f - (y - center) / ((pH - 20.0f) * autoVZoom)); }
 
 void AutomationEditor::grabNodesUnderNotes(const std::set<int>& selectedIndices) {
-    juce::ScopedLock sl(dataLock); linkedNodes.clear(); if (notesRef == nullptr || selectedIndices.empty()) return;
+    juce::ScopedLock sl(dataLock); linkedNodes.clear(); if (clipRef == nullptr || selectedIndices.empty()) return;
     for (int laneId = 1; laneId <= 4; ++laneId) {
         AutoLane* lane = getLaneById(laneId);
         for (size_t nIdx = 0; nIdx < lane->nodes.size(); ++nIdx) {
             float nx = lane->nodes[nIdx].x; bool isInside = false;
             for (int idx : selectedIndices) {
-                if (idx < notesRef->size()) {
-                    const auto& note = (*notesRef)[idx];
+                if (idx < clipRef->notes.size()) {
+                    const auto& note = clipRef->notes[idx];
                     if (nx >= note.x && nx <= note.x + note.width) { isInside = true; break; }
                 }
             }
@@ -254,13 +280,13 @@ void AutomationEditor::paint(juce::Graphics& g) {
         g.drawText("Shape mode. Ghost preview active. Drag to draw, click to repeat. Hold Ctrl for temporary pointer.", keyW + 15, toolbarH + 10, getWidth() - keyW - 30, 20, juce::Justification::topLeft);
     }
 
-    if (notesRef != nullptr && !notesRef->empty()) {
+    if (clipRef != nullptr && !clipRef->notes.empty()) {
         juce::ScopedLock sl(dataLock);
         g.setColour(juce::Colours::white.withAlpha(0.18f));
         float rowH = 22.0f * vZoom; float pH = 600.0f;
         if (getParentComponent() != nullptr) pH = (float)getParentComponent()->getHeight() - (float)getHeight() - 90.0f;
 
-        for (const auto& n : *notesRef) {
+        for (const auto& n : clipRef->notes) {
             int nx = (int)(n.x * hZoom) + keyW - (int)hScroll; int nw = (int)(n.width * hZoom);
             if (nx + nw < keyW || nx > getWidth()) continue;
             float absoluteY = (127 - n.pitch) * rowH; float yInPR = absoluteY - vScroll;
@@ -314,8 +340,8 @@ void AutomationEditor::paint(juce::Graphics& g) {
 
         if (autoSelector.getSelectedId() == 4) {
             float tx = (tooltipPos.x - keyW + hScroll) / hZoom; int baseP = -1;
-            if (notesRef != nullptr) {
-                for (const auto& n : *notesRef) { if (tx >= n.x && tx <= n.x + n.width) { baseP = n.pitch; break; } }
+            if (clipRef != nullptr) {
+                for (const auto& n : clipRef->notes) { if (tx >= n.x && tx <= n.x + n.width) { baseP = n.pitch; break; } }
             }
             if (baseP != -1) {
                 float semitones = (tooltipValue - 0.5f) * 24.0f;
@@ -348,8 +374,8 @@ void AutomationEditor::paint(juce::Graphics& g) {
 
     if (autoSelector.getSelectedId() == 4) {
         int currentPlayingPitch = -1;
-        if (notesRef != nullptr) {
-            for (const auto& n : *notesRef) {
+        if (clipRef != nullptr) {
+            for (const auto& n : clipRef->notes) {
                 if (currentPlayheadX >= n.x && currentPlayheadX <= n.x + n.width) { currentPlayingPitch = n.pitch; break; }
             }
         }
@@ -360,7 +386,7 @@ void AutomationEditor::paint(juce::Graphics& g) {
 
         juce::String nStr = "--"; g.setColour(juce::Colours::white.withAlpha(0.3f));
         if (currentPlayingPitch != -1) {
-            float currentPitchAuto = autoPitch.getValueAt(currentPlayheadX);
+            float currentPitchAuto = clipRef->autoPitch.getValueAt(currentPlayheadX);
             float semitones = (currentPitchAuto - 0.5f) * 24.0f;
             int finalP = juce::jlimit(0, 127, currentPlayingPitch + juce::roundToInt(semitones));
             static const juce::String names[] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };

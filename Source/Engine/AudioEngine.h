@@ -88,15 +88,19 @@ public:
             }
         }
 
+        MidiClipData* activeClip = pianoRollUI.getActiveClip();
+
         for (int i = (int)tracks.size() - 1; i >= 0; --i) {
             auto* track = tracks[i];
 
-            // --- DETECCIÓN INTELIGENTE DE PIANO ROLL ACTIVO ---
-            bool isPianoRollActive = (&(track->notes) == pianoRollUI.getActiveNotesPointer());
-            for (auto* clip : track->midiClips) {
-                if (&(clip->notes) == pianoRollUI.getActiveNotesPointer()) {
-                    isPianoRollActive = true;
-                    break;
+            // --- DETECCIÓN INTELIGENTE CORREGIDA ---
+            bool isPianoRollActive = false;
+            if (activeClip != nullptr) {
+                for (auto* clip : track->midiClips) {
+                    if (clip == activeClip) {
+                        isPianoRollActive = true;
+                        break;
+                    }
                 }
             }
 

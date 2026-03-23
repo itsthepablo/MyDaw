@@ -3,6 +3,7 @@
 #include <vector>
 #include <set>
 #include "../GlobalData.h" 
+#include "../Tracks/Track.h" 
 #include "AutomationEditor.h" 
 
 enum class ToolMode { Draw, Select };
@@ -25,12 +26,18 @@ public:
     PianoRollComponent();
     ~PianoRollComponent() override;
 
-    void setActiveNotes(std::vector<Note>* trackNotes) {
-        externalNotes = trackNotes;
-        automationEditor.setNotesReference(trackNotes);
+    // --- NUEVO: Sistema de transmisión para sincronizar clones ---
+    std::function<void(MidiClipData*)> onPatternEdited;
+    void notifyPatternEdited() {
+        if (onPatternEdited && activeClip) onPatternEdited(activeClip);
+    }
+
+    void setActiveClip(MidiClipData* clip) {
+        activeClip = clip;
+        automationEditor.setClipReference(clip);
         repaint();
     }
-    const std::vector<Note>* getActiveNotesPointer() const { return externalNotes; }
+    MidiClipData* getActiveClip() const { return activeClip; }
 
     void setPlaying(bool p) { isPlaying = p; }
     bool getIsPlaying() const { return isPlaying; }
@@ -40,7 +47,6 @@ public:
 
     float getLoopEndPos() const;
 
-    // Cambiado para usar el valor interno en lugar del slider eliminado
     double getBpm() const { return bpmValue; }
     void setBpm(double newBpm) { bpmValue = newBpm; repaint(); }
 
@@ -65,16 +71,17 @@ public:
 
     const std::vector<Note>& getNotes() const {
         static std::vector<Note> empty;
-        return (externalNotes != nullptr) ? *externalNotes : empty;
+        return (activeClip != nullptr) ? activeClip->notes : empty;
     }
 
     AutomationEditor& getAutoEditor() { return automationEditor; }
 
 private:
-    std::vector<Note>* externalNotes = nullptr;
+    MidiClipData* activeClip = nullptr;
+
     float playheadAbsPos = 0.0f;
     bool isPlaying = false;
-    double bpmValue = 120.0; // Nueva variable interna
+    double bpmValue = 120.0;
 
     int previewPitch = -1;
     bool isPreviewingNote = false;

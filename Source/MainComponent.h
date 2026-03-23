@@ -19,7 +19,11 @@
 #include "UI/TopMenuBar.h" 
 #include "Engine/AudioEngine.h"
 
-class MainComponent : public juce::AudioAppComponent, public juce::ApplicationCommandTarget {
+// <-- SOLUCIÓN CRÍTICA: Se añade juce::DragAndDropContainer a la herencia múltiple -->
+class MainComponent : public juce::AudioAppComponent,
+    public juce::ApplicationCommandTarget,
+    public juce::DragAndDropContainer
+{
 public:
     MainComponent();
     ~MainComponent() override;
