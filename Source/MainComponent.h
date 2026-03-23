@@ -15,7 +15,7 @@
 #include "UI/BottomDock.h"       
 #include "UI/SidebarResizer.h" 
 #include "UI/BottomDockResizer.h" 
-#include "UI/HintPanel.h"   // <--- RESTAURADO
+#include "UI/HintPanel.h"   
 #include "UI/TopMenuBar.h" 
 #include "Engine/AudioEngine.h"
 
@@ -36,15 +36,22 @@ public:
     bool perform(const juce::ApplicationCommandTarget::InvocationInfo& info) override;
 
 private:
+    // --- NUEVOS MÉTODOS DE MODO ENFOQUE ---
+    void openPianoRoll();
+    void closePianoRoll();
+
     juce::ApplicationCommandManager commandManager;
     const juce::CommandID playStopCommand = 1;
 
     TopMenuBar topMenuBar;
-    HintPanel hintPanel; // <--- RESTAURADO
+    HintPanel hintPanel;
 
     TrackContainer trackContainer;
     PlaylistComponent playlistUI;
+
+    // Piano Roll + Botón para cerrarlo
     PianoRollComponent pianoRollUI;
+    juce::TextButton closePianoRollBtn;
 
     MixerComponent mixerUI;
     ChannelRackPanel rackPanelUI;
@@ -61,8 +68,6 @@ private:
     ToolbarButtons toolbarButtons;
     std::unique_ptr<ResourceMeter> resourceMeter;
 
-    std::unique_ptr<juce::DocumentWindow> pianoRollWindow;
-
     juce::CriticalSection audioMutex;
     AudioEngine audioEngine;
 
@@ -71,6 +76,11 @@ private:
 
     bool isLeftSidebarVisible = true;
     int leftSidebarWidth = 200;
+
+    // --- VARIABLES DE MEMORIA (Para restaurar la interfaz al salir del Piano Roll) ---
+    bool isPianoRollVisible = false;
+    bool prePianoRollLeftSidebar = true;
+    bool prePianoRollBottomDock = true;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

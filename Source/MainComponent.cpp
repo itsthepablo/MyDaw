@@ -11,16 +11,13 @@ MainComponent::MainComponent() {
 
     resourceMeter = std::make_unique<ResourceMeter>(*this);
 
-    // --- BARRA DE TÍTULO CUSTOM Y PANEL INFERIOR ---
     addAndMakeVisible(topMenuBar);
-    addAndMakeVisible(hintPanel); // <--- RESTAURADO
+    addAndMakeVisible(hintPanel);
 
-    // --- CONTROLES SUPERIORES ---
     addAndMakeVisible(transportBar);
     addAndMakeVisible(toolbarButtons);
     addAndMakeVisible(*resourceMeter);
 
-    // --- PANELES LATERALES E INFERIORES ---
     addAndMakeVisible(leftSidebar);
     addAndMakeVisible(sidebarResizer);
     addAndMakeVisible(trackContainer);
@@ -29,6 +26,18 @@ MainComponent::MainComponent() {
     addAndMakeVisible(bottomDockResizer);
     addAndMakeVisible(bottomDock);
 
+    // --- NUEVO: Piano Roll y Botón de Volver ---
+    addAndMakeVisible(pianoRollUI);
+    addAndMakeVisible(closePianoRollBtn);
+
+    pianoRollUI.setVisible(false); // Oculto por defecto
+    closePianoRollBtn.setVisible(false);
+
+    closePianoRollBtn.setButtonText("Cerrar Piano Roll");
+    closePianoRollBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(200, 70, 70)); // Rojo destacado
+    closePianoRollBtn.setTooltip("Vuelve a la vista de Playlist y restaura tus paneles.");
+    closePianoRollBtn.onClick = [this] { closePianoRoll(); };
+
     bottomDock.setVisible(true);
     leftSidebar.setVisible(true);
 
@@ -36,43 +45,29 @@ MainComponent::MainComponent() {
     playlistUI.setExternalMutex(&audioMutex);
     pickerPanelUI.setTrackContainer(&trackContainer);
 
-    leftSidebar.onClose = [this] {
-        isLeftSidebarVisible = false;
-        resized();
-        };
-
-    bottomDock.onClose = [this] {
-        isBottomDockVisible = false;
-        resized();
-        };
-
-    sidebarResizer.onResizeDelta = [this](int deltaX) {
-        leftSidebarWidth = juce::jlimit(150, 600, leftSidebarWidth + deltaX);
-        resized();
-        };
-
-    bottomDockResizer.onResizeDelta = [this](int deltaY) {
-        int maxHeight = (int)(getHeight() * 0.8f);
-        bottomDockHeight = juce::jlimit(100, maxHeight, bottomDockHeight - deltaY);
-        resized();
-        };
+    leftSidebar.onClose = [this] { isLeftSidebarVisible = false; resized(); };
+    bottomDock.onClose = [this] { isBottomDockVisible = false; resized(); };
+    sidebarResizer.onResizeDelta = [this](int deltaX) { leftSidebarWidth = juce::jlimit(150, 600, leftSidebarWidth + deltaX); resized(); };
+    bottomDockResizer.onResizeDelta = [this](int deltaY) { bottomDockHeight = juce::jlimit(100, (int)(getHeight() * 0.8f), bottomDockHeight - deltaY); resized(); };
 
     toolbarButtons.onSnapChanged = [this](double newSnapPixels) { playlistUI.snapPixels = newSnapPixels; };
     toolbarButtons.onToolChanged = [this](int toolId) { playlistUI.setTool(toolId); };
 
     playlistUI.onMidiClipDeleted = [this](MidiClipData* deletedClip) {
         if (pianoRollUI.getActiveNotesPointer() == &(deletedClip->notes)) {
-            pianoRollUI.setActiveNotes(nullptr);
-            if (pianoRollWindow) pianoRollWindow->setVisible(false);
+            closePianoRoll(); // Cerramos si borramos el clip activo
         }
         };
 
-    TrackPianoRollBridge::connect(trackContainer, playlistUI, pianoRollUI, pianoRollWindow);
-    TrackPianoRollBridge::connectPlaylist(playlistUI, pianoRollUI, pianoRollWindow);
+    // --- CONEXIONES MODIFICADAS PARA LLAMAR AL MODO ENFOQUE ---
+    TrackPianoRollBridge::connect(trackContainer, playlistUI, pianoRollUI, [this] { openPianoRoll(); });
+    TrackPianoRollBridge::connectPlaylist(playlistUI, pianoRollUI, [this] { openPianoRoll(); });
 
     TrackEffectsBridge::connect(trackContainer, effectsPanelUI, audioMutex,
         audioEngine.clock.sampleRate, audioEngine.clock.blockSize,
         [this] {
+            // Si abrimos un efecto, nos aseguramos de salir del Piano Roll para verlo
+            if (isPianoRollVisible) closePianoRoll();
             isLeftSidebarVisible = true;
             leftSidebar.showTab(LeftSidebar::FxTab);
             resized();
@@ -86,7 +81,7 @@ MainComponent::MainComponent() {
     trackContainer.onDeleteTrack = [this](int index) {
         const juce::ScopedLock sl(audioMutex);
         if (index >= 0 && index < trackContainer.getTracks().size()) {
-            TrackPianoRollBridge::cleanup(pianoRollUI, pianoRollWindow, trackContainer.getTracks()[index]);
+            TrackPianoRollBridge::cleanup(pianoRollUI, [this] { closePianoRoll(); }, trackContainer.getTracks()[index]);
             trackContainer.removeTrack(index);
             playlistUI.updateScrollBars();
             playlistUI.repaint();
@@ -99,69 +94,105 @@ MainComponent::MainComponent() {
     setAudioChannels(0, 2);
 }
 
-MainComponent::~MainComponent() {
-    shutdownAudio();
+MainComponent::~MainComponent() { shutdownAudio(); }
+
+void MainComponent::prepareToPlay(int samples, double s) { audioEngine.prepareToPlay(samples, s, trackContainer, audioMutex); }
+void MainComponent::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill) { audioEngine.processBlock(bufferToFill, trackContainer, pianoRollUI, playlistUI, mixerUI, audioMutex); }
+void MainComponent::releaseResources() { audioEngine.releaseResources(); }
+
+void MainComponent::paint(juce::Graphics& g) { g.fillAll(juce::Colour(30, 32, 35)); }
+
+// --- LÓGICA DE APERTURA Y CIERRE DEL MODO ENFOQUE ---
+void MainComponent::openPianoRoll() {
+    if (!isPianoRollVisible) {
+        // Guardamos cómo tenía el usuario su DAW antes de entrar
+        prePianoRollLeftSidebar = isLeftSidebarVisible;
+        prePianoRollBottomDock = isBottomDockVisible;
+        isPianoRollVisible = true;
+        resized();
+    }
 }
 
-void MainComponent::prepareToPlay(int samples, double s) {
-    audioEngine.prepareToPlay(samples, s, trackContainer, audioMutex);
-}
-
-void MainComponent::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill) {
-    audioEngine.processBlock(bufferToFill, trackContainer, pianoRollUI, playlistUI, mixerUI, audioMutex);
-}
-
-void MainComponent::releaseResources() {
-    audioEngine.releaseResources();
-}
-
-void MainComponent::paint(juce::Graphics& g) {
-    g.fillAll(juce::Colour(30, 32, 35));
+void MainComponent::closePianoRoll() {
+    if (isPianoRollVisible) {
+        isPianoRollVisible = false;
+        // Restauramos los paneles tal cual estaban
+        isLeftSidebarVisible = prePianoRollLeftSidebar;
+        isBottomDockVisible = prePianoRollBottomDock;
+        pianoRollUI.setActiveNotes(nullptr);
+        resized();
+    }
 }
 
 void MainComponent::resized() {
     auto area = getLocalBounds();
 
-    // --- 0. BARRA DE TÍTULO EN LA CIMA (30px) ---
+    // 1. Barras maestras inamovibles (Cabecera y Hint Panel)
     topMenuBar.setBounds(area.removeFromTop(30));
-
-    // --- 1. BARRA DE ESTADO INFERIOR (28px) ---
-    // RESTAURADO: Le quitamos espacio a la base absoluta de la pantalla
     hintPanel.setBounds(area.removeFromBottom(28));
 
-    // --- 2. BARRA DE HERRAMIENTAS Y TRANSPORTE ---
+    // 2. Barra de Transporte (Play/Stop siempre debe verse)
     auto topArea = area.removeFromTop(45);
     toolbarButtons.setBounds(topArea.removeFromRight(550));
     resourceMeter->setBounds(topArea.removeFromRight(100).reduced(8, 10));
     transportBar.setBounds(topArea);
 
-    // --- 3. CONTENEDOR INFERIOR (MIXER + RACK) ---
-    if (isBottomDockVisible) {
-        bottomDock.setVisible(true);
-        bottomDockResizer.setVisible(true);
-        bottomDock.setBounds(area.removeFromBottom(bottomDockHeight));
-        bottomDockResizer.setBounds(area.removeFromBottom(4));
-    }
-    else {
+    if (isPianoRollVisible) {
+        // =======================================================
+        // MODO ENFOQUE: PIANO ROLL OCUPA TODO EL RESTO
+        // =======================================================
+        pianoRollUI.setVisible(true);
+        closePianoRollBtn.setVisible(true);
+
+        // El Piano Roll ocupa todo el espacio central masivo
+        pianoRollUI.setBounds(area);
+
+        // Flotamos el botón de cerrar en la esquina superior derecha del Piano Roll
+        closePianoRollBtn.setBounds(area.getRight() - 160, area.getY() + 10, 140, 25);
+
+        // Ocultamos todo lo demás
+        trackContainer.setVisible(false);
+        playlistUI.setVisible(false);
         bottomDock.setVisible(false);
         bottomDockResizer.setVisible(false);
-    }
-
-    // --- 4. CONTENEDOR LATERAL IZQUIERDO ---
-    if (isLeftSidebarVisible) {
-        leftSidebar.setVisible(true);
-        sidebarResizer.setVisible(true);
-        leftSidebar.setBounds(area.removeFromLeft(leftSidebarWidth));
-        sidebarResizer.setBounds(area.removeFromLeft(4));
-    }
-    else {
         leftSidebar.setVisible(false);
         sidebarResizer.setVisible(false);
     }
+    else {
+        // =======================================================
+        // MODO PLAYLIST (NORMAL)
+        // =======================================================
+        pianoRollUI.setVisible(false);
+        closePianoRollBtn.setVisible(false);
 
-    // --- 5. ZONA CENTRAL ---
-    trackContainer.setBounds(area.removeFromLeft(250));
-    playlistUI.setBounds(area);
+        trackContainer.setVisible(true);
+        playlistUI.setVisible(true);
+
+        if (isBottomDockVisible) {
+            bottomDock.setVisible(true);
+            bottomDockResizer.setVisible(true);
+            bottomDock.setBounds(area.removeFromBottom(bottomDockHeight));
+            bottomDockResizer.setBounds(area.removeFromBottom(4));
+        }
+        else {
+            bottomDock.setVisible(false);
+            bottomDockResizer.setVisible(false);
+        }
+
+        if (isLeftSidebarVisible) {
+            leftSidebar.setVisible(true);
+            sidebarResizer.setVisible(true);
+            leftSidebar.setBounds(area.removeFromLeft(leftSidebarWidth));
+            sidebarResizer.setBounds(area.removeFromLeft(4));
+        }
+        else {
+            leftSidebar.setVisible(false);
+            sidebarResizer.setVisible(false);
+        }
+
+        trackContainer.setBounds(area.removeFromLeft(250));
+        playlistUI.setBounds(area);
+    }
 }
 
 juce::ApplicationCommandTarget* MainComponent::getNextCommandTarget() { return nullptr; }
