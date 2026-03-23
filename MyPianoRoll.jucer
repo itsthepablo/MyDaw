@@ -17,6 +17,7 @@
           <FILE id="DNLFnt" name="ToolbarButtons.h" compile="0" resource="0"
                 file="Source/UI/Buttons/ToolbarButtons.h"/>
         </GROUP>
+        <FILE id="Oq1yky" name="TopMenuBar.h" compile="0" resource="0" file="Source/UI/TopMenuBar.h"/>
         <FILE id="D6vTfs" name="HintPanel.h" compile="0" resource="0" file="Source/UI/HintPanel.h"/>
         <FILE id="B6VI8M" name="LevelMeter.h" compile="0" resource="0" file="Source/UI/LevelMeter.h"/>
         <FILE id="kfwxKj" name="BottomDockResizer.h" compile="0" resource="0"

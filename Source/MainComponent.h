@@ -15,7 +15,8 @@
 #include "UI/BottomDock.h"       
 #include "UI/SidebarResizer.h" 
 #include "UI/BottomDockResizer.h" 
-#include "UI/HintPanel.h" // <--- NUEVO INCLUDE
+#include "UI/HintPanel.h"   // <--- RESTAURADO
+#include "UI/TopMenuBar.h" 
 #include "Engine/AudioEngine.h"
 
 class MainComponent : public juce::AudioAppComponent, public juce::ApplicationCommandTarget {
@@ -38,37 +39,38 @@ private:
     juce::ApplicationCommandManager commandManager;
     const juce::CommandID playStopCommand = 1;
 
-    HintPanel hintPanel; // <--- NUEVO: EL PANEL DE SUGERENCIAS
+    TopMenuBar topMenuBar;
+    HintPanel hintPanel; // <--- RESTAURADO
 
     TrackContainer trackContainer;
     PlaylistComponent playlistUI;
     PianoRollComponent pianoRollUI;
-    
+
     MixerComponent mixerUI;
-    ChannelRackPanel rackPanelUI; 
-    BottomDock bottomDock{mixerUI, rackPanelUI}; 
-    BottomDockResizer bottomDockResizer; 
-    
+    ChannelRackPanel rackPanelUI;
+    BottomDock bottomDock{ mixerUI, rackPanelUI };
+    BottomDockResizer bottomDockResizer;
+
     EffectsPanel effectsPanelUI;
-    PickerPanel pickerPanelUI; 
-    FileBrowserPanel fileBrowserPanelUI; 
-    LeftSidebar leftSidebar{pickerPanelUI, effectsPanelUI, fileBrowserPanelUI}; 
-    SidebarResizer sidebarResizer; 
+    PickerPanel pickerPanelUI;
+    FileBrowserPanel fileBrowserPanelUI;
+    LeftSidebar leftSidebar{ pickerPanelUI, effectsPanelUI, fileBrowserPanelUI };
+    SidebarResizer sidebarResizer;
 
     TransportBar transportBar;
     ToolbarButtons toolbarButtons;
     std::unique_ptr<ResourceMeter> resourceMeter;
-    
+
     std::unique_ptr<juce::DocumentWindow> pianoRollWindow;
 
     juce::CriticalSection audioMutex;
     AudioEngine audioEngine;
 
-    bool isBottomDockVisible = true; 
-    int bottomDockHeight = 250; 
+    bool isBottomDockVisible = true;
+    int bottomDockHeight = 250;
 
-    bool isLeftSidebarVisible = true; 
-    int leftSidebarWidth = 200; 
-    
+    bool isLeftSidebarVisible = true;
+    int leftSidebarWidth = 200;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

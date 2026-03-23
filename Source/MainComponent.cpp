@@ -11,10 +11,11 @@ MainComponent::MainComponent() {
 
     resourceMeter = std::make_unique<ResourceMeter>(*this);
 
-    // --- AÑADIMOS LA BARRA DE ESTADO INFERIOR ---
-    addAndMakeVisible(hintPanel);
+    // --- BARRA DE TÍTULO CUSTOM Y PANEL INFERIOR ---
+    addAndMakeVisible(topMenuBar);
+    addAndMakeVisible(hintPanel); // <--- RESTAURADO
 
-    // --- BARRA SUPERIOR ---
+    // --- CONTROLES SUPERIORES ---
     addAndMakeVisible(transportBar);
     addAndMakeVisible(toolbarButtons);
     addAndMakeVisible(*resourceMeter);
@@ -25,7 +26,6 @@ MainComponent::MainComponent() {
     addAndMakeVisible(trackContainer);
     addAndMakeVisible(playlistUI);
 
-    // Añadimos el Dock y su barra resizer
     addAndMakeVisible(bottomDockResizer);
     addAndMakeVisible(bottomDock);
 
@@ -34,10 +34,8 @@ MainComponent::MainComponent() {
 
     trackContainer.setExternalMutex(&audioMutex);
     playlistUI.setExternalMutex(&audioMutex);
-
     pickerPanelUI.setTrackContainer(&trackContainer);
 
-    // --- LÓGICA DE LOS BOTONES CERRAR [X] ---
     leftSidebar.onClose = [this] {
         isLeftSidebarVisible = false;
         resized();
@@ -48,25 +46,17 @@ MainComponent::MainComponent() {
         resized();
         };
 
-    // --- LÓGICA DE REDIMENSIONAMIENTO LATERAL (Izquierdo) ---
     sidebarResizer.onResizeDelta = [this](int deltaX) {
         leftSidebarWidth = juce::jlimit(150, 600, leftSidebarWidth + deltaX);
         resized();
         };
 
-    // --- LÓGICA DE REDIMENSIONAMIENTO INFERIOR ---
     bottomDockResizer.onResizeDelta = [this](int deltaY) {
-        // Recordar: Arrastrar hacia ARRIBA es deltaY NEGATIVO.
-        // Queremos que el panel CREZCA al arrastrar hacia arriba, por lo que RESTAMOS deltaY.
-
-        // jlimit: mínimo 100px (para ver pestañas), máximo 80% del alto total de la ventana.
         int maxHeight = (int)(getHeight() * 0.8f);
         bottomDockHeight = juce::jlimit(100, maxHeight, bottomDockHeight - deltaY);
-
-        resized(); // Forzamos repintado instantáneo
+        resized();
         };
 
-    // Conexiones de la barra superior
     toolbarButtons.onSnapChanged = [this](double newSnapPixels) { playlistUI.snapPixels = newSnapPixels; };
     toolbarButtons.onToolChanged = [this](int toolId) { playlistUI.setTool(toolId); };
 
@@ -77,7 +67,6 @@ MainComponent::MainComponent() {
         }
         };
 
-    // Puentes de comunicación
     TrackPianoRollBridge::connect(trackContainer, playlistUI, pianoRollUI, pianoRollWindow);
     TrackPianoRollBridge::connectPlaylist(playlistUI, pianoRollUI, pianoRollWindow);
 
@@ -91,7 +80,6 @@ MainComponent::MainComponent() {
 
     TrackMixerPlaylistBridge::connect(trackContainer, mixerUI, playlistUI);
     TransportBridge::connect(transportBar, pianoRollUI, playlistUI);
-
     InterfaceBridge::connect(toolbarButtons, isBottomDockVisible, isLeftSidebarVisible,
         bottomDock, effectsPanelUI, leftSidebar, trackContainer, [this] { resized(); });
 
@@ -102,8 +90,6 @@ MainComponent::MainComponent() {
             trackContainer.removeTrack(index);
             playlistUI.updateScrollBars();
             playlistUI.repaint();
-
-            // Si borramos una pista mientras veíamos sus efectos, cerramos la pestaña
             if (leftSidebar.getCurrentTab() == LeftSidebar::FxTab) isLeftSidebarVisible = false;
             resized();
         }
@@ -136,24 +122,23 @@ void MainComponent::paint(juce::Graphics& g) {
 void MainComponent::resized() {
     auto area = getLocalBounds();
 
-    // --- 1. BARRA DE ESTADO INFERIOR (HINT PANEL) ---
-    // Le quitamos 28 píxeles de la base absoluta del DAW
+    // --- 0. BARRA DE TÍTULO EN LA CIMA (30px) ---
+    topMenuBar.setBounds(area.removeFromTop(30));
+
+    // --- 1. BARRA DE ESTADO INFERIOR (28px) ---
+    // RESTAURADO: Le quitamos espacio a la base absoluta de la pantalla
     hintPanel.setBounds(area.removeFromBottom(28));
 
-    // --- 2. BARRA SUPERIOR (TOP BAR) ---
+    // --- 2. BARRA DE HERRAMIENTAS Y TRANSPORTE ---
     auto topArea = area.removeFromTop(45);
-
-    // Ahora la barra de transporte puede tomar todo el lado izquierdo
     toolbarButtons.setBounds(topArea.removeFromRight(550));
     resourceMeter->setBounds(topArea.removeFromRight(100).reduced(8, 10));
-    transportBar.setBounds(topArea); // Ocupa todo el centro y la izquierda
+    transportBar.setBounds(topArea);
 
-    // --- 3. CONTENEDOR INFERIOR (MIXER + RACK + RESIZER) ---
-    // (Aparece justo encima del Hint Panel porque ya le restamos ese espacio a 'area')
+    // --- 3. CONTENEDOR INFERIOR (MIXER + RACK) ---
     if (isBottomDockVisible) {
         bottomDock.setVisible(true);
         bottomDockResizer.setVisible(true);
-
         bottomDock.setBounds(area.removeFromBottom(bottomDockHeight));
         bottomDockResizer.setBounds(area.removeFromBottom(4));
     }
