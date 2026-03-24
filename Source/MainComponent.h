@@ -19,6 +19,8 @@
 #include "UI/TopMenuBar.h" 
 #include "Engine/AudioEngine.h"
 
+enum class ViewMode { Arrangement, Mixer };
+
 class MainComponent : public juce::AudioAppComponent,
     public juce::ApplicationCommandTarget,
     public juce::DragAndDropContainer
@@ -38,12 +40,17 @@ public:
     void getCommandInfo(juce::CommandID commandID, juce::ApplicationCommandInfo& result) override;
     bool perform(const juce::ApplicationCommandTarget::InvocationInfo& info) override;
 
+    bool keyPressed(const juce::KeyPress& key) override;
+    void toggleViewMode();
+
 private:
     void openPianoRoll();
     void closePianoRoll();
 
     juce::ApplicationCommandManager commandManager;
     const juce::CommandID playStopCommand = 1;
+
+    ViewMode currentView = ViewMode::Arrangement;
 
     TopMenuBar topMenuBar;
     HintPanel hintPanel;
@@ -54,11 +61,10 @@ private:
     PianoRollComponent pianoRollUI;
     juce::TextButton closePianoRollBtn;
 
-    // --- REORGANIZACIÓN ARQUITECTÓNICA ---
     MixerComponent mixerUI;
     ChannelRackPanel rackPanelUI;
-    EffectsPanel effectsPanelUI; // AHORA PERTENECE AL BOTTOM DOCK
-    BottomDock bottomDock{ mixerUI, rackPanelUI, effectsPanelUI };
+    EffectsPanel effectsPanelUI;
+    BottomDock bottomDock{ rackPanelUI, effectsPanelUI }; // Mixer extraído
     BottomDockResizer bottomDockResizer;
 
     PickerPanel pickerPanelUI;
@@ -75,7 +81,6 @@ private:
 
     bool isBottomDockVisible = true;
     int bottomDockHeight = 250;
-
     bool isLeftSidebarVisible = true;
     int leftSidebarWidth = 200;
 

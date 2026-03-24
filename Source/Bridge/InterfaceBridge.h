@@ -12,7 +12,8 @@ public:
         bool& isBottomDockVisible, bool& isLeftSidebarVisible,
         BottomDock& bottomDock, EffectsPanel& effectsPanelUI, LeftSidebar& leftSidebar,
         TrackContainer& trackContainer,
-        std::function<void()> triggerResize)
+        std::function<void()> triggerResize,
+        std::function<void()> toggleMixerMode) // <--- NUEVO PARÁMETRO
     {
         toolbar.onTogglePicker = [&isLeftSidebarVisible, &leftSidebar, triggerResize] {
             if (!isLeftSidebarVisible) {
@@ -36,7 +37,6 @@ public:
             triggerResize();
             };
 
-        // --- CORREGIDO: FxTab ahora vive en el BottomDock ---
         toolbar.onToggleFx = [&isBottomDockVisible, &bottomDock, triggerResize, &effectsPanelUI, &trackContainer] {
             if (!isBottomDockVisible) {
                 isBottomDockVisible = true; bottomDock.showTab(BottomDock::EffectsTab);
@@ -57,15 +57,9 @@ public:
             triggerResize();
             };
 
-        toolbar.onToggleMixer = [&isBottomDockVisible, &bottomDock, triggerResize] {
-            if (!isBottomDockVisible) {
-                isBottomDockVisible = true; bottomDock.showTab(BottomDock::MixerTab);
-            }
-            else {
-                if (bottomDock.getCurrentTab() == BottomDock::MixerTab) isBottomDockVisible = false;
-                else bottomDock.showTab(BottomDock::MixerTab);
-            }
-            triggerResize();
+        // --- CORREGIDO: Ahora el Mixer ya no se busca en el BottomDock ---
+        toolbar.onToggleMixer = [toggleMixerMode] {
+            if (toggleMixerMode) toggleMixerMode(); // Llama a toggleViewMode() del MainComponent
             };
 
         toolbar.onToggleRack = [&isBottomDockVisible, &bottomDock, triggerResize] {

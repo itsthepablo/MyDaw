@@ -25,17 +25,21 @@ MainComponent::MainComponent() {
 
     addAndMakeVisible(bottomDockResizer);
     addAndMakeVisible(bottomDock);
+    addAndMakeVisible(mixerUI); // Ahora es un componente principal independiente
 
     addAndMakeVisible(pianoRollUI);
     addAndMakeVisible(closePianoRollBtn);
 
     pianoRollUI.setVisible(false);
     closePianoRollBtn.setVisible(false);
+    mixerUI.setVisible(false); // Por defecto iniciamos en vista Arrangement
 
     closePianoRollBtn.setButtonText("Cerrar Piano Roll");
     closePianoRollBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(200, 70, 70));
     closePianoRollBtn.setTooltip("Vuelve a la vista de Playlist y restaura tus paneles.");
     closePianoRollBtn.onClick = [this] { closePianoRoll(); };
+
+    topMenuBar.viewToggleBtn.onClick = [this] { toggleViewMode(); };
 
     bottomDock.setVisible(true);
     leftSidebar.setVisible(true);
@@ -77,7 +81,7 @@ MainComponent::MainComponent() {
         audioEngine.clock.sampleRate, audioEngine.clock.blockSize,
         [this] {
             if (isPianoRollVisible) closePianoRoll();
-            // AHORA SE ABRE EL BOTTOM DOCK, NO EL LEFT SIDEBAR
+            currentView = ViewMode::Arrangement;
             isBottomDockVisible = true;
             bottomDock.showTab(BottomDock::EffectsTab);
             resized();
@@ -85,8 +89,12 @@ MainComponent::MainComponent() {
 
     TrackMixerPlaylistBridge::connect(trackContainer, mixerUI, playlistUI);
     TransportBridge::connect(transportBar, pianoRollUI, playlistUI);
+
+    // Conexión del puente de interfaz con la nueva función de cambio de vista
     InterfaceBridge::connect(toolbarButtons, isBottomDockVisible, isLeftSidebarVisible,
-        bottomDock, effectsPanelUI, leftSidebar, trackContainer, [this] { resized(); });
+        bottomDock, effectsPanelUI, leftSidebar, trackContainer,
+        [this] { resized(); },
+        [this] { toggleViewMode(); });
 
     trackContainer.onDeleteTrack = [this](int index) {
         const juce::ScopedLock sl(audioMutex);
@@ -120,11 +128,25 @@ void MainComponent::releaseResources() { audioEngine.releaseResources(); }
 
 void MainComponent::paint(juce::Graphics& g) { g.fillAll(juce::Colour(30, 32, 35)); }
 
+void MainComponent::toggleViewMode() {
+    currentView = (currentView == ViewMode::Arrangement) ? ViewMode::Mixer : ViewMode::Arrangement;
+    resized();
+}
+
+bool MainComponent::keyPressed(const juce::KeyPress& key) {
+    if (key.getKeyCode() == juce::KeyPress::tabKey) {
+        toggleViewMode();
+        return true;
+    }
+    return false;
+}
+
 void MainComponent::openPianoRoll() {
     if (!isPianoRollVisible) {
         prePianoRollLeftSidebar = isLeftSidebarVisible;
         prePianoRollBottomDock = isBottomDockVisible;
         isPianoRollVisible = true;
+        currentView = ViewMode::Arrangement;
         resized();
     }
 }
@@ -163,38 +185,53 @@ void MainComponent::resized() {
         bottomDockResizer.setVisible(false);
         leftSidebar.setVisible(false);
         sidebarResizer.setVisible(false);
+        mixerUI.setVisible(false);
     }
     else {
         pianoRollUI.setVisible(false);
         closePianoRollBtn.setVisible(false);
 
-        trackContainer.setVisible(true);
-        playlistUI.setVisible(true);
-
-        if (isBottomDockVisible) {
-            bottomDock.setVisible(true);
-            bottomDockResizer.setVisible(true);
-            bottomDock.setBounds(area.removeFromBottom(bottomDockHeight));
-            bottomDockResizer.setBounds(area.removeFromBottom(4));
-        }
-        else {
+        if (currentView == ViewMode::Mixer) {
+            trackContainer.setVisible(false);
+            playlistUI.setVisible(false);
             bottomDock.setVisible(false);
             bottomDockResizer.setVisible(false);
-        }
-
-        if (isLeftSidebarVisible) {
-            leftSidebar.setVisible(true);
-            sidebarResizer.setVisible(true);
-            leftSidebar.setBounds(area.removeFromLeft(leftSidebarWidth));
-            sidebarResizer.setBounds(area.removeFromLeft(4));
-        }
-        else {
             leftSidebar.setVisible(false);
             sidebarResizer.setVisible(false);
-        }
 
-        trackContainer.setBounds(area.removeFromLeft(250));
-        playlistUI.setBounds(area);
+            mixerUI.setVisible(true);
+            mixerUI.setBounds(area);
+        }
+        else {
+            mixerUI.setVisible(false);
+            trackContainer.setVisible(true);
+            playlistUI.setVisible(true);
+
+            if (isBottomDockVisible) {
+                bottomDock.setVisible(true);
+                bottomDockResizer.setVisible(true);
+                bottomDock.setBounds(area.removeFromBottom(bottomDockHeight));
+                bottomDockResizer.setBounds(area.removeFromBottom(4));
+            }
+            else {
+                bottomDock.setVisible(false);
+                bottomDockResizer.setVisible(false);
+            }
+
+            if (isLeftSidebarVisible) {
+                leftSidebar.setVisible(true);
+                sidebarResizer.setVisible(true);
+                leftSidebar.setBounds(area.removeFromLeft(leftSidebarWidth));
+                sidebarResizer.setBounds(area.removeFromLeft(4));
+            }
+            else {
+                leftSidebar.setVisible(false);
+                sidebarResizer.setVisible(false);
+            }
+
+            trackContainer.setBounds(area.removeFromLeft(250));
+            playlistUI.setBounds(area);
+        }
     }
 }
 
