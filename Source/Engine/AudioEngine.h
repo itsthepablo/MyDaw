@@ -4,7 +4,6 @@
 #include "TrackProcessor.h"
 #include "MasterMixer.h"
 #include "SafetyProcessors.h"
-#include "../Native_Plugins/MasterAnalyzer/PluginProcessor.h" // AÑADIDO: Importa tu VST directamente
 
 class TrackContainer;
 class PianoRollComponent;
@@ -14,12 +13,9 @@ class MixerComponent;
 class AudioEngine {
 public:
     AudioClock clock;
-    MiPrimerVSTAudioProcessor masterAnalyzer; // AÑADIDO: Instancia nativa de tu plugin
 
     void prepareToPlay(int samples, double s, TrackContainer& trackContainer, juce::CriticalSection& audioMutex) {
         clock.prepare(s, samples);
-        
-        masterAnalyzer.prepareToPlay(s, samples); // AÑADIDO: Prepara tu plugin
 
         const juce::ScopedLock sl(audioMutex);
         for (auto* track : trackContainer.getTracks())
@@ -28,7 +24,6 @@ public:
     }
 
     void releaseResources() {
-        masterAnalyzer.releaseResources(); // AÑADIDO
     }
 
     void processBlock(const juce::AudioSourceChannelInfo& bufferToFill,
@@ -125,13 +120,5 @@ public:
         SafetyProcessors::applyNaNKiller(*bufferToFill.buffer, bufferToFill.startSample, bufferToFill.numSamples);
         bufferToFill.buffer->applyGain(bufferToFill.startSample, bufferToFill.numSamples, mixerUI.getMasterVolume());
         SafetyProcessors::applyHardClipper(*bufferToFill.buffer, bufferToFill.startSample, bufferToFill.numSamples, 1.0f);
-
-        // AÑADIDO: Procesamiento final a través de tu Analizador VST Nativo
-        juce::MidiBuffer emptyMidi;
-        juce::AudioBuffer<float> proxy(bufferToFill.buffer->getArrayOfWritePointers(),
-                                       bufferToFill.buffer->getNumChannels(),
-                                       bufferToFill.startSample,
-                                       bufferToFill.numSamples);
-        masterAnalyzer.processBlock(proxy, emptyMidi);
     }
 };

@@ -80,9 +80,6 @@ private:
     juce::CriticalSection audioMutex;
     AudioEngine audioEngine;
 
-    // AÑADIDO: Puntero que contendrá la ventana (UI) de tu VST
-    std::unique_ptr<juce::AudioProcessorEditor> analyzerUI;
-
     bool isBottomDockVisible = true;
     int bottomDockHeight = 250;
     bool isLeftSidebarVisible = true;

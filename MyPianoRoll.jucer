@@ -5,35 +5,6 @@
   <MAINGROUP id="OgOeCb" name="MyPianoRoll">
     <GROUP id="{832B9725-4498-E7CC-3428-6D1D4B31D6DB}" name="Source">
       <GROUP id="{1F0EA522-B943-AF42-C851-3209A0EC109F}" name="Native_Plugins">
-        <GROUP id="{B474B7DC-254A-8713-29E9-02EE74F9D25B}" name="MasterAnalyzer">
-          <FILE id="hYY3dR" name="_kiss_fft_guts.h" compile="0" resource="0"
-                file="Source/Native_Plugins/MasterAnalyzer/_kiss_fft_guts.h"/>
-          <FILE id="v3n4Ga" name="ExactMeter.h" compile="0" resource="0" file="Source/Native_Plugins/MasterAnalyzer/ExactMeter.h"/>
-          <FILE id="jDec34" name="HexColorPicker.h" compile="0" resource="0"
-                file="Source/Native_Plugins/MasterAnalyzer/HexColorPicker.h"/>
-          <FILE id="OY17B9" name="kiss_fft.c" compile="1" resource="0" file="Source/Native_Plugins/MasterAnalyzer/kiss_fft.c"/>
-          <FILE id="M0WDwc" name="kiss_fft.h" compile="0" resource="0" file="Source/Native_Plugins/MasterAnalyzer/kiss_fft.h"/>
-          <FILE id="o0NrvW" name="LissajousBackground.h" compile="0" resource="0"
-                file="Source/Native_Plugins/MasterAnalyzer/LissajousBackground.h"/>
-          <FILE id="Ce49KN" name="ModernDarkKnob.h" compile="0" resource="0"
-                file="Source/Native_Plugins/MasterAnalyzer/ModernDarkKnob.h"/>
-          <FILE id="PMA0rL" name="PluginEditor.cpp" compile="1" resource="0"
-                file="Source/Native_Plugins/MasterAnalyzer/PluginEditor.cpp"/>
-          <FILE id="U9aq4M" name="PluginEditor.h" compile="0" resource="0" file="Source/Native_Plugins/MasterAnalyzer/PluginEditor.h"/>
-          <FILE id="a74Aqk" name="PluginProcessor.cpp" compile="1" resource="0"
-                file="Source/Native_Plugins/MasterAnalyzer/PluginProcessor.cpp"/>
-          <FILE id="eITx9g" name="PluginProcessor.h" compile="0" resource="0"
-                file="Source/Native_Plugins/MasterAnalyzer/PluginProcessor.h"/>
-          <FILE id="zjnTJy" name="PolarPatterns.h" compile="0" resource="0" file="Source/Native_Plugins/MasterAnalyzer/PolarPatterns.h"/>
-          <FILE id="BJYZ2k" name="ScopeComponents.h" compile="0" resource="0"
-                file="Source/Native_Plugins/MasterAnalyzer/ScopeComponents.h"/>
-          <FILE id="WJpu1D" name="SimpleAnalyzer.h" compile="0" resource="0"
-                file="Source/Native_Plugins/MasterAnalyzer/SimpleAnalyzer.h"/>
-          <FILE id="M6qDEG" name="SimpleLoudness.h" compile="0" resource="0"
-                file="Source/Native_Plugins/MasterAnalyzer/SimpleLoudness.h"/>
-          <FILE id="V8OgFI" name="SimpleMeter.h" compile="0" resource="0" file="Source/Native_Plugins/MasterAnalyzer/SimpleMeter.h"/>
-          <FILE id="eH1qL6" name="VuMeter.h" compile="0" resource="0" file="Source/Native_Plugins/MasterAnalyzer/VuMeter.h"/>
-        </GROUP>
         <FILE id="fK5R3n" name="BaseEffect.h" compile="0" resource="0" file="Source/Native_Plugins/BaseEffect.h"/>
         <FILE id="ghMFvY" name="UtilityPlugin.h" compile="0" resource="0" file="Source/Native_Plugins/UtilityPlugin.h"/>
       </GROUP>
