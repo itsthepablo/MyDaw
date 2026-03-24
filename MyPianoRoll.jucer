@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <JUCERPROJECT id="kQUd48" name="MyPianoRoll" projectType="guiapp" useAppConfig="0"
-              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1">
+              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" companyName="Two Levels Audio"
+              companyCopyright="Two Levels Audio">
   <MAINGROUP id="OgOeCb" name="MyPianoRoll">
     <GROUP id="{832B9725-4498-E7CC-3428-6D1D4B31D6DB}" name="Source">
       <GROUP id="{1F0EA522-B943-AF42-C851-3209A0EC109F}" name="Native_Plugins">
@@ -149,8 +150,10 @@
   <EXPORTFORMATS>
     <VS2022 targetFolder="Builds/VisualStudio2022">
       <CONFIGURATIONS>
-        <CONFIGURATION isDebug="1" name="Debug" targetName="MyPianoRoll" headerPath="C:\Users\pablo\Desktop\JUCE\modules\juce_audio_processors\format_types\VST3_SDK&#10;"/>
-        <CONFIGURATION isDebug="0" name="Release" targetName="MyPianoRoll" headerPath="C:\Users\pablo\Desktop\JUCE\modules\juce_audio_processors\format_types\VST3_SDK&#10;"/>
+        <CONFIGURATION isDebug="1" name="Debug" targetName="FatPuppy Studio" headerPath="C:\Users\pablo\Desktop\JUCE\modules\juce_audio_processors\format_types\VST3_SDK&#10;"
+                       binaryPath="C:\Users\pablo\Desktop\MY DAW"/>
+        <CONFIGURATION isDebug="0" name="Release" targetName="FatPuppy Studio" headerPath="C:\Users\pablo\Desktop\JUCE\modules\juce_audio_processors\format_types\VST3_SDK&#10;"
+                       binaryPath="C:\Users\pablo\Desktop\MY DAW"/>
       </CONFIGURATIONS>
       <MODULEPATHS>
         <MODULEPATH id="juce_audio_basics" path="C:/Users/pablo/Desktop/JUCE/modules"/>
