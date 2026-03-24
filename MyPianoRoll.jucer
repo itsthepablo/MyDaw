@@ -76,6 +76,10 @@
         <FILE id="RbHrXU" name="EffectsPanel.h" compile="0" resource="0" file="Source/Effects/EffectsPanel.h"/>
       </GROUP>
       <GROUP id="{57A16124-0184-7C27-B886-F155C0B20BDF}" name="Mixer">
+        <FILE id="QuB7TA" name="MasterChannelUI.h" compile="0" resource="0"
+              file="Source/Mixer/MasterChannelUI.h"/>
+        <FILE id="RcTW5A" name="MixerChannelUI.h" compile="0" resource="0"
+              file="Source/Mixer/MixerChannelUI.h"/>
         <FILE id="CBlPLC" name="MixerComponent.cpp" compile="1" resource="0"
               file="Source/Mixer/MixerComponent.cpp"/>
         <FILE id="uNkpr9" name="MixerComponent.h" compile="0" resource="0"

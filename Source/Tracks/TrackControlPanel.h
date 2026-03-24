@@ -2,7 +2,6 @@
 #include <JuceHeader.h>
 #include "Track.h"
 #include "../PluginHost/VSTHost.h" 
-#include "../UI/Knobs/FLKnobLookAndFeel.h"
 #include "../UI/Knobs/FloatingValueSlider.h" 
 #include "../UI/LevelMeter.h"
 
@@ -11,11 +10,9 @@ public:
     std::function<void()> onFxClick, onPianoRollClick, onDeleteClick, onEffectsClick, onFolderStateChange;
     std::function<void()> onWaveformViewChanged;
     std::function<void(int)> onPluginClick;
-
-    // <-- MODIFICADO: Ahora el callback envía el estado de las teclas modificadoras -->
     std::function<void(const juce::ModifierKeys&)> onTrackSelected;
 
-    int dragHoverMode = 0; // 0 = nada, 1 = linea arriba, 2 = highlight carpeta, 3 = linea abajo (dentro), 4 = linea roja (extraer)
+    int dragHoverMode = 0;
 
     TrackControlPanel(Track& t) : track(t) {
         addAndMakeVisible(nameLabel);
@@ -45,8 +42,9 @@ public:
 
         addAndMakeVisible(volKnob); addAndMakeVisible(panKnob);
 
+        // AQUÍ LE DECIMOS AL THEME GLOBAL QUÉ TIPO DE KNOB ES
+        volKnob.setName("TrackKnob");
         volKnob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-        volKnob.setLookAndFeel(&flLookAndFeel);
         volKnob.setRange(0.0, 1.0);
         volKnob.setValue(track.getVolume(), juce::dontSendNotification);
         volKnob.setTooltip("Volumen: Ajusta la ganancia principal del canal.");
@@ -58,8 +56,9 @@ public:
             return juce::String(db, 1) + " dB";
             };
 
+        // AQUÍ LE DECIMOS AL THEME GLOBAL QUÉ TIPO DE KNOB ES
+        panKnob.setName("TrackKnob");
         panKnob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-        panKnob.setLookAndFeel(&flLookAndFeel);
         panKnob.setRange(-1.0, 1.0);
         panKnob.setValue(track.getBalance(), juce::dontSendNotification);
         panKnob.setTooltip("Paneo / Balance: Ajusta la posición estéreo L/R.");
@@ -276,7 +275,6 @@ public:
 
     void mouseDown(const juce::MouseEvent& e) override {
         if (e.mods.isLeftButtonDown()) {
-            // <-- MODIFICADO: Enviamos el estado de las teclas (Ctrl, Shift, etc) -->
             if (onTrackSelected) onTrackSelected(e.mods);
         }
 
@@ -316,7 +314,6 @@ private:
     juce::TextButton fxButton, prButton, inlineBtn, effectsBtn, folderBtn, compactBtn;
     juce::OwnedArray<juce::TextButton> pluginButtons;
 
-    FLKnobLookAndFeel flLookAndFeel;
     LevelMeter levelMeter;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TrackControlPanel)

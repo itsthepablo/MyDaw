@@ -4,6 +4,7 @@
 #include "Playlist/PlaylistComponent.h"
 #include "PianoRoll/PianoRollComponent.h"
 #include "Mixer/MixerComponent.h"
+#include "Mixer/MasterChannelUI.h" // <--- ESTA ES LA PIEZA CLAVE QUE FALTABA
 #include "Effects/EffectsPanel.h"
 #include "UI/TransportBar.h"
 #include "UI/Buttons/ToolbarButtons.h"
