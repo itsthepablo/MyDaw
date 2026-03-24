@@ -25,14 +25,22 @@ MainComponent::MainComponent() {
 
     addAndMakeVisible(bottomDockResizer);
     addAndMakeVisible(bottomDock);
-    addAndMakeVisible(mixerUI); // Ahora es un componente principal independiente
+    addAndMakeVisible(mixerUI); 
+    addAndMakeVisible(masterChannelUI);
+
+    // AÃ‘ADIDO: Obtenemos el UI de tu VST y lo incrustamos como panel nativo
+    analyzerUI.reset(audioEngine.masterAnalyzer.createEditorIfNeeded());
+    if (analyzerUI != nullptr) {
+        addAndMakeVisible(analyzerUI.get());
+    }
 
     addAndMakeVisible(pianoRollUI);
     addAndMakeVisible(closePianoRollBtn);
 
     pianoRollUI.setVisible(false);
     closePianoRollBtn.setVisible(false);
-    mixerUI.setVisible(false); // Por defecto iniciamos en vista Arrangement
+    mixerUI.setVisible(false); 
+    masterChannelUI.setVisible(true);
 
     closePianoRollBtn.setButtonText("Cerrar Piano Roll");
     closePianoRollBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(200, 70, 70));
@@ -90,7 +98,6 @@ MainComponent::MainComponent() {
     TrackMixerPlaylistBridge::connect(trackContainer, mixerUI, playlistUI);
     TransportBridge::connect(transportBar, pianoRollUI, playlistUI);
 
-    // Conexión del puente de interfaz con la nueva función de cambio de vista
     InterfaceBridge::connect(toolbarButtons, isBottomDockVisible, isLeftSidebarVisible,
         bottomDock, effectsPanelUI, leftSidebar, trackContainer,
         [this] { resized(); },
@@ -186,10 +193,14 @@ void MainComponent::resized() {
         leftSidebar.setVisible(false);
         sidebarResizer.setVisible(false);
         mixerUI.setVisible(false);
+        masterChannelUI.setVisible(false);
+        if (analyzerUI != nullptr) analyzerUI->setVisible(false); // AÃ‘ADIDO
     }
     else {
         pianoRollUI.setVisible(false);
         closePianoRollBtn.setVisible(false);
+        masterChannelUI.setVisible(true);
+        if (analyzerUI != nullptr) analyzerUI->setVisible(true); // AÃ‘ADIDO
 
         if (currentView == ViewMode::Mixer) {
             trackContainer.setVisible(false);
@@ -200,10 +211,33 @@ void MainComponent::resized() {
             sidebarResizer.setVisible(false);
 
             mixerUI.setVisible(true);
+            
+            // MASTER Y ANALIZADOR AL LADO IZQUIERDO EN EL MIXER
+            float scale = area.getHeight() / 600.0f;
+            int masterWidth = juce::roundToInt(120.0f * scale);
+            masterChannelUI.setBounds(area.removeFromLeft(masterWidth));
+
+            // Respetamos el Aspect Ratio original de tu plugin (181/703)
+            int analyzerWidth = juce::roundToInt(area.getHeight() * (181.0f / 703.0f));
+            if (analyzerUI != nullptr) {
+                analyzerUI->setBounds(area.removeFromLeft(analyzerWidth));
+            }
+
             mixerUI.setBounds(area);
         }
         else {
             mixerUI.setVisible(false);
+            
+            // ANALIZADOR Y MASTER AL LADO DERECHO EN ARRANGEMENT
+            int analyzerWidth = juce::roundToInt(area.getHeight() * (181.0f / 703.0f));
+            if (analyzerUI != nullptr) {
+                analyzerUI->setBounds(area.removeFromRight(analyzerWidth));
+            }
+
+            float scale = area.getHeight() / 600.0f;
+            int masterWidth = juce::roundToInt(120.0f * scale);
+            masterChannelUI.setBounds(area.removeFromRight(masterWidth));
+
             trackContainer.setVisible(true);
             playlistUI.setVisible(true);
 

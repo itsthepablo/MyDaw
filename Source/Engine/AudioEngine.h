@@ -4,6 +4,7 @@
 #include "TrackProcessor.h"
 #include "MasterMixer.h"
 #include "SafetyProcessors.h"
+#include "../Native_Plugins/MasterAnalyzer/PluginProcessor.h" // AÑADIDO: Importa tu VST directamente
 
 class TrackContainer;
 class PianoRollComponent;
@@ -13,16 +14,22 @@ class MixerComponent;
 class AudioEngine {
 public:
     AudioClock clock;
+    MiPrimerVSTAudioProcessor masterAnalyzer; // AÑADIDO: Instancia nativa de tu plugin
 
     void prepareToPlay(int samples, double s, TrackContainer& trackContainer, juce::CriticalSection& audioMutex) {
         clock.prepare(s, samples);
+        
+        masterAnalyzer.prepareToPlay(s, samples); // AÑADIDO: Prepara tu plugin
+
         const juce::ScopedLock sl(audioMutex);
         for (auto* track : trackContainer.getTracks())
             for (auto* p : track->plugins)
                 if (p->isLoaded()) p->prepareToPlay(s, samples);
     }
 
-    void releaseResources() {}
+    void releaseResources() {
+        masterAnalyzer.releaseResources(); // AÑADIDO
+    }
 
     void processBlock(const juce::AudioSourceChannelInfo& bufferToFill,
         TrackContainer& trackContainer,
@@ -93,7 +100,6 @@ public:
         for (int i = (int)tracks.size() - 1; i >= 0; --i) {
             auto* track = tracks[i];
 
-            // --- DETECCIÓN INTELIGENTE CORREGIDA ---
             bool isPianoRollActive = false;
             if (activeClip != nullptr) {
                 for (auto* clip : track->midiClips) {
@@ -119,5 +125,13 @@ public:
         SafetyProcessors::applyNaNKiller(*bufferToFill.buffer, bufferToFill.startSample, bufferToFill.numSamples);
         bufferToFill.buffer->applyGain(bufferToFill.startSample, bufferToFill.numSamples, mixerUI.getMasterVolume());
         SafetyProcessors::applyHardClipper(*bufferToFill.buffer, bufferToFill.startSample, bufferToFill.numSamples, 1.0f);
+
+        // AÑADIDO: Procesamiento final a través de tu Analizador VST Nativo
+        juce::MidiBuffer emptyMidi;
+        juce::AudioBuffer<float> proxy(bufferToFill.buffer->getArrayOfWritePointers(),
+                                       bufferToFill.buffer->getNumChannels(),
+                                       bufferToFill.startSample,
+                                       bufferToFill.numSamples);
+        masterAnalyzer.processBlock(proxy, emptyMidi);
     }
 };

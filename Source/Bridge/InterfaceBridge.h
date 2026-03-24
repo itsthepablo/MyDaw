@@ -13,7 +13,7 @@ public:
         BottomDock& bottomDock, EffectsPanel& effectsPanelUI, LeftSidebar& leftSidebar,
         TrackContainer& trackContainer,
         std::function<void()> triggerResize,
-        std::function<void()> toggleMixerMode) // <--- NUEVO PARÁMETRO
+        std::function<void()> toggleMixerMode) // <--- NUEVO PARÃMETRO
     {
         toolbar.onTogglePicker = [&isLeftSidebarVisible, &leftSidebar, triggerResize] {
             if (!isLeftSidebarVisible) {

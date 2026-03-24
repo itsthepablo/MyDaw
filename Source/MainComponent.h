@@ -62,9 +62,10 @@ private:
     juce::TextButton closePianoRollBtn;
 
     MixerComponent mixerUI;
+    MasterChannelUI masterChannelUI{ mixerUI };
     ChannelRackPanel rackPanelUI;
     EffectsPanel effectsPanelUI;
-    BottomDock bottomDock{ rackPanelUI, effectsPanelUI }; // Mixer extraído
+    BottomDock bottomDock{ rackPanelUI, effectsPanelUI };
     BottomDockResizer bottomDockResizer;
 
     PickerPanel pickerPanelUI;
@@ -78,6 +79,9 @@ private:
 
     juce::CriticalSection audioMutex;
     AudioEngine audioEngine;
+
+    // AÑADIDO: Puntero que contendrá la ventana (UI) de tu VST
+    std::unique_ptr<juce::AudioProcessorEditor> analyzerUI;
 
     bool isBottomDockVisible = true;
     int bottomDockHeight = 250;
