@@ -28,7 +28,7 @@ public:
             };
 
         addAndMakeVisible(phaseBtn);
-        phaseBtn.setButtonText(juce::CharPointer_UTF8("\xc3\x98")); // Símbolo de fase
+        phaseBtn.setButtonText(juce::CharPointer_UTF8("\xc3\x98"));
         phaseBtn.setClickingTogglesState(true);
         phaseBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colours::red.darker(0.2f));
         phaseBtn.setTooltip("Invertir Polaridad (Fase)");
@@ -65,57 +65,64 @@ public:
     }
 
     void paint(juce::Graphics& g) override {
-        // Textos descriptivos debajo de los knobs dinámicos
+        // 1. CORRECCIÓN DE COHESIÓN: Ahora el panel padre dibuja el fondo y encapsula todo
+        g.fillAll(juce::Colour(25, 28, 31));
+        g.setColour(juce::Colour(50, 53, 56));
+        g.drawRect(getLocalBounds());
+
+        // 2. CORRECCIÓN DE LÍNEA: Cruza todo el panel de extremo a extremo
+        g.setColour(juce::Colour(50, 53, 56));
+        g.drawHorizontalLine(getHeight() / 2, 10.0f, (float)getWidth() - 10.0f);
+
+        // Línea vertical sutil para separar el medidor de los controles
+        g.drawVerticalLine(getWidth() / 2, 10.0f, (float)getHeight() - 10.0f);
+
+        // 3. CORRECCIÓN DE TEXTO: Se dibuja garantizado 2 píxeles por DEBAJO de los knobs
         g.setColour(juce::Colours::white.withAlpha(0.6f));
         g.setFont(juce::Font("Sans-Serif", 11.0f, juce::Font::bold));
 
         if (preGainKnob.isVisible()) {
             auto preBounds = preGainKnob.getBounds();
-            g.drawText("PRE", preBounds.getX(), preBounds.getBottom(), preBounds.getWidth(), 14, juce::Justification::centredTop);
+            g.drawText("PRE", preBounds.getX(), preBounds.getBottom() + 2, preBounds.getWidth(), 14, juce::Justification::centredTop);
         }
 
         if (postGainKnob.isVisible()) {
             auto postBounds = postGainKnob.getBounds();
-            g.drawText("POST", postBounds.getX(), postBounds.getBottom(), postBounds.getWidth(), 14, juce::Justification::centredTop);
+            g.drawText("POST", postBounds.getX(), postBounds.getBottom() + 2, postBounds.getWidth(), 14, juce::Justification::centredTop);
         }
     }
 
     void resized() override {
         auto area = getLocalBounds().reduced(6);
 
-        // 1. EL MEDIDOR (Ocupa la mitad izquierda de todo el alto disponible)
-        meter.setBounds(area.removeFromLeft(getWidth() / 2));
+        // El medidor ocupa la mitad izquierda
+        meter.setBounds(area.removeFromLeft(getWidth() / 2 - 6));
 
-        area.removeFromLeft(8); // Espaciador vertical central entre el medidor y los controles
+        area.removeFromLeft(6); // Espaciador vertical central
 
-        // 2. LOS CONTROLES (Ocupan la mitad derecha, alineados con los medidores)
+        // Los controles ocupan la mitad derecha
         auto rightArea = area;
         int halfH = rightArea.getHeight() / 2;
 
-        // --- SECCIÓN PRE-FX (Alineada con el medidor superior) ---
+        // --- SECCIÓN PRE-FX ---
         auto preArea = rightArea.removeFromTop(halfH);
 
-        // Knob PRE ocupa la mayor parte arriba
-        auto preKnobArea = preArea.removeFromTop((int)(preArea.getHeight() * 0.60f));
-        preGainKnob.setBounds(preKnobArea.reduced(8, 2));
+        auto preKnobArea = preArea.removeFromTop((int)(preArea.getHeight() * 0.55f));
+        preGainKnob.setBounds(preKnobArea.reduced(6, 2));
 
-        preArea.removeFromTop(14); // Espacio reservado para el texto "PRE" dibujado en paint()
+        preArea.removeFromTop(18); // Espacio obligatorio para el texto
 
-        // Botón de Fase centrado abajo del knob PRE
-        phaseBtn.setBounds(preArea.removeFromTop(22).reduced(12, 0));
+        phaseBtn.setBounds(preArea.removeFromTop(20).reduced(12, 0));
 
-
-        // --- SECCIÓN POST-FX (Alineada con el medidor inferior) ---
+        // --- SECCIÓN POST-FX ---
         auto postArea = rightArea;
 
-        // Knob POST ocupa la mayor parte arriba
         auto postKnobArea = postArea.removeFromTop((int)(postArea.getHeight() * 0.55f));
-        postGainKnob.setBounds(postKnobArea.reduced(8, 2));
+        postGainKnob.setBounds(postKnobArea.reduced(6, 2));
 
-        postArea.removeFromTop(14); // Espacio reservado para el texto "POST" dibujado en paint()
+        postArea.removeFromTop(18); // Espacio obligatorio para el texto
 
-        // Botones Mono y Match lado a lado en la parte inferior
-        auto postBtnsArea = postArea.removeFromBottom(24);
+        auto postBtnsArea = postArea.removeFromBottom(22);
         monoBtn.setBounds(postBtnsArea.removeFromLeft(postBtnsArea.getWidth() / 2).reduced(2, 0));
         matchBtn.setBounds(postBtnsArea.reduced(2, 0));
     }

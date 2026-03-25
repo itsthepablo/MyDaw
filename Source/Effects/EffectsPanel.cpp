@@ -95,10 +95,14 @@ void EffectsPanel::updateSlots() {
 void EffectsPanel::paint(juce::Graphics& g) {
     g.fillAll(juce::Colour(40, 43, 48));
 
+    // --- CORRECCIÓN CRÍTICA DE RENDERIZADO ---
+    // El ancho de la columna izquierda ahora es de 200px para albergar la Gain Station holgadamente.
+    int leftColumnWidth = 200;
+
     g.setColour(juce::Colour(30, 33, 36));
-    g.fillRect(0, 0, 150, getHeight());
+    g.fillRect(0, 0, leftColumnWidth, getHeight()); // Fondo actualizado dinámicamente
     g.setColour(juce::Colours::black.withAlpha(0.5f));
-    g.drawVerticalLine(150, 0.0f, (float)getHeight());
+    g.drawVerticalLine(leftColumnWidth, 0.0f, (float)getHeight()); // Línea separadora movida a 200
 
     if (!activeTrack) {
         g.setColour(juce::Colours::white.withAlpha(0.3f));
@@ -120,18 +124,22 @@ void EffectsPanel::paint(juce::Graphics& g) {
 }
 
 void EffectsPanel::resized() {
+    int leftColumnWidth = 200; // Constante maestra de diseño
     int leftPadding = 10;
     int currentY = 70;
-    int leftWidth = 180; // <--- MODIFICACIÓN CRÍTICA: Aumentado de 130 a 180 para que respire
+    int leftWidth = 180; // La Gain Station de 180px cabe perfecto en la columna de 200px
     int bottomY = getHeight() - leftPadding;
 
-    bypassAllBtn.setBounds(85, 15, 55, 20);
+    // Alineamos el botón Bypass al borde derecho de la columna
+    bypassAllBtn.setBounds(leftColumnWidth - 65, 15, 55, 20);
+
     loudnessMeter.setBounds(leftPadding, currentY, leftWidth, bottomY - currentY);
 
     if (!activeTrack) return;
 
-    int padding = 10;
-    int x = 160;
+    // --- CORRECCIÓN CRÍTICA DE POSICIONAMIENTO DE PLUGINS ---
+    int padding = 15;
+    int x = leftColumnWidth + padding; // ¡Los plugins AHORA empiezan DESPUÉS de la columna izquierda! (Posición 215)
     int y = 20;
     int slotWidth = 140;
     int slotHeight = getHeight() - 40;
