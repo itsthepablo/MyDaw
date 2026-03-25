@@ -1,6 +1,7 @@
 #include <JuceHeader.h>
 #include "MainComponent.h"
 #include "Theme/CustomTheme.h" 
+#include "UI/SplashWindow.h" // <-- IMPORTAMOS LA NUEVA CLASE INDEPENDIENTE
 
 // --- LA VENTANA PRINCIPAL DEL PROGRAMA ---
 class MyPianoRoll_AppApplication : public juce::JUCEApplication
@@ -12,11 +13,20 @@ public:
     bool moreThanOneInstanceAllowed() override { return true; }
 
     void initialise(const juce::String& commandLine) override {
+        // 1. Cargamos el tema global (Para los colores del DAW)
         juce::LookAndFeel::setDefaultLookAndFeel(&myCustomTheme);
-        mainWindow.reset(new MainWindow(getApplicationName()));
+        
+        // 2. Iniciamos la ventana de Splash importada desde su propio archivo
+        splashWindow.reset(new SplashWindow([this]() 
+        {
+            // 3. Cuando pasen los 3 segundos, el Splash llama a este bloque:
+            mainWindow.reset(new MainWindow(getApplicationName()));
+            splashWindow = nullptr; // Destruye y libera la RAM de la imagen del Splash
+        }));
     }
 
     void shutdown() override {
+        splashWindow = nullptr;
         mainWindow = nullptr;
         juce::LookAndFeel::setDefaultLookAndFeel(nullptr);
     }
@@ -59,6 +69,7 @@ public:
     };
 
 private:
+    std::unique_ptr<SplashWindow> splashWindow;
     std::unique_ptr<MainWindow> mainWindow;
     CustomTheme myCustomTheme;
 };

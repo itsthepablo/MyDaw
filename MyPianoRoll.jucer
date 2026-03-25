@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<JUCERPROJECT id="kQUd48" name="MyPianoRoll" projectType="guiapp" useAppConfig="0"
+<JUCERPROJECT id="kQUd48" name="FatPuppy Studio" projectType="guiapp" useAppConfig="0"
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" companyName="Two Levels Audio"
-              companyCopyright="Two Levels Audio">
-  <MAINGROUP id="OgOeCb" name="MyPianoRoll">
+              companyCopyright="Two Levels Audio" version="1.0.0">
+  <MAINGROUP id="OgOeCb" name="FatPuppy Studio">
     <GROUP id="{832B9725-4498-E7CC-3428-6D1D4B31D6DB}" name="Source">
+      <GROUP id="{AFD9DDCE-5185-EFD2-051F-092FE115DBAB}" name="Images">
+        <FILE id="HNJ2Wb" name="daw_icon.png" compile="0" resource="1" file="Source/Images/daw_icon.png"/>
+      </GROUP>
       <GROUP id="{1F0EA522-B943-AF42-C851-3209A0EC109F}" name="Native_Plugins">
         <FILE id="fK5R3n" name="BaseEffect.h" compile="0" resource="0" file="Source/Native_Plugins/BaseEffect.h"/>
         <FILE id="ghMFvY" name="UtilityPlugin.h" compile="0" resource="0" file="Source/Native_Plugins/UtilityPlugin.h"/>
@@ -22,6 +25,7 @@
           <FILE id="DNLFnt" name="ToolbarButtons.h" compile="0" resource="0"
                 file="Source/UI/Buttons/ToolbarButtons.h"/>
         </GROUP>
+        <FILE id="eosDxo" name="SplashWindow.h" compile="0" resource="0" file="Source/UI/SplashWindow.h"/>
         <FILE id="Oq1yky" name="TopMenuBar.h" compile="0" resource="0" file="Source/UI/TopMenuBar.h"/>
         <FILE id="D6vTfs" name="HintPanel.h" compile="0" resource="0" file="Source/UI/HintPanel.h"/>
         <FILE id="B6VI8M" name="LevelMeter.h" compile="0" resource="0" file="Source/UI/LevelMeter.h"/>
@@ -148,7 +152,7 @@
   </MODULES>
   <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1" JUCE_PLUGINHOST_VST3="1"/>
   <EXPORTFORMATS>
-    <VS2022 targetFolder="Builds/VisualStudio2022">
+    <VS2022 targetFolder="Builds/VisualStudio2022" smallIcon="HNJ2Wb" bigIcon="HNJ2Wb">
       <CONFIGURATIONS>
         <CONFIGURATION isDebug="1" name="Debug" targetName="FatPuppy Studio" headerPath="C:\Users\pablo\Desktop\JUCE\modules\juce_audio_processors\format_types\VST3_SDK&#10;"
                        binaryPath="C:\Users\pablo\Desktop\MY DAW"/>
