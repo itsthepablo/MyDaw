@@ -1,9 +1,9 @@
 #include <JuceHeader.h>
 #include "MainComponent.h"
 #include "Theme/CustomTheme.h" 
-#include "UI/SplashWindow.h" // <-- IMPORTAMOS LA NUEVA CLASE INDEPENDIENTE
+#include "UI/SplashWindow.h"
+#include "FileAssociationHandler.h"
 
-// --- LA VENTANA PRINCIPAL DEL PROGRAMA ---
 class MyPianoRoll_AppApplication : public juce::JUCEApplication
 {
 public:
@@ -13,16 +13,19 @@ public:
     bool moreThanOneInstanceAllowed() override { return true; }
 
     void initialise(const juce::String& commandLine) override {
-        // 1. Cargamos el tema global (Para los colores del DAW)
         juce::LookAndFeel::setDefaultLookAndFeel(&myCustomTheme);
-        
-        // 2. Iniciamos la ventana de Splash importada desde su propio archivo
-        splashWindow.reset(new SplashWindow([this]() 
-        {
-            // 3. Cuando pasen los 3 segundos, el Splash llama a este bloque:
-            mainWindow.reset(new MainWindow(getApplicationName()));
-            splashWindow = nullptr; // Destruye y libera la RAM de la imagen del Splash
-        }));
+
+        initialFileToLoad = commandLine.unquoted();
+        FileAssociationHandler::registerDAWExtension();
+
+        splashWindow.reset(new SplashWindow([this]()
+            {
+                juce::MessageManager::callAsync([this]()
+                    {
+                        mainWindow.reset(new MainWindow(getApplicationName(), initialFileToLoad));
+                        splashWindow = nullptr;
+                    });
+            }));
     }
 
     void shutdown() override {
@@ -32,33 +35,38 @@ public:
     }
 
     void systemRequestedQuit() override { quit(); }
-    void anotherInstanceStarted(const juce::String& commandLine) override {}
+
+    void anotherInstanceStarted(const juce::String& commandLine) override {
+        if (mainWindow != nullptr) {
+            if (auto* mc = dynamic_cast<MainComponent*>(mainWindow->getContentComponent())) {
+                mc->loadProject(juce::File(commandLine.unquoted()));
+            }
+        }
+    }
 
     class MainWindow : public juce::DocumentWindow
     {
     public:
-        MainWindow(juce::String name)
+        MainWindow(juce::String name, juce::String fileToLoad)
             : DocumentWindow(name, juce::Colours::darkgrey, DocumentWindow::allButtons)
         {
-            // 1. Desactivamos la barra de Windows/Mac
             setUsingNativeTitleBar(false);
-
-            // 2. ¡LA CLAVE! Reducimos la barra antigua a 0 píxeles.
             setTitleBarHeight(0);
 
-            // 3. Cargamos directamente el MainComponent (que ahora tiene tu nueva TopMenuBar)
-            setContentOwned(new MainComponent(), true);
+            auto* mc = new MainComponent();
+            setContentOwned(mc, true);
+
+            if (fileToLoad.isNotEmpty()) {
+                mc->loadProject(juce::File(fileToLoad));
+            }
 
 #if JUCE_IOS || JUCE_ANDROID
             setFullScreen(true);
 #else
             setResizable(true, true);
-
-            // Ocupar toda la pantalla respetando la barra de tareas
             auto screenArea = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay()->userArea;
             setBounds(screenArea);
 #endif
-
             setVisible(true);
         }
 
@@ -72,6 +80,7 @@ private:
     std::unique_ptr<SplashWindow> splashWindow;
     std::unique_ptr<MainWindow> mainWindow;
     CustomTheme myCustomTheme;
+    juce::String initialFileToLoad;
 };
 
 START_JUCE_APPLICATION(MyPianoRoll_AppApplication)

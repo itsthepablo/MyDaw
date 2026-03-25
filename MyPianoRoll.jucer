@@ -129,6 +129,8 @@
         <FILE id="sGaZIn" name="PianoRollComponent.h" compile="0" resource="0"
               file="Source/PianoRoll/PianoRollComponent.h"/>
       </GROUP>
+      <FILE id="nuc93N" name="FileAssociationHandler.h" compile="0" resource="0"
+            file="Source/FileAssociationHandler.h"/>
       <FILE id="L5O99I" name="GlobalData.h" compile="0" resource="0" file="Source/GlobalData.h"/>
       <FILE id="EwYe1F" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
       <FILE id="aTUeza" name="MainComponent.h" compile="0" resource="0" file="Source/MainComponent.h"/>
@@ -150,7 +152,7 @@
     <MODULE id="juce_gui_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_gui_extra" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
   </MODULES>
-  <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1" JUCE_PLUGINHOST_VST3="1"/>
+  <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1" JUCE_PLUGINHOST_VST3="1" JUCE_USE_MP3AUDIOFORMAT="1"/>
   <EXPORTFORMATS>
     <VS2022 targetFolder="Builds/VisualStudio2022" smallIcon="HNJ2Wb" bigIcon="HNJ2Wb">
       <CONFIGURATIONS>

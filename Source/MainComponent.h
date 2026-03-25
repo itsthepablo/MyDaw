@@ -4,7 +4,7 @@
 #include "Playlist/PlaylistComponent.h"
 #include "PianoRoll/PianoRollComponent.h"
 #include "Mixer/MixerComponent.h"
-#include "Mixer/MasterChannelUI.h" // <--- ESTA ES LA PIEZA CLAVE QUE FALTABA
+#include "Mixer/MasterChannelUI.h" 
 #include "Effects/EffectsPanel.h"
 #include "UI/TransportBar.h"
 #include "UI/Buttons/ToolbarButtons.h"
@@ -43,10 +43,12 @@ public:
 
     bool keyPressed(const juce::KeyPress& key) override;
     void toggleViewMode();
+    void loadProject(const juce::File& file);
 
 private:
     void openPianoRoll();
     void closePianoRoll();
+    void saveProject();
 
     juce::ApplicationCommandManager commandManager;
     const juce::CommandID playStopCommand = 1;
@@ -89,6 +91,8 @@ private:
     bool isPianoRollVisible = false;
     bool prePianoRollLeftSidebar = true;
     bool prePianoRollBottomDock = true;
+
+    std::unique_ptr<juce::FileChooser> fileChooser;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

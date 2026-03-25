@@ -43,6 +43,7 @@ private:
 class TopMenuBar : public juce::Component, public juce::MenuBarModel {
 public:
     juce::TextButton viewToggleBtn; // Botón para cambiar vista
+    std::function<void()> onSaveRequested; // Callback para el guardado
 
     TopMenuBar() {
         menuBar.reset(new juce::MenuBarComponent(this));
@@ -68,12 +69,29 @@ public:
     void mouseDrag(const juce::MouseEvent& e) override { dragger.dragComponent(getTopLevelComponent(), e, nullptr); }
 
     juce::StringArray getMenuBarNames() override { return { "FILE", "EDIT", "VIEW", "OPTIONS", "TOOLS", "HELP" }; }
-    juce::PopupMenu getMenuForIndex(int, const juce::String&) override {
+
+    juce::PopupMenu getMenuForIndex(int menuIndex, const juce::String&) override {
         juce::PopupMenu menu;
-        menu.addItem(1, "Vacío por ahora...", false, false);
+        if (menuIndex == 0) // Menú FILE
+        {
+            menu.addItem(1, "Nuevo Proyecto", true, false);
+            menu.addItem(2, "Abrir Proyecto...", true, false);
+            menu.addSeparator();
+            menu.addItem(3, "Guardar Proyecto (.perritogordo)", true, false);
+            menu.addItem(4, "Guardar como...", true, false);
+        }
+        else {
+            menu.addItem(1, "Vacio por ahora...", false, false);
+        }
         return menu;
     }
-    void menuItemSelected(int, int) override {}
+
+    void menuItemSelected(int menuID, int menuIndex) override {
+        if (menuIndex == 0 && menuID == 3) // Si es FILE -> Guardar
+        {
+            if (onSaveRequested) onSaveRequested();
+        }
+    }
 
     void paint(juce::Graphics& g) override { g.fillAll(juce::Colour(20, 22, 25)); }
 
@@ -87,7 +105,6 @@ public:
         area.removeFromLeft(10);
         menuBar->setBounds(area.removeFromLeft(350));
 
-        // El botón de cambio de vista al centro-derecha
         viewToggleBtn.setBounds(area.removeFromRight(150).reduced(5));
     }
 
