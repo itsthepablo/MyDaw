@@ -19,6 +19,18 @@
         <FILE id="ghMFvY" name="UtilityPlugin.h" compile="0" resource="0" file="Source/Native_Plugins/UtilityPlugin.h"/>
       </GROUP>
       <GROUP id="{721FC522-4CF1-05D4-BC36-D97CDC4B59FC}" name="UI">
+        <GROUP id="{E7B85CD9-616C-D134-AD51-768267AEA5F4}" name="Commands">
+          <FILE id="L8vNYa" name="CommandIDs.h" compile="0" resource="0" file="Source/UI/Commands/CommandIDs.h"/>
+          <FILE id="UEUYQr" name="DAWCommandHandler.cpp" compile="1" resource="0"
+                file="Source/UI/Commands/DAWCommandHandler.cpp"/>
+          <FILE id="oL5Arr" name="DAWCommandHandler.h" compile="0" resource="0"
+                file="Source/UI/Commands/DAWCommandHandler.h"/>
+        </GROUP>
+        <GROUP id="{493E77C4-3200-C8E2-90EC-33CDCA20C386}" name="Layout">
+          <FILE id="TZjXHr" name="LayoutHandler.cpp" compile="1" resource="0"
+                file="Source/UI/Layout/LayoutHandler.cpp"/>
+          <FILE id="BOvzG7" name="LayoutHandler.h" compile="0" resource="0" file="Source/UI/Layout/LayoutHandler.h"/>
+        </GROUP>
         <GROUP id="{BBB205AE-7F6B-3B00-30AE-2BAC363F4EF5}" name="Knobs">
           <FILE id="vKUjPw" name="FLKnobLookAndFeel.h" compile="0" resource="0"
                 file="Source/UI/Knobs/FLKnobLookAndFeel.h"/>

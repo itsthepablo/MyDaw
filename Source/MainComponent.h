@@ -20,12 +20,12 @@
 #include "UI/TopMenuBar.h" 
 #include "Engine/AudioEngine.h"
 #include "Project/ProjectManager.h"
-#include "Bridge/BridgeManager.h" // Nuevo
-
-enum class ViewMode { Arrangement, Mixer };
+#include "Bridge/BridgeManager.h"
+#include "UI/Layout/LayoutHandler.h"
+#include "UI/Commands/DAWCommandHandler.h" // Nuevo
 
 class MainComponent : public juce::AudioAppComponent,
-    public juce::ApplicationCommandTarget,
+    public juce::ApplicationCommandTarget, // Seguimos siendo target para enlazar el manager
     public juce::DragAndDropContainer
 {
 public:
@@ -38,12 +38,13 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override;
 
+    // Métodos de CommandTarget (ahora delegan al handler)
     juce::ApplicationCommandTarget* getNextCommandTarget() override;
     void getAllCommands(juce::Array<juce::CommandID>& c) override;
     void getCommandInfo(juce::CommandID commandID, juce::ApplicationCommandInfo& result) override;
     bool perform(const juce::ApplicationCommandTarget::InvocationInfo& info) override;
 
-    bool keyPressed(const juce::KeyPress& key) override;
+    // keyPressed ya no es necesario si usamos Comandos para el Tab
     void toggleViewMode();
     void loadProject(const juce::File& file);
 
@@ -51,41 +52,36 @@ private:
     void setupUIComponents();
     void setupCallbacks();
     void setupBridges();
+    void setupCommands(); // Nuevo método
 
     void openPianoRoll();
     void closePianoRoll();
     void saveProject();
 
     juce::ApplicationCommandManager commandManager;
-    const juce::CommandID playStopCommand = 1;
+    std::unique_ptr<DAWCommandHandler> commandHandler; // Manejador real
 
     ViewMode currentView = ViewMode::Arrangement;
 
     TopMenuBar topMenuBar;
     HintPanel hintPanel;
-
     TrackContainer trackContainer;
     PlaylistComponent playlistUI;
-
     PianoRollComponent pianoRollUI;
     juce::TextButton closePianoRollBtn;
-
     MixerComponent mixerUI;
     MasterChannelUI masterChannelUI{ mixerUI };
     ChannelRackPanel rackPanelUI;
     EffectsPanel effectsPanelUI;
     BottomDock bottomDock{ rackPanelUI, effectsPanelUI };
     BottomDockResizer bottomDockResizer;
-
     PickerPanel pickerPanelUI;
     FileBrowserPanel fileBrowserPanelUI;
     LeftSidebar leftSidebar{ pickerPanelUI, fileBrowserPanelUI };
     SidebarResizer sidebarResizer;
-
     TransportBar transportBar;
     ToolbarButtons toolbarButtons;
     std::unique_ptr<ResourceMeter> resourceMeter;
-
     juce::CriticalSection audioMutex;
     AudioEngine audioEngine;
 
@@ -93,7 +89,6 @@ private:
     int bottomDockHeight = 250;
     bool isLeftSidebarVisible = true;
     int leftSidebarWidth = 200;
-
     bool isPianoRollVisible = false;
     bool prePianoRollLeftSidebar = true;
     bool prePianoRollBottomDock = true;
