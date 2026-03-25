@@ -32,11 +32,16 @@ public:
 
 private:
     Track* activeTrack = nullptr;
-    
+
     juce::TextButton bypassAllBtn;
     juce::TextButton addEffectBtn;
-    juce::OwnedArray<EffectDevice> devices; 
-    
+    juce::OwnedArray<EffectDevice> devices;
+
+    // Estado y botones de control del panel izquierdo
+    bool isGainStationExpanded = true;
+    juce::TextButton toggleGainStationBtn; // La barra negra cuando está oculto
+    juce::TextButton hideGainStationBtn;   // El botón HIDE cuando está visible
+
     // El contenedor es la Gain Station. Variable nombrada loudnessMeter para no romper EffectsPanel.cpp
     GainStationPanel loudnessMeter;
 

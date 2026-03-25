@@ -20,7 +20,7 @@ public:
     // --- DragAndDropTarget ---
     bool isInterestedInDragSource(const SourceDetails& details) override;
     void itemDragEnter(const SourceDetails& details) override;
-    void itemDragMove(const SourceDetails& details) override; 
+    void itemDragMove(const SourceDetails& details) override;
     void itemDragExit(const SourceDetails& details) override;
     void itemDropped(const SourceDetails& details) override;
 
@@ -29,14 +29,19 @@ private:
     juce::String fxName;
     bool isInstrument;
     bool isBypassed;
+    BaseEffect* effect; // Referencia al plugin para cambiar su ruteo
     EffectsPanel& panel;
-    
+
     // --- Puntero al editor embebido (solo si es Nativo) ---
     juce::Component* nativeEditor = nullptr;
 
     juce::TextButton bypassBtn;
-    int dragHoverMode = 0; 
+    juce::TextButton routingBtn; // <-- NUEVO: Botón de Ruteo
+
+    int dragHoverMode = 0;
     const juce::String dragID = "EFFECT_DEVICE_SLOT";
+
+    void updateRoutingButtonText(); // Helper para actualizar la UI
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EffectDevice)
 };

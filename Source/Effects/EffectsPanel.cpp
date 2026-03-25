@@ -42,6 +42,30 @@ EffectsPanel::EffectsPanel() {
 
     addEffectBtn.setVisible(false);
 
+    // --- BARRA NEGRA (SOLO VISIBLE CUANDO ESTÁ OCULTO) ---
+    addAndMakeVisible(toggleGainStationBtn);
+    toggleGainStationBtn.setButtonText(">");
+    toggleGainStationBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(15, 18, 20)); // Barra oscura
+    toggleGainStationBtn.setTooltip("Mostrar Gain Station");
+    toggleGainStationBtn.onClick = [this] {
+        isGainStationExpanded = true;
+        resized();
+        repaint();
+        };
+
+    // --- BOTÓN HIDE (SOLO VISIBLE CUANDO ESTÁ EXPANDIDO) ---
+    addAndMakeVisible(hideGainStationBtn);
+    hideGainStationBtn.setButtonText("HIDE");
+    // Diseño minimalista e integrado
+    hideGainStationBtn.setColour(juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
+    hideGainStationBtn.setColour(juce::TextButton::textColourOffId, juce::Colours::white.withAlpha(0.4f));
+    hideGainStationBtn.setColour(juce::TextButton::textColourOnId, juce::Colours::white);
+    hideGainStationBtn.onClick = [this] {
+        isGainStationExpanded = false;
+        resized();
+        repaint();
+        };
+
     addAndMakeVisible(loudnessMeter);
 }
 
@@ -93,16 +117,18 @@ void EffectsPanel::updateSlots() {
 }
 
 void EffectsPanel::paint(juce::Graphics& g) {
-    g.fillAll(juce::Colour(40, 43, 48));
+    g.fillAll(juce::Colour(40, 43, 48)); // Fondo principal donde van los plugins
 
-    // --- CORRECCIÓN CRÍTICA DE RENDERIZADO ---
-    // El ancho de la columna izquierda ahora es de 200px para albergar la Gain Station holgadamente.
-    int leftColumnWidth = 200;
+    int trackInfoWidth = 110;
+    int gainStationWidth = isGainStationExpanded ? 180 : 0;
+    int totalLeftWidth = trackInfoWidth + gainStationWidth; // El panel unificado
 
+    // --- FONDO UNIFICADO DEL PANEL IZQUIERDO ---
+    // Esto hace que la Gain Station parezca una extensión nativa de los controles de la pista
     g.setColour(juce::Colour(30, 33, 36));
-    g.fillRect(0, 0, leftColumnWidth, getHeight()); // Fondo actualizado dinámicamente
+    g.fillRect(0, 0, totalLeftWidth, getHeight());
     g.setColour(juce::Colours::black.withAlpha(0.5f));
-    g.drawVerticalLine(leftColumnWidth, 0.0f, (float)getHeight()); // Línea separadora movida a 200
+    g.drawVerticalLine(totalLeftWidth, 0.0f, (float)getHeight());
 
     if (!activeTrack) {
         g.setColour(juce::Colours::white.withAlpha(0.3f));
@@ -117,29 +143,55 @@ void EffectsPanel::paint(juce::Graphics& g) {
 
     g.setColour(juce::Colours::white.withAlpha(0.6f));
     g.setFont(juce::Font(14.0f));
-    g.drawText(activeTrack->getName(), 35, 40, 100, 20, juce::Justification::centredLeft);
+    g.drawText(activeTrack->getName(), 35, 40, trackInfoWidth - 40, 20, juce::Justification::centredLeft);
 
     g.setColour(activeTrack->getColor());
     g.fillEllipse(15, 43, 12, 12);
 }
 
 void EffectsPanel::resized() {
-    int leftColumnWidth = 200; // Constante maestra de diseño
-    int leftPadding = 10;
-    int currentY = 70;
-    int leftWidth = 180; // La Gain Station de 180px cabe perfecto en la columna de 200px
-    int bottomY = getHeight() - leftPadding;
-
-    // Alineamos el botón Bypass al borde derecho de la columna
-    bypassAllBtn.setBounds(leftColumnWidth - 65, 15, 55, 20);
-
-    loudnessMeter.setBounds(leftPadding, currentY, leftWidth, bottomY - currentY);
-
-    if (!activeTrack) return;
-
-    // --- CORRECCIÓN CRÍTICA DE POSICIONAMIENTO DE PLUGINS ---
+    int trackInfoWidth = 110;
+    int gainStationWidth = 180;
+    int toggleBarWidth = 20;
     int padding = 15;
-    int x = leftColumnWidth + padding; // ¡Los plugins AHORA empiezan DESPUÉS de la columna izquierda! (Posición 215)
+
+    bypassAllBtn.setBounds(15, 70, 80, 20);
+
+    if (!activeTrack) {
+        toggleGainStationBtn.setVisible(false);
+        hideGainStationBtn.setVisible(false);
+        loudnessMeter.setVisible(false);
+        return;
+    }
+
+    int startX = trackInfoWidth;
+
+    if (isGainStationExpanded) {
+        toggleGainStationBtn.setVisible(false);
+        hideGainStationBtn.setVisible(true);
+        loudnessMeter.setVisible(true);
+
+        // Se adhiere perfectamente a la información del track sin gaps
+        loudnessMeter.setBounds(trackInfoWidth, 20, gainStationWidth, getHeight() - 30);
+
+        // El botón HIDE se ubica en la esquina superior derecha del área unificada
+        hideGainStationBtn.setBounds(trackInfoWidth + gainStationWidth - 45, 5, 40, 15);
+
+        startX += gainStationWidth + padding;
+    }
+    else {
+        toggleGainStationBtn.setVisible(true);
+        hideGainStationBtn.setVisible(false);
+        loudnessMeter.setVisible(false);
+
+        // La barra negra colapsada se pega a la info del track
+        toggleGainStationBtn.setBounds(trackInfoWidth, 0, toggleBarWidth, getHeight());
+
+        startX += toggleBarWidth + padding;
+    }
+
+    // --- POSICIONAMIENTO DINÁMICO DE PLUGINS ---
+    int x = startX;
     int y = 20;
     int slotWidth = 140;
     int slotHeight = getHeight() - 40;

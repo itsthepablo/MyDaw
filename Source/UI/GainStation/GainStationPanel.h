@@ -65,19 +65,17 @@ public:
     }
 
     void paint(juce::Graphics& g) override {
-        // 1. CORRECCIÓN DE COHESIÓN: Ahora el panel padre dibuja el fondo y encapsula todo
-        g.fillAll(juce::Colour(25, 28, 31));
-        g.setColour(juce::Colour(50, 53, 56));
-        g.drawRect(getLocalBounds());
+        // --- CORRECCIÓN CRÍTICA DE INTEGRACIÓN ---
+        // Ahora comparte el mismo color exacto del panel de track info (30, 33, 36).
+        // Se ha borrado el "drawRect" que lo hacía parecer un slot de plugin independiente.
+        g.fillAll(juce::Colour(30, 33, 36));
 
-        // 2. CORRECCIÓN DE LÍNEA: Cruza todo el panel de extremo a extremo
+        // Líneas organizativas internas
         g.setColour(juce::Colour(50, 53, 56));
         g.drawHorizontalLine(getHeight() / 2, 10.0f, (float)getWidth() - 10.0f);
-
-        // Línea vertical sutil para separar el medidor de los controles
         g.drawVerticalLine(getWidth() / 2, 10.0f, (float)getHeight() - 10.0f);
 
-        // 3. CORRECCIÓN DE TEXTO: Se dibuja garantizado 2 píxeles por DEBAJO de los knobs
+        // Texto descriptivo inferior
         g.setColour(juce::Colours::white.withAlpha(0.6f));
         g.setFont(juce::Font("Sans-Serif", 11.0f, juce::Font::bold));
 
