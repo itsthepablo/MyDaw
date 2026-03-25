@@ -1,7 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include "../GlobalData.h" 
-#include "../Native_Plugins/BaseEffect.h" // <-- Inclusión maestra
+#include "../Native_Plugins/BaseEffect.h"
 #include "../PluginHost/VSTHost.h" 
 #include "../Engine/SimpleLoudness.h"
 #include <vector>
@@ -108,6 +108,16 @@ public:
     juce::StringArray getPluginNames() const { return pluginNames; }
     void addPluginName(juce::String n) { pluginNames.add(n); }
 
+    // --- GAIN STATION STATE ---
+    float getPreGain() const { return preGain; }
+    void setPreGain(float v) { preGain = v; }
+    
+    float getPostGain() const { return postGain; }
+    void setPostGain(float v) { postGain = v; }
+
+    bool isPhaseInverted = false;
+    bool isMonoActive = false;
+
     std::vector<Note> notes;
     
     // --- CAMBIO CLAVE: Ahora acepta BaseEffect para alojar Nativos y VST3 ---
@@ -143,6 +153,10 @@ private:
     juce::Colour color;
     float volume = 0.8f;
     float balance = 0.0f;
+    
+    float preGain = 1.0f;
+    float postGain = 1.0f;
+
     juce::StringArray pluginNames;
 
     WaveformViewMode waveformViewMode = WaveformViewMode::Combined;

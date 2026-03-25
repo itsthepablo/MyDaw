@@ -4,7 +4,7 @@
 std::map<void*, bool> EffectsPanel::pluginIsInstrumentMap;
 
 EffectsPanel::EffectsPanel() {
-    
+
     addAndMakeVisible(bypassAllBtn);
     bypassAllBtn.setButtonText("BYPASS");
     bypassAllBtn.setClickingTogglesState(true);
@@ -17,31 +17,31 @@ EffectsPanel::EffectsPanel() {
             for (auto* p : activeTrack->plugins) {
                 if (p) p->setBypassed(isBypassed);
             }
-            updateSlots(); 
+            updateSlots();
         }
-    };
+        };
 
     addAndMakeVisible(addEffectBtn);
     addEffectBtn.setButtonText("+ PLUGIN");
     addEffectBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(70, 75, 80));
-    
+
     // --- MENÚ DESPLEGABLE PARA ELEGIR VST O NATIVO ---
-    addEffectBtn.onClick = [this] { 
+    addEffectBtn.onClick = [this] {
         if (activeTrack) {
             juce::PopupMenu m;
             m.addItem(1, "Native: Utility (Gain/Pan)");
             m.addSeparator();
             m.addItem(2, "External VST3...");
-            
+
             m.showMenuAsync(juce::PopupMenu::Options(), [this](int result) {
                 if (result == 1 && onAddNativeUtility) onAddNativeUtility(*activeTrack);
                 if (result == 2 && onAddVST3) onAddVST3(*activeTrack);
-            });
+                });
         }
-    };
-    
-    addEffectBtn.setVisible(false); 
-    
+        };
+
+    addEffectBtn.setVisible(false);
+
     addAndMakeVisible(loudnessMeter);
 }
 
@@ -52,8 +52,8 @@ void EffectsPanel::setTrack(Track* t) {
 }
 
 void EffectsPanel::updateSlots() {
-    devices.clear(); 
-    addEffectBtn.setVisible(activeTrack != nullptr); 
+    devices.clear();
+    addEffectBtn.setVisible(activeTrack != nullptr);
     bypassAllBtn.setVisible(activeTrack != nullptr);
 
     bool allBypassed = true;
@@ -62,12 +62,12 @@ void EffectsPanel::updateSlots() {
     if (activeTrack) {
         for (int i = 0; i < activeTrack->plugins.size(); ++i) {
             auto* effectRef = activeTrack->plugins[i];
-            
+
             if (effectRef) {
                 hasPlugins = true;
                 if (!effectRef->isBypassed()) allBypassed = false;
             }
-            
+
             bool isInst = false;
             if (activeTrack->getType() == TrackType::MIDI && !effectRef->isNative()) {
                 isInst = pluginIsInstrumentMap[(void*)effectRef];
@@ -84,7 +84,7 @@ void EffectsPanel::updateSlots() {
             addAndMakeVisible(device);
         }
     }
-    
+
     if (hasPlugins && allBypassed) bypassAllBtn.setToggleState(true, juce::dontSendNotification);
     else bypassAllBtn.setToggleState(false, juce::dontSendNotification);
 
@@ -104,12 +104,12 @@ void EffectsPanel::paint(juce::Graphics& g) {
         g.setColour(juce::Colours::white.withAlpha(0.3f));
         g.setFont(juce::Font(18.0f, juce::Font::bold));
         g.drawText("SELECCIONA PISTA", 0, 0, getWidth(), getHeight(), juce::Justification::centred);
-        return; 
+        return;
     }
 
-    g.setColour(juce::Colours::white.withAlpha(0.5f)); 
-    g.setFont(juce::Font(12.0f, juce::Font::bold));    
-    g.drawText("EFFECTS", 15, 10, 60, 30, juce::Justification::centredLeft); 
+    g.setColour(juce::Colours::white.withAlpha(0.5f));
+    g.setFont(juce::Font(12.0f, juce::Font::bold));
+    g.drawText("EFFECTS", 15, 10, 60, 30, juce::Justification::centredLeft);
 
     g.setColour(juce::Colours::white.withAlpha(0.6f));
     g.setFont(juce::Font(14.0f));
@@ -122,19 +122,19 @@ void EffectsPanel::paint(juce::Graphics& g) {
 void EffectsPanel::resized() {
     int leftPadding = 10;
     int currentY = 70;
-    int leftWidth = 130;
+    int leftWidth = 180; // <--- MODIFICACIÓN CRÍTICA: Aumentado de 130 a 180 para que respire
     int bottomY = getHeight() - leftPadding;
 
     bypassAllBtn.setBounds(85, 15, 55, 20);
     loudnessMeter.setBounds(leftPadding, currentY, leftWidth, bottomY - currentY);
-    
+
     if (!activeTrack) return;
 
     int padding = 10;
-    int x = 160; 
-    int y = 20; 
+    int x = 160;
+    int y = 20;
     int slotWidth = 140;
-    int slotHeight = getHeight() - 40; 
+    int slotHeight = getHeight() - 40;
     if (slotHeight < 50) slotHeight = 50;
 
     for (auto* device : devices) {
@@ -142,5 +142,5 @@ void EffectsPanel::resized() {
         x += slotWidth + padding;
     }
 
-    addEffectBtn.setBounds(x, y + (slotHeight/2) - 20, 80, 40);
+    addEffectBtn.setBounds(x, y + (slotHeight / 2) - 20, 80, 40);
 }

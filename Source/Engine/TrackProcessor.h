@@ -2,6 +2,7 @@
 #include <JuceHeader.h>
 #include "AudioClock.h"
 #include "../Tracks/Track.h"
+#include "../UI/GainStation/GainStationDSP.h" // Importación del Motor DSP modular
 
 class TrackProcessor {
 public:
@@ -13,7 +14,6 @@ public:
         bool isPianoRollActive,
         float loopEndPos)
     {
-        // --- INICIALIZAR DSP SI NO ESTA LISTO ---
         if (!track->isAnalyzersPrepared) {
             track->preLoudness.prepare(44100.0, 512);
             track->postLoudness.prepare(44100.0, 512);
@@ -22,11 +22,8 @@ public:
 
         juce::MidiBuffer trackMidi;
 
-        if (isPianoRollActive) {
-            trackMidi.addEvents(previewMidi, 0, numSamples, 0);
-        }
+        if (isPianoRollActive) trackMidi.addEvents(previewMidi, 0, numSamples, 0);
 
-        // --- LECTURA DE NOTAS MIDI ---
         if (isPlayingNow) {
             for (const auto& note : track->notes) {
                 bool triggerOn = clock.looped ? ((note.x >= clock.currentPh && note.x < loopEndPos) || (note.x >= 0 && note.x < clock.nextPh)) : (note.x >= clock.currentPh && note.x < clock.nextPh);
@@ -49,7 +46,6 @@ public:
             }
         }
 
-        // --- AUDIO CLIPS ---
         if (isPlayingNow) {
             for (auto* clip : track->audioClips) {
                 long long clipStartSample = (long long)(clip->startX * clock.samplesPerPixel);
@@ -82,16 +78,17 @@ public:
         }
 
         // ==============================================================================
-        // 1. LECTURA PRE-FX
-        track->preLoudness.process(track->audioBuffer);
+        // GAIN STATION: EJECUCIÓN MODULAR
+        // ==============================================================================
+        
+        GainStationDSP::processPreFX(track, track->audioBuffer);
 
-        // 2. PROCESAMIENTO VST
         for (auto* p : track->plugins) {
             if (p->isLoaded()) p->processBlock(track->audioBuffer, trackMidi);
         }
 
-        // 3. LECTURA POST-FX
-        track->postLoudness.process(track->audioBuffer);
+        GainStationDSP::processPostFX(track, track->audioBuffer);
+        
         // ==============================================================================
     }
 };

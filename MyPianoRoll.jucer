@@ -19,6 +19,14 @@
         <FILE id="ghMFvY" name="UtilityPlugin.h" compile="0" resource="0" file="Source/Native_Plugins/UtilityPlugin.h"/>
       </GROUP>
       <GROUP id="{721FC522-4CF1-05D4-BC36-D97CDC4B59FC}" name="UI">
+        <GROUP id="{D4E608E9-5EDD-7C63-EF71-C30B716729F9}" name="GainStation">
+          <FILE id="StO5Tq" name="GainStationDSP.h" compile="0" resource="0"
+                file="Source/UI/GainStation/GainStationDSP.h"/>
+          <FILE id="rkmvy0" name="GainStationMeter.h" compile="0" resource="0"
+                file="Source/UI/GainStation/GainStationMeter.h"/>
+          <FILE id="hMqUst" name="GainStationPanel.h" compile="0" resource="0"
+                file="Source/UI/GainStation/GainStationPanel.h"/>
+        </GROUP>
         <GROUP id="{E7B85CD9-616C-D134-AD51-768267AEA5F4}" name="Commands">
           <FILE id="L8vNYa" name="CommandIDs.h" compile="0" resource="0" file="Source/UI/Commands/CommandIDs.h"/>
           <FILE id="UEUYQr" name="DAWCommandHandler.cpp" compile="1" resource="0"
