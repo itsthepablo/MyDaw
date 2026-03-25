@@ -5,6 +5,12 @@
               companyCopyright="Two Levels Audio" version="1.0.0">
   <MAINGROUP id="OgOeCb" name="FatPuppy Studio">
     <GROUP id="{832B9725-4498-E7CC-3428-6D1D4B31D6DB}" name="Source">
+      <GROUP id="{C1405057-646F-29F2-ADE5-EE3D759DC311}" name="Project">
+        <FILE id="VvWl44" name="ProjectManager.cpp" compile="1" resource="0"
+              file="Source/Project/ProjectManager.cpp"/>
+        <FILE id="Oc47os" name="ProjectManager.h" compile="0" resource="0"
+              file="Source/Project/ProjectManager.h"/>
+      </GROUP>
       <GROUP id="{AFD9DDCE-5185-EFD2-051F-092FE115DBAB}" name="Images">
         <FILE id="HNJ2Wb" name="daw_icon.png" compile="0" resource="1" file="Source/Images/daw_icon.png"/>
       </GROUP>
@@ -61,6 +67,9 @@
               file="Source/Engine/TrackProcessor.h"/>
       </GROUP>
       <GROUP id="{E133DAA7-A9EF-385F-B76E-9BD38D9F0AC7}" name="Bridge">
+        <FILE id="t1H2xp" name="BridgeManager.cpp" compile="1" resource="0"
+              file="Source/Bridge/BridgeManager.cpp"/>
+        <FILE id="q6I1fP" name="BridgeManager.h" compile="0" resource="0" file="Source/Bridge/BridgeManager.h"/>
         <FILE id="C1c2Iw" name="InterfaceBridge.h" compile="0" resource="0"
               file="Source/Bridge/InterfaceBridge.h"/>
         <FILE id="E9uxC2" name="TrackEffectsBridge.h" compile="1" resource="0"
@@ -129,6 +138,8 @@
         <FILE id="sGaZIn" name="PianoRollComponent.h" compile="0" resource="0"
               file="Source/PianoRoll/PianoRollComponent.h"/>
       </GROUP>
+      <FILE id="gDy3yM" name="ProjectManager.h" compile="0" resource="0"
+            file="Source/ProjectManager.h"/>
       <FILE id="nuc93N" name="FileAssociationHandler.h" compile="0" resource="0"
             file="Source/FileAssociationHandler.h"/>
       <FILE id="L5O99I" name="GlobalData.h" compile="0" resource="0" file="Source/GlobalData.h"/>

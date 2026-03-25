@@ -19,6 +19,8 @@
 #include "UI/HintPanel.h"   
 #include "UI/TopMenuBar.h" 
 #include "Engine/AudioEngine.h"
+#include "Project/ProjectManager.h"
+#include "Bridge/BridgeManager.h" // Nuevo
 
 enum class ViewMode { Arrangement, Mixer };
 
@@ -46,6 +48,10 @@ public:
     void loadProject(const juce::File& file);
 
 private:
+    void setupUIComponents();
+    void setupCallbacks();
+    void setupBridges();
+
     void openPianoRoll();
     void closePianoRoll();
     void saveProject();

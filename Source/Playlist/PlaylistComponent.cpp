@@ -366,7 +366,11 @@ void PlaylistComponent::filesDropped(const juce::StringArray& files, int x, int 
     absX = juce::jmax(0.0f, absX);
 
     if (!isMidiFile) {
-        juce::AudioFormatManager fmt; fmt.registerBasicFormats();
+        juce::AudioFormatManager fmt;
+        fmt.registerBasicFormats();
+        // AADIDO: Forzamos el registro del formato MP3 de forma explcita por seguridad
+        fmt.registerFormat(new juce::MP3AudioFormat(), false);
+
         for (auto path : files) {
             juce::File f(path);
             std::unique_ptr<juce::AudioFormatReader> reader(fmt.createReaderFor(f));
@@ -389,8 +393,10 @@ void PlaylistComponent::filesDropped(const juce::StringArray& files, int x, int 
     updateScrollBars(); repaint();
 }
 
+// AADIDO: Ahora validamos tanto el Picker como el nuevo FileBrowser
 bool PlaylistComponent::isInterestedInDragSource(const juce::DragAndDropTarget::SourceDetails& dragSourceDetails) {
-    return dragSourceDetails.description.toString().startsWith("PickerDrag|");
+    juce::String desc = dragSourceDetails.description.toString();
+    return desc.startsWith("PickerDrag|") || desc == "FileBrowserDrag";
 }
 
 void PlaylistComponent::itemDragEnter(const juce::DragAndDropTarget::SourceDetails& dragSourceDetails) {
@@ -407,6 +413,20 @@ void PlaylistComponent::itemDropped(const juce::DragAndDropTarget::SourceDetails
     isInternalDragging = false;
     juce::String desc = dragSourceDetails.description.toString();
 
+    // NUEVO: Interceptamos si el archivo viene desde el FileBrowserPanel
+    if (desc == "FileBrowserDrag") {
+        if (auto* tree = dynamic_cast<juce::FileTreeComponent*>(dragSourceDetails.sourceComponent.get())) {
+            juce::File f = tree->getSelectedFile();
+            if (f.existsAsFile()) {
+                juce::StringArray arr;
+                arr.add(f.getFullPathName());
+                // Engaamos a JUCE pasndole el archivo a la funcin de soltar externo
+                filesDropped(arr, dragSourceDetails.localPosition.x, dragSourceDetails.localPosition.y);
+            }
+        }
+        return;
+    }
+
     juce::StringArray tokens;
     tokens.addTokens(desc, "|", "");
     if (tokens.size() == 3) {
@@ -419,7 +439,6 @@ void PlaylistComponent::itemDropped(const juce::DragAndDropTarget::SourceDetails
         int tIdx = getTrackAtY(y);
         TrackType requiredType = isMidi ? TrackType::MIDI : TrackType::Audio;
 
-        // Si soltamos sobre un track de tipo incorrecto o en el vacio
         if (tIdx != -1 && tracksRef && (*tracksRef)[tIdx]->getType() != requiredType) {
             tIdx = -1;
         }
