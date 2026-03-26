@@ -25,7 +25,7 @@ MainComponent::~MainComponent() { shutdownAudio(); }
 
 void MainComponent::setupCommands() {
     commandHandler = std::make_unique<DAWCommandHandler>(CommandActions{
-        [this] { ui.transportBar.playBtn.triggerClick(); },
+        [this] { ui.topMenuBar.playBtn.triggerClick(); },
         [this] { toggleViewMode(); }
         });
 }
@@ -85,7 +85,7 @@ void MainComponent::setupCallbacks() {
 void MainComponent::setupBridges() {
     BridgeManager::initializeAllBridges({
         ui.trackContainer, ui.playlistUI, ui.pianoRollUI, ui.mixerUI, ui.effectsPanelUI,
-        ui.transportBar, ui.toolbarButtons, ui.bottomDock, ui.leftSidebar, audioEngine, audioMutex,
+        ui.transportBar, ui.topMenuBar, ui.toolbarButtons, ui.bottomDock, ui.leftSidebar, audioEngine, audioMutex,
         isBottomDockVisible, isLeftSidebarVisible,
         [this] { openPianoRoll(); }, [this] { closePianoRoll(); },
         [this] { resized(); }, [this] { toggleViewMode(); },
@@ -156,4 +156,4 @@ void MainComponent::resized() {
 juce::ApplicationCommandTarget* MainComponent::getNextCommandTarget() { return commandHandler.get(); }
 void MainComponent::getAllCommands(juce::Array<juce::CommandID>& c) { commandHandler->getAllCommands(c); }
 void MainComponent::getCommandInfo(juce::CommandID id, juce::ApplicationCommandInfo& r) { commandHandler->getCommandInfo(id, r); }
-bool MainComponent::perform(const juce::ApplicationCommandTarget::InvocationInfo& i) { return commandHandler->perform(i); } 
+bool MainComponent::perform(const juce::ApplicationCommandTarget::InvocationInfo& i) { return commandHandler->perform(i); }

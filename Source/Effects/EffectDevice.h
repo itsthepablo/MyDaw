@@ -36,12 +36,13 @@ private:
     juce::Component* nativeEditor = nullptr;
 
     juce::TextButton bypassBtn;
-    juce::TextButton routingBtn; // <-- NUEVO: Botón de Ruteo
+    juce::TextButton routingBtn; // <-- NUEVO: Botn de Ruteo
 
     int dragHoverMode = 0;
     const juce::String dragID = "EFFECT_DEVICE_SLOT";
-
     void updateRoutingButtonText(); // Helper para actualizar la UI
+
+
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EffectDevice)
 };

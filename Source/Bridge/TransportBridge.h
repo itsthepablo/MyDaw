@@ -1,16 +1,18 @@
 #pragma once
 #include <JuceHeader.h>
 #include "../UI/TransportBar.h"
+#include "../UI/TopMenuBar.h"
 #include "../PianoRoll/PianoRollComponent.h"
 #include "../Playlist/PlaylistComponent.h"
 
 class TransportBridge {
 public:
     static void connect(TransportBar& bar,
+        TopMenuBar& topMenu,
         PianoRollComponent& pianoRoll,
         PlaylistComponent& playlist)
     {
-        bar.playBtn.onClick = [&bar, &pianoRoll, &playlist] {
+        topMenu.playBtn.onClick = [&topMenu, &pianoRoll, &playlist] {
             bool newState = !pianoRoll.getIsPlaying();
 
             pianoRoll.setPlaying(newState);
@@ -21,8 +23,8 @@ public:
                 playlist.setPlayheadPos(0);
             }
 
-            bar.playBtn.setButtonText(newState ? "STOP" : "PLAY");
-            bar.playBtn.setColour(juce::TextButton::buttonColourId,
+            topMenu.playBtn.setButtonText(newState ? "S" : "P");
+            topMenu.playBtn.setColour(juce::TextButton::buttonColourId,
                 newState ? juce::Colours::red : juce::Colours::green);
             };
 

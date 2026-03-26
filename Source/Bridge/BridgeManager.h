@@ -6,6 +6,7 @@
 #include "../Mixer/MixerComponent.h"
 #include "../Effects/EffectsPanel.h"
 #include "../UI/TransportBar.h"
+#include "../UI/TopMenuBar.h"
 #include "../UI/Buttons/ToolbarButtons.h"
 #include "../UI/BottomDock.h"
 #include "../UI/LeftSidebar.h"
@@ -18,6 +19,7 @@ struct BridgeDependencies {
     MixerComponent& mixerUI;
     EffectsPanel& effectsPanelUI;
     TransportBar& transportBar;
+    TopMenuBar& topMenuBar;
     ToolbarButtons& toolbarButtons;
     BottomDock& bottomDock;
     LeftSidebar& leftSidebar;
@@ -37,7 +39,7 @@ struct BridgeDependencies {
 class BridgeManager {
 public:
     static void initializeAllBridges(BridgeDependencies d);
-    
+
     // Nuevo método para limpiar un track de los sistemas de Piano Roll
     static void cleanupTrack(Track* track, PianoRollComponent& pianoRoll, std::function<void()> closePianoRollCallback);
 };

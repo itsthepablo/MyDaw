@@ -42,7 +42,10 @@ private:
 
 class TopMenuBar : public juce::Component, public juce::MenuBarModel {
 public:
-    juce::TextButton viewToggleBtn; // Botón para cambiar vista
+    juce::TextButton viewToggleBtn;      // Botón para cambiar vista
+    juce::TextButton playlistToggleBtn;  // Botón para Playlist/ChannelRack toggle
+    juce::TextButton playBtn;           // Botón Play
+    juce::TextButton stopBtn;           // Botón Stop
     std::function<void()> onSaveRequested; // Callback para el guardado
 
     TopMenuBar() {
@@ -53,6 +56,21 @@ public:
         addAndMakeVisible(viewToggleBtn);
         viewToggleBtn.setButtonText("MIXER / ARRANGEMENT");
         viewToggleBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(40, 45, 50));
+
+        // Botón Playlist/Channel Rack placeholder
+        addAndMakeVisible(playlistToggleBtn);
+        playlistToggleBtn.setButtonText("PL/CR");
+        playlistToggleBtn.setColour(juce::TextButton::buttonColourId, juce::Colours::blue);
+
+        // Botón Play
+        addAndMakeVisible(playBtn);
+        playBtn.setButtonText("P");
+        playBtn.setColour(juce::TextButton::buttonColourId, juce::Colours::green);
+
+        // Botón Stop
+        addAndMakeVisible(stopBtn);
+        stopBtn.setButtonText(u8"\u25B2"); // Triángulo
+        stopBtn.setColour(juce::TextButton::buttonColourId, juce::Colours::red);
 
         addAndMakeVisible(minBtn);
         addAndMakeVisible(maxBtn);
@@ -106,6 +124,11 @@ public:
         menuBar->setBounds(area.removeFromLeft(350));
 
         viewToggleBtn.setBounds(area.removeFromRight(150).reduced(5));
+
+        // Coordenadas locales precisas calculadas por ti
+        playlistToggleBtn.setBounds(497, 6, 40, 40);
+        playBtn.setBounds(537, 6, 40, 40);
+        stopBtn.setBounds(577, 6, 40, 40);
     }
 
 private:

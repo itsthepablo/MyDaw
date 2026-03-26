@@ -4,11 +4,6 @@
 class TransportBar : public juce::Component {
 public:
     TransportBar() {
-        // Botón Play/Stop
-        addAndMakeVisible(playBtn);
-        playBtn.setButtonText("PLAY");
-        playBtn.setColour(juce::TextButton::buttonColourId, juce::Colours::green);
-
         // Slider de BPM
         addAndMakeVisible(bpmSlider);
         bpmSlider.setRange(40.0, 240.0, 0.1);
@@ -25,16 +20,13 @@ public:
 
     void resized() override {
         auto area = getLocalBounds();
-        
-        // Diseño de la barra: Botón a la izquierda, BPM al lado
-        playBtn.setBounds(area.removeFromLeft(100).reduced(5));
-        
+
+        // Diseño de la barra para el slider y BPM (Los botones migraron a TopMenuBar)
         auto bpmArea = area.removeFromLeft(100);
         bpmLabel.setBounds(bpmArea.removeFromTop(18));
         bpmSlider.setBounds(bpmArea.reduced(2));
     }
 
-    juce::TextButton playBtn;
     juce::Slider bpmSlider;
     juce::Label bpmLabel;
 

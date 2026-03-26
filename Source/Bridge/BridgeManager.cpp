@@ -14,7 +14,7 @@ void BridgeManager::initializeAllBridges(BridgeDependencies d) {
         d.switchToArrangementWithEffects);
 
     TrackMixerPlaylistBridge::connect(d.trackContainer, d.mixerUI, d.playlistUI);
-    TransportBridge::connect(d.transportBar, d.pianoRollUI, d.playlistUI);
+    TransportBridge::connect(d.transportBar, d.topMenuBar, d.pianoRollUI, d.playlistUI);
 
     InterfaceBridge::connect(d.toolbarButtons, d.isBottomDockVisible, d.isLeftSidebarVisible,
         d.bottomDock, d.effectsPanelUI, d.leftSidebar, d.trackContainer,
