@@ -15,6 +15,13 @@ public:
     void initialise(const juce::String& commandLine) override {
         juce::LookAndFeel::setDefaultLookAndFeel(&myCustomTheme);
 
+        // ESCUDO ANTI-ESCALADO
+        auto* display = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay();
+        if (display != nullptr) {
+            float osScale = (float)display->scale;
+            juce::Desktop::getInstance().setGlobalScaleFactor(1.0f / osScale);
+        }
+
         initialFileToLoad = commandLine.unquoted();
         FileAssociationHandler::registerDAWExtension();
 
@@ -60,13 +67,15 @@ public:
                 mc->loadProject(juce::File(fileToLoad));
             }
 
-#if JUCE_IOS || JUCE_ANDROID
-            setFullScreen(true);
-#else
             setResizable(true, true);
-            auto screenArea = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay()->userArea;
-            setBounds(screenArea);
-#endif
+
+            // =========================================================================
+            // FIX REAL AL BORDE FANTASMA: Usar el UserArea de la pantalla.
+            // Ocupa el 100% de la pantalla respetando la barra de tareas de Windows.
+            // =========================================================================
+            auto userArea = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay()->userArea;
+            setBounds(userArea);
+
             setVisible(true);
         }
 

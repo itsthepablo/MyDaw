@@ -3,7 +3,8 @@
 void LayoutHandler::performLayout(LayoutDependencies d) {
     auto area = d.area;
 
-    d.topMenuBar.setBounds(area.removeFromTop(30));
+    // SOLUCIÓN: Altura ampliada de 30 a 46 píxeles para acomodar los botones de 40px en Y: 6
+    d.topMenuBar.setBounds(area.removeFromTop(46));
     d.hintPanel.setBounds(area.removeFromBottom(28));
 
     auto topArea = area.removeFromTop(45);
@@ -35,7 +36,7 @@ void LayoutHandler::performLayout(LayoutDependencies d) {
         d.closePianoRollBtn.setVisible(false);
 
         if (d.currentView == ViewMode::Mixer) {
-            d.masterChannelUI.setVisible(true); 
+            d.masterChannelUI.setVisible(true);
 
             d.trackContainer.setVisible(false);
             d.playlistUI.setVisible(false);
@@ -53,7 +54,7 @@ void LayoutHandler::performLayout(LayoutDependencies d) {
             d.mixerUI.setBounds(area);
         }
         else {
-            d.masterChannelUI.setVisible(false); 
+            d.masterChannelUI.setVisible(false);
             d.mixerUI.setVisible(false);
 
             d.trackContainer.setVisible(true);

@@ -17,7 +17,9 @@ MainComponent::MainComponent() {
     ui.playlistUI.setTrackContainer(&ui.trackContainer);
     ui.pickerPanelUI.setTrackContainer(&ui.trackContainer);
 
-    setSize(1200, 800);
+    // SOLUCIÓN DE RAÍZ: La matriz interna nace y muere en 1920x1080. 
+    setSize(1920, 1080);
+
     setAudioChannels(0, 2);
 }
 
