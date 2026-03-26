@@ -44,7 +44,7 @@ class TopMenuBar : public juce::Component, public juce::MenuBarModel {
 public:
     juce::TextButton viewToggleBtn;      // Botón para cambiar vista
     juce::TextButton playlistToggleBtn;  // Botón para Playlist/ChannelRack toggle
-    juce::TextButton playBtn;           // Botón Play
+    juce::TextButton playBtn;           // Botón Play 
     juce::TextButton stopBtn;           // Botón Stop
     std::function<void()> onSaveRequested; // Callback para el guardado
 
