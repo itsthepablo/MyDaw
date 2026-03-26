@@ -3,7 +3,6 @@
 void LayoutHandler::performLayout(LayoutDependencies d) {
     auto area = d.area;
 
-    // SOLUCIÓN: Altura ampliada de 30 a 46 píxeles para acomodar los botones de 40px en Y: 6
     d.topMenuBar.setBounds(area.removeFromTop(46));
     d.hintPanel.setBounds(area.removeFromBottom(28));
 

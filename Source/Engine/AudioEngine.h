@@ -4,6 +4,7 @@
 #include "TrackProcessor.h"
 #include "MasterMixer.h"
 #include "SafetyProcessors.h"
+#include "Metronome.h" // <-- NUEVO
 
 class TrackContainer;
 class PianoRollComponent;
@@ -13,9 +14,11 @@ class MixerComponent;
 class AudioEngine {
 public:
     AudioClock clock;
+    Metronome metronome; // <-- NUEVO
 
     void prepareToPlay(int samples, double s, TrackContainer& trackContainer, juce::CriticalSection& audioMutex) {
         clock.prepare(s, samples);
+        metronome.prepare(s); // <-- NUEVO
 
         const juce::ScopedLock sl(audioMutex);
         for (auto* track : trackContainer.getTracks())
@@ -116,6 +119,9 @@ public:
                 playlistUI.setPlayheadPos(nPh);
                 });
         }
+
+        // --- DSP DEL METRÓNOMO ---
+        metronome.process(*bufferToFill.buffer, bufferToFill.numSamples, clock, pianoRollUI.getBpm());
 
         SafetyProcessors::applyNaNKiller(*bufferToFill.buffer, bufferToFill.startSample, bufferToFill.numSamples);
         bufferToFill.buffer->applyGain(bufferToFill.startSample, bufferToFill.numSamples, mixerUI.getMasterVolume());

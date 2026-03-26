@@ -15,6 +15,7 @@ struct AudioClipData {
     juce::String name;
     float startX = 0.0f;
     float width = 0.0f;
+    juce::String sourceFilePath; // <-- Agregado para arreglar el error de ProjectManager
     juce::AudioBuffer<float> fileBuffer;
     double sourceSampleRate = 44100.0;
 
@@ -111,7 +112,7 @@ public:
     // --- GAIN STATION STATE ---
     float getPreGain() const { return preGain; }
     void setPreGain(float v) { preGain = v; }
-    
+
     float getPostGain() const { return postGain; }
     void setPostGain(float v) { postGain = v; }
 
@@ -119,7 +120,7 @@ public:
     bool isMonoActive = false;
 
     std::vector<Note> notes;
-    
+
     // --- CAMBIO CLAVE: Ahora acepta BaseEffect para alojar Nativos y VST3 ---
     juce::OwnedArray<BaseEffect> plugins;
 
@@ -153,7 +154,7 @@ private:
     juce::Colour color;
     float volume = 0.8f;
     float balance = 0.0f;
-    
+
     float preGain = 1.0f;
     float postGain = 1.0f;
 

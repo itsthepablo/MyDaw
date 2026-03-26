@@ -3,7 +3,7 @@
 #include "Tracks/TrackContainer.h"
 #include "Playlist/PlaylistComponent.h"
 
-class ProjectManager 
+class ProjectManager
 {
 public:
     // --- FUNCIÓN PROFESIONAL DE GUARDADO (BINARIO) ---
@@ -13,7 +13,7 @@ public:
         projectTree.setProperty("dawVersion", ProjectInfo::versionString, nullptr);
 
         juce::ValueTree tracksTree("TRACK_LIST");
-        
+
         for (auto* track : container.getTracks())
         {
             juce::ValueTree t("TRACK");
@@ -35,8 +35,8 @@ public:
                 {
                     juce::ValueTree n("NOTE");
                     n.setProperty("x", note.x, nullptr);
-                    n.setProperty("y", note.y, nullptr);
-                    n.setProperty("w", note.w, nullptr);
+                    n.setProperty("pitch", note.pitch, nullptr);
+                    n.setProperty("width", note.width, nullptr);
                     notesNode.addChild(n, -1, nullptr);
                 }
                 mcTree.addChild(notesNode, -1, nullptr);
@@ -78,7 +78,7 @@ public:
         if (!projectTree.isValid() || !projectTree.hasType("PERRITOGORDO_PROJECT")) return;
 
         const juce::ScopedLock sl(audioMutex);
-        
+
         // Limpiamos todo
         playlist.clips.clear();
         while (container.getTracks().size() > 0) container.removeTrack(0);
@@ -102,14 +102,15 @@ public:
                         midi->name = cTree.getProperty("name");
                         midi->startX = cTree.getProperty("startX");
                         midi->width = cTree.getProperty("width");
-                        
+
                         juce::ValueTree notesTree = cTree.getChildWithName("NOTES");
                         for (auto nTree : notesTree)
                         {
-                            MidiNote n;
+                            Note n;
                             n.x = nTree.getProperty("x");
-                            n.y = nTree.getProperty("y");
-                            n.w = nTree.getProperty("w");
+                            n.pitch = nTree.getProperty("pitch");
+                            n.width = nTree.getProperty("width");
+                            n.frequency = 0; // Default frequency
                             midi->notes.push_back(n);
                         }
                         newTrack->midiClips.add(midi);
@@ -123,7 +124,7 @@ public:
                             juce::AudioFormatManager fmt;
                             fmt.registerBasicFormats();
                             fmt.registerFormat(new juce::MP3AudioFormat(), false);
-                            
+
                             if (auto reader = std::unique_ptr<juce::AudioFormatReader>(fmt.createReaderFor(sampleFile)))
                             {
                                 auto* audio = new AudioClipData();
@@ -134,7 +135,7 @@ public:
                                 reader->read(&audio->fileBuffer, 0, (int)reader->lengthInSamples, 0, true, true);
                                 audio->generateCache();
                                 audio->width = cTree.getProperty("width");
-                                
+
                                 newTrack->audioClips.add(audio);
                                 playlist.clips.push_back({ newTrack, audio->startX, audio->width, audio->name, audio, nullptr });
                             }

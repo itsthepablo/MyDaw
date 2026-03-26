@@ -19,6 +19,14 @@
         <FILE id="ghMFvY" name="UtilityPlugin.h" compile="0" resource="0" file="Source/Native_Plugins/UtilityPlugin.h"/>
       </GROUP>
       <GROUP id="{721FC522-4CF1-05D4-BC36-D97CDC4B59FC}" name="UI">
+        <GROUP id="{FC2AFCB8-7B6C-E19E-B615-A10781D21F88}" name="TopMenuBar">
+          <FILE id="SrXLf0" name="BpmDragControl.h" compile="0" resource="0"
+                file="Source/UI/TopMenuBar/BpmDragControl.h"/>
+          <FILE id="nKVcEQ" name="TopMenuBar.h" compile="0" resource="0" file="Source/UI/TopMenuBar/TopMenuBar.h"/>
+          <FILE id="fauvAY" name="TopMenuButton.h" compile="0" resource="0" file="Source/UI/TopMenuBar/TopMenuButton.h"/>
+          <FILE id="VMoPm2" name="WindowControlButton.h" compile="0" resource="0"
+                file="Source/UI/TopMenuBar/WindowControlButton.h"/>
+        </GROUP>
         <GROUP id="{D4E608E9-5EDD-7C63-EF71-C30B716729F9}" name="GainStation">
           <FILE id="StO5Tq" name="GainStationDSP.h" compile="0" resource="0"
                 file="Source/UI/GainStation/GainStationDSP.h"/>
@@ -54,7 +62,6 @@
         <FILE id="BvdwDj" name="UIManager.cpp" compile="1" resource="0" file="Source/UI/UIManager.cpp"/>
         <FILE id="bmzdqo" name="UIManager.h" compile="0" resource="0" file="Source/UI/UIManager.h"/>
         <FILE id="eosDxo" name="SplashWindow.h" compile="0" resource="0" file="Source/UI/SplashWindow.h"/>
-        <FILE id="Oq1yky" name="TopMenuBar.h" compile="0" resource="0" file="Source/UI/TopMenuBar.h"/>
         <FILE id="D6vTfs" name="HintPanel.h" compile="0" resource="0" file="Source/UI/HintPanel.h"/>
         <FILE id="B6VI8M" name="LevelMeter.h" compile="0" resource="0" file="Source/UI/LevelMeter.h"/>
         <FILE id="kfwxKj" name="BottomDockResizer.h" compile="0" resource="0"
@@ -79,6 +86,7 @@
         <FILE id="mEx8qf" name="AudioClock.h" compile="0" resource="0" file="Source/Engine/AudioClock.h"/>
         <FILE id="jWdwyO" name="AudioEngine.h" compile="0" resource="0" file="Source/Engine/AudioEngine.h"/>
         <FILE id="kbAMkm" name="MasterMixer.h" compile="0" resource="0" file="Source/Engine/MasterMixer.h"/>
+        <FILE id="uwXG7u" name="Metronome.h" compile="0" resource="0" file="Source/Engine/Metronome.h"/>
         <FILE id="YPFnVd" name="SafetyProcessors.h" compile="0" resource="0"
               file="Source/Engine/SafetyProcessors.h"/>
         <FILE id="f8Nvgg" name="SimpleLoudness.h" compile="0" resource="0"

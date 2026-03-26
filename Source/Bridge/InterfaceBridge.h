@@ -13,7 +13,7 @@ public:
         BottomDock& bottomDock, EffectsPanel& effectsPanelUI, LeftSidebar& leftSidebar,
         TrackContainer& trackContainer,
         std::function<void()> triggerResize,
-        std::function<void()> toggleMixerMode) // <--- NUEVO PARÁMETRO
+        std::function<void()> toggleMixerMode)
     {
         toolbar.onTogglePicker = [&isLeftSidebarVisible, &leftSidebar, triggerResize] {
             if (!isLeftSidebarVisible) {
@@ -57,9 +57,8 @@ public:
             triggerResize();
             };
 
-        // --- CORREGIDO: Ahora el Mixer ya no se busca en el BottomDock ---
         toolbar.onToggleMixer = [toggleMixerMode] {
-            if (toggleMixerMode) toggleMixerMode(); // Llama a toggleViewMode() del MainComponent
+            if (toggleMixerMode) toggleMixerMode();
             };
 
         toolbar.onToggleRack = [&isBottomDockVisible, &bottomDock, triggerResize] {

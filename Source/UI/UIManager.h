@@ -17,7 +17,7 @@
 #include "../UI/SidebarResizer.h" 
 #include "../UI/BottomDockResizer.h" 
 #include "../UI/HintPanel.h"   
-#include "../UI/TopMenuBar.h" 
+#include "TopMenuBar/TopMenuBar.h"
 
 struct DAWUIComponents {
     TopMenuBar topMenuBar;

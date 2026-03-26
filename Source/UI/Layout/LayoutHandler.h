@@ -9,7 +9,7 @@
 #include "../../UI/BottomDockResizer.h"
 #include "../../UI/LeftSidebar.h"
 #include "../../UI/SidebarResizer.h"
-#include "../../UI/TopMenuBar.h"
+#include "../../UI/TopMenuBar/TopMenuBar.h"
 #include "../../UI/HintPanel.h"
 #include "../../UI/TransportBar.h"
 #include "../../UI/Buttons/ToolbarButtons.h"

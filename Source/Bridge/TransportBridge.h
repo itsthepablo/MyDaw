@@ -1,7 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include "../UI/TransportBar.h"
-#include "../UI/TopMenuBar.h"
+#include "../UI/TopMenuBar/TopMenuBar.h"
 #include "../PianoRoll/PianoRollComponent.h"
 #include "../Playlist/PlaylistComponent.h"
 
@@ -13,27 +13,49 @@ public:
         PlaylistComponent& playlist)
     {
         topMenu.playBtn.onClick = [&topMenu, &pianoRoll, &playlist] {
-            bool newState = !pianoRoll.getIsPlaying();
+            bool isPlaying = pianoRoll.getIsPlaying();
+            auto mods = juce::ModifierKeys::getCurrentModifiers();
 
-            pianoRoll.setPlaying(newState);
-            playlist.isPlaying = newState;
-
-            if (newState) {
-                pianoRoll.setPlayheadPos(0);
-                playlist.setPlayheadPos(0);
+            if (!isPlaying) {
+                pianoRoll.setPlaying(true);
+                playlist.isPlaying = true;
+                topMenu.playBtn.setButtonText("S");
+                topMenu.playBtn.setColour(juce::TextButton::buttonColourId, juce::Colours::red);
             }
+            else {
+                pianoRoll.setPlaying(false);
+                playlist.isPlaying = false;
 
-            topMenu.playBtn.setButtonText(newState ? "S" : "P");
-            topMenu.playBtn.setColour(juce::TextButton::buttonColourId,
-                newState ? juce::Colours::red : juce::Colours::green);
+                if (!mods.isCtrlDown() && !mods.isCommandDown()) {
+                    pianoRoll.setPlayheadPos(0);
+                    playlist.setPlayheadPos(0);
+                }
+
+                topMenu.playBtn.setButtonText("P");
+                topMenu.playBtn.setColour(juce::TextButton::buttonColourId, juce::Colours::green);
+            }
             };
 
-        bar.bpmSlider.onValueChange = [&bar, &pianoRoll, &playlist] {
-            double val = bar.bpmSlider.getValue();
-            bar.bpmLabel.setText(juce::String(val, 1) + " BPM", juce::dontSendNotification);
+        topMenu.stopBtn.onClick = [&topMenu, &pianoRoll, &playlist] {
+            pianoRoll.setPlaying(false);
+            playlist.isPlaying = false;
+            pianoRoll.setPlayheadPos(0);
+            playlist.setPlayheadPos(0);
 
+            topMenu.playBtn.setButtonText("P");
+            topMenu.playBtn.setColour(juce::TextButton::buttonColourId, juce::Colours::green);
+            };
+
+        topMenu.bpmControl.onBpmChanged = [&pianoRoll, &playlist](float val) {
             pianoRoll.setBpm(val);
             playlist.setBpm(val);
+            };
+
+        topMenu.requestPlaybackTimeInSeconds = [&pianoRoll]() -> double {
+            double bpm = pianoRoll.getBpm();
+            double pixelsPerSec = (bpm / 60.0) * 80.0;
+            if (pixelsPerSec <= 0.0) return 0.0;
+            return pianoRoll.getPlayheadPos() / pixelsPerSec;
             };
     }
 };

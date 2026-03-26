@@ -3,7 +3,7 @@
 DAWCommandHandler::DAWCommandHandler(CommandActions a) : actions(a) {}
 
 juce::ApplicationCommandTarget* DAWCommandHandler::getNextCommandTarget() {
-    return nullptr; // Aquí podrías devolver un plugin enfocado si quisieras
+    return nullptr; 
 }
 
 void DAWCommandHandler::getAllCommands(juce::Array<juce::CommandID>& commands) {
@@ -14,7 +14,13 @@ void DAWCommandHandler::getAllCommands(juce::Array<juce::CommandID>& commands) {
 void DAWCommandHandler::getCommandInfo(juce::CommandID id, juce::ApplicationCommandInfo& result) {
     if (id == DAWCommands::playStop) {
         result.setInfo("Play / Stop", "Control de transporte", "Transport", 0);
+        
+        // Espacio Normal
         result.addDefaultKeypress(' ', 0);
+        
+        // Ctrl + Espacio y Cmd + Espacio (Para la pausa, el Puente lo detectará en tiempo real)
+        result.addDefaultKeypress(' ', juce::ModifierKeys::ctrlModifier);
+        result.addDefaultKeypress(' ', juce::ModifierKeys::commandModifier);
     }
     else if (id == DAWCommands::toggleView) {
         result.setInfo("Alternar Vista", "Interfaz", "UI", 0);

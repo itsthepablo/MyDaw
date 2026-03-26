@@ -6,7 +6,7 @@
 #include "../Mixer/MixerComponent.h"
 #include "../Effects/EffectsPanel.h"
 #include "../UI/TransportBar.h"
-#include "../UI/TopMenuBar.h"
+#include "../UI/TopMenuBar/TopMenuBar.h"
 #include "../UI/Buttons/ToolbarButtons.h"
 #include "../UI/BottomDock.h"
 #include "../UI/LeftSidebar.h"

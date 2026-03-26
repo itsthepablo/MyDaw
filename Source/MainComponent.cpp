@@ -17,7 +17,6 @@ MainComponent::MainComponent() {
     ui.playlistUI.setTrackContainer(&ui.trackContainer);
     ui.pickerPanelUI.setTrackContainer(&ui.trackContainer);
 
-    // SOLUCIÓN DE RAÍZ: La matriz interna nace y muere en 1920x1080. 
     setSize(1920, 1080);
 
     setAudioChannels(0, 2);
@@ -35,6 +34,11 @@ void MainComponent::setupCommands() {
 void MainComponent::setupCallbacks() {
     ui.topMenuBar.viewToggleBtn.onClick = [this] { toggleViewMode(); };
     ui.topMenuBar.onSaveRequested = [this] { saveProject(); };
+
+    // --- CONEXIÃ“N METRÃ“NOMO (UI -> DSP) ---
+    ui.topMenuBar.metronomeBtn.onClick = [this] {
+        audioEngine.metronome.setEnabled(ui.topMenuBar.metronomeBtn.getToggleState());
+    };
 
     ui.playlistUI.onNewTrackRequested = [this](TrackType type) { ui.trackContainer.addTrack(type); };
 
