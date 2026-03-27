@@ -1,4 +1,4 @@
-﻿#include "InstrumentPanel.h"
+#include "InstrumentPanel.h"
 
 InstrumentPanel::InstrumentPanel() {
     addAndMakeVisible(addInstrumentBtn);

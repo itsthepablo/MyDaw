@@ -9,7 +9,8 @@ public:
         int cIdx = p.getClipAt(e.x, e.y);
         if (cIdx == -1) return;
 
-        float hS = (float)p.hBar.getCurrentRangeStart();
+        // --- MODIFICADO: hBar -> hNavigator ---
+        float hS = (float)p.hNavigator.getCurrentRangeStart();
         float absX = (e.x + hS) / p.hZoom;
 
         // 1. Calculamos el punto de corte respetando el Grid (Snap)

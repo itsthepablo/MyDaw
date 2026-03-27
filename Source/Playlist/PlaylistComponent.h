@@ -6,7 +6,8 @@
 #include <cmath>       
 #include "../Tracks/TrackContainer.h" 
 #include "Tools/PlaylistTool.h" 
-#include "../Playlist/PlaylistMenuBar/PlaylistMenuBar.h" 
+#include "PlaylistMenuBar/PlaylistMenuBar.h" 
+#include "ScrollBar/PlaylistNavigator.h" 
 
 struct TrackClip {
     Track* trackPtr;
@@ -28,9 +29,7 @@ public:
     PlaylistComponent();
     ~PlaylistComponent() override;
 
-    // --- MODIFICADO: Ahora exige saber si debe crear un Track de Audio o MIDI ---
     std::function<void(TrackType)> onNewTrackRequested;
-
     std::function<void(int)> onVerticalScroll;
     std::function<void(Track*, MidiClipData*)> onMidiClipDoubleClicked;
     std::function<void(MidiClipData*)> onMidiClipDeleted;
@@ -50,10 +49,10 @@ public:
 
     std::vector<TrackClip> clips;
     float hZoom = 1.0f;
-
+    
     PlaylistMenuBar menuBar;
-    juce::ScrollBar hBar{ false };
-    juce::ScrollBar vBar{ true };
+    PlaylistNavigator hNavigator; 
+    juce::ScrollBar vBar{ true }; // Mantenemos vBar como nativo por ahora
 
     int draggingClipIndex = -1;
     int selectedClipIndex = -1;

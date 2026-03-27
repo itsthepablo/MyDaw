@@ -14,9 +14,14 @@ PlaylistComponent::PlaylistComponent() {
     activeTool = std::make_unique<PointerTool>();
 
     addAndMakeVisible(menuBar);
-    addAndMakeVisible(hBar); hBar.addListener(this);
+    addAndMakeVisible(hNavigator);
+
+    // Callback: cuando el navigator cambia la posición, repintamos la playlist
+    hNavigator.onScrollMoved = [this](double) { repaint(); };
+
     addAndMakeVisible(vBar); vBar.addListener(this);
     vBar.setAlwaysOnTop(true);
+
     updateScrollBars();
     startTimerHz(30);
 }
@@ -29,8 +34,9 @@ PlaylistComponent::~PlaylistComponent() {
 void PlaylistComponent::timerCallback() { repaint(); }
 
 void PlaylistComponent::updateScrollBars() {
-    hBar.setRangeLimits(0.0, 32 * 320 * hZoom);
-    hBar.setCurrentRange(hBar.getCurrentRangeStart(), (double)getWidth() - scrollBarSize);
+    hNavigator.setRangeLimits(0.0, 32 * 320 * hZoom);
+    hNavigator.setCurrentRange(hNavigator.getCurrentRangeStart(), (double)getWidth() - scrollBarSize);
+
     int totalH = 0;
     if (tracksRef) {
         for (auto* t : *tracksRef) if (t->isShowingInChildren) totalH += (int)trackHeight;
@@ -149,7 +155,7 @@ bool PlaylistComponent::keyPressed(const juce::KeyPress& key, juce::Component*) 
 
 void PlaylistComponent::paint(juce::Graphics& g) {
     g.fillAll(juce::Colour(25, 27, 30));
-    float hS = (float)hBar.getCurrentRangeStart();
+    float hS = (float)hNavigator.getCurrentRangeStart();
     float vS = (float)vBar.getCurrentRangeStart();
     int viewAreaY = menuBarH + timelineH;
     int viewAreaH = getHeight() - menuBarH - timelineH - scrollBarSize;
@@ -227,7 +233,7 @@ void PlaylistComponent::paint(juce::Graphics& g) {
 
 void PlaylistComponent::resized() {
     menuBar.setBounds(0, 0, getWidth(), menuBarH);
-    hBar.setBounds(0, getHeight() - scrollBarSize, getWidth() - scrollBarSize, scrollBarSize);
+    hNavigator.setBounds(0, getHeight() - scrollBarSize, getWidth() - scrollBarSize, scrollBarSize);
     vBar.setBounds(getWidth() - scrollBarSize, menuBarH + timelineH, scrollBarSize, getHeight() - menuBarH - timelineH - scrollBarSize);
     updateScrollBars();
 }
@@ -248,7 +254,7 @@ void PlaylistComponent::mouseWheelMove(const juce::MouseEvent& e, const juce::Mo
 
 int PlaylistComponent::getClipAt(int x, int y) const {
     int tIdx = getTrackAtY(y); if (tIdx == -1) return -1;
-    float absX = (x + (float)hBar.getCurrentRangeStart()) / hZoom;
+    float absX = (x + (float)hNavigator.getCurrentRangeStart()) / hZoom;
     for (int i = (int)clips.size() - 1; i >= 0; --i) {
         if (clips[i].trackPtr == (*tracksRef)[tIdx] && absX >= clips[i].startX && absX <= clips[i].startX + clips[i].width) return i;
     }
@@ -268,7 +274,7 @@ void PlaylistComponent::mouseDoubleClick(const juce::MouseEvent& e) {
 
     int tIdx = getTrackAtY(e.y);
     if (tIdx != -1 && (*tracksRef)[tIdx]->getType() == TrackType::MIDI && cIdx == -1) {
-        float absX = (e.x + (float)hBar.getCurrentRangeStart()) / hZoom;
+        float absX = (e.x + (float)hNavigator.getCurrentRangeStart()) / hZoom;
         float snappedX = std::round(absX / snapPixels) * snapPixels;
 
         Track* targetTrack = (*tracksRef)[tIdx];
@@ -363,7 +369,7 @@ void PlaylistComponent::filesDropped(const juce::StringArray& files, int x, int 
     }
     if (tIdx == -1) return;
 
-    float absX = (x + (float)hBar.getCurrentRangeStart()) / hZoom;
+    float absX = (x + (float)hNavigator.getCurrentRangeStart()) / hZoom;
     absX = std::round(absX / snapPixels) * snapPixels;
     absX = juce::jmax(0.0f, absX);
 
@@ -455,7 +461,7 @@ void PlaylistComponent::itemDropped(const juce::DragAndDropTarget::SourceDetails
 
         Track* targetTrack = (*tracksRef)[tIdx];
 
-        float absX = (x + (float)hBar.getCurrentRangeStart()) / hZoom;
+        float absX = (x + (float)hNavigator.getCurrentRangeStart()) / hZoom;
         float snappedX = std::round(absX / snapPixels) * snapPixels;
         snappedX = juce::jmax(0.0f, snappedX);
 

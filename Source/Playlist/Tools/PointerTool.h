@@ -95,7 +95,8 @@ public:
             }
 
             auto& clip = p.clips[cIdx];
-            float hS = (float)p.hBar.getCurrentRangeStart();
+            // --- MODIFICADO: hBar -> hNavigator ---
+            float hS = (float)p.hNavigator.getCurrentRangeStart();
 
             if (clip.trackPtr->isInlineEditingActive && clip.linkedMidi) {
                 int yPos = p.getTrackY(clip.trackPtr);
@@ -138,10 +139,11 @@ public:
     void mouseDrag(const juce::MouseEvent& e, PlaylistComponent& p) override {
         if (p.draggingClipIndex == -1) return;
 
-        float absX = (e.x + (float)p.hBar.getCurrentRangeStart()) / p.hZoom;
+        // --- MODIFICADO: hBar -> hNavigator ---
+        float absX = (e.x + (float)p.hNavigator.getCurrentRangeStart()) / p.hZoom;
         float diff = absX - p.dragStartAbsX;
 
-        // --- EDICIN INLINE DE NOTAS ---
+        // --- EDICI N INLINE DE NOTAS ---
         if (p.draggingNoteIndex != -1) {
             auto* midiClip = p.clips[p.draggingClipIndex].linkedMidi;
             auto& note = midiClip->notes[p.draggingNoteIndex];
@@ -155,13 +157,11 @@ public:
                 note.x = juce::jmax(midiClip->startX, snappedX);
             }
 
-            // --- NUEVO: Transmitir el cambio inline a todos los clones del proyecto
             p.notifyPatternEdited(midiClip);
             p.repaint();
             return;
         }
 
-        // ... (El resto del cdigo de movimiento de clips se mantiene id	ntico)
         int newTrackIdx = p.getTrackAtY(e.y);
         if (newTrackIdx != -1 && (*p.tracksRef)[newTrackIdx] != p.clips[p.draggingClipIndex].trackPtr && !p.isResizingClip) {
             Track* newTrack = (*p.tracksRef)[newTrackIdx];
@@ -230,7 +230,8 @@ public:
         int idx = p.getClipAt(e.x, e.y);
         if (idx != -1) {
             auto& clip = p.clips[idx];
-            float hS = (float)p.hBar.getCurrentRangeStart();
+            // --- MODIFICADO: hBar -> hNavigator ---
+            float hS = (float)p.hNavigator.getCurrentRangeStart();
 
             if (clip.trackPtr->isInlineEditingActive && clip.linkedMidi) {
                 int yPos = p.getTrackY(clip.trackPtr);

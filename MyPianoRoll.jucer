@@ -145,6 +145,12 @@
           <FILE id="BD5VkH" name="PlaylistMenuBar.h" compile="0" resource="0"
                 file="Source/Playlist/PlaylistMenuBar/PlaylistMenuBar.h"/>
         </GROUP>
+        <GROUP id="{091C807D-957C-EDB9-DE83-5B142B432301}" name="ScrollBar">
+          <FILE id="DqP0HM" name="PlaylistNavigator.cpp" compile="1" resource="0"
+                file="Source/Playlist/ScrollBar/PlaylistNavigator.cpp"/>
+          <FILE id="qynAAL" name="PlaylistNavigator.h" compile="0" resource="0"
+                file="Source/Playlist/ScrollBar/PlaylistNavigator.h"/>
+        </GROUP>
         <GROUP id="{361B1AF3-F0CC-2376-25A1-51065AF40789}" name="Tools">
           <FILE id="eNp0RM" name="EraserTool.h" compile="0" resource="0" file="Source/Playlist/Tools/EraserTool.h"/>
           <FILE id="BIHoRJ" name="PlaylistTool.h" compile="0" resource="0" file="Source/Playlist/Tools/PlaylistTool.h"/>
