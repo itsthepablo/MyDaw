@@ -2,7 +2,7 @@
 #include <JuceHeader.h>
 #include <functional>
 
-class PlaylistNavigator : public juce::Component
+class PlaylistNavigator : public juce::Component, private juce::Timer
 {
 public:
     PlaylistNavigator();
@@ -11,13 +11,18 @@ public:
     void paint(juce::Graphics& g) override;
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseDrag(const juce::MouseEvent& e) override;
+    void mouseUp(const juce::MouseEvent& e) override;
+    void mouseMove(const juce::MouseEvent& e) override;
+    void timerCallback() override;
 
     void setRangeLimits(double minimum, double maximum);
     void setCurrentRange(double newStart, double newSize);
     double getCurrentRangeStart() const { return currentStart; }
 
-    // Callback para avisarle al Playlist que la barra se movió
+    void setZoomContext(double currentZoom, double baseWidth);
+
     std::function<void(double)> onScrollMoved;
+    std::function<void(double)> onZoomChanged;
 
 private:
     double totalMin = 0.0;
@@ -25,11 +30,22 @@ private:
     double currentStart = 0.0;
     double visibleSize = 1.0;
 
-    bool isDraggingThumb = false;
+    double currentZoom = 1.0;
+    double baseTotalWidth = 10240.0;
+
+    enum DragMode { None, DraggingThumb, DraggingLeftEdge, DraggingRightEdge, HoldingLeftBtn, HoldingRightBtn };
+    DragMode dragMode = None;
+
     double dragStartMouseX = 0.0;
     double dragStartThumbX = 0.0;
+    double dragStartZoom = 1.0;
 
+    const int btnSize = 20;
+
+    juce::Rectangle<int> getTrackBounds() const;
     juce::Rectangle<int> getThumbBounds() const;
+    juce::Rectangle<int> getLeftButtonBounds() const;
+    juce::Rectangle<int> getRightButtonBounds() const;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PlaylistNavigator)
 };

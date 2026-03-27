@@ -27,10 +27,7 @@ public:
                 m.showMenuAsync(juce::PopupMenu::Options(), [&p, cIdx](int result) {
                     if (result == 0) return;
 
-                    if (result == 3) {
-                        p.deleteClip(cIdx);
-                        return;
-                    }
+                    if (result == 3) { p.deleteClip(cIdx); return; }
 
                     if (cIdx >= p.clips.size()) return;
 
@@ -39,7 +36,6 @@ public:
 
                     if (result == 1 && sourceMidi && targetTrack) {
                         MidiClipData* newMidiClip = new MidiClipData(*sourceMidi);
-
                         int maxPatternNum = 0;
                         if (p.tracksRef) {
                             for (auto* tr : *p.tracksRef) {
@@ -52,7 +48,6 @@ public:
                             }
                         }
                         newMidiClip->name = "Pattern " + juce::String(maxPatternNum + 1);
-
                         targetTrack->midiClips.add(newMidiClip);
                         p.clips[cIdx].linkedMidi = newMidiClip;
                         p.clips[cIdx].name = newMidiClip->name;
@@ -67,7 +62,6 @@ public:
 
                             alert->enterModalState(false, juce::ModalCallbackFunction::create([&p, sourceMidi, alert](int btn) {
                                 alert->setVisible(false);
-
                                 if (btn == 1) {
                                     juce::String newName = alert->getTextEditorContents("newName");
                                     juce::String oldName = sourceMidi->name;
@@ -95,7 +89,6 @@ public:
             }
 
             auto& clip = p.clips[cIdx];
-            // --- MODIFICADO: hBar -> hNavigator ---
             float hS = (float)p.hNavigator.getCurrentRangeStart();
 
             if (clip.trackPtr->isInlineEditingActive && clip.linkedMidi) {
@@ -113,7 +106,7 @@ public:
 
                     p.draggingClipIndex = cIdx;
                     p.draggingNoteIndex = noteIdx;
-                    p.dragStartAbsX = (e.x + hS) / p.hZoom;
+                    p.dragStartAbsX = p.getAbsoluteXFromMouse(e.x);
                     p.dragStartNoteX = note.x;
                     p.dragStartNoteWidth = note.width;
                     p.isResizingNote = e.x > (noteScreenX + noteScreenW - 6);
@@ -124,10 +117,13 @@ public:
 
             p.draggingClipIndex = cIdx;
             p.draggingNoteIndex = -1;
-            p.dragStartAbsX = (e.x + hS) / p.hZoom;
+            p.dragStartAbsX = p.getAbsoluteXFromMouse(e.x);
             p.dragStartXOriginal = p.clips[cIdx].startX;
             p.dragStartWidth = p.clips[cIdx].width;
-            p.isResizingClip = e.x > ((p.clips[cIdx].startX * p.hZoom - hS) + p.clips[cIdx].width * p.hZoom - 10);
+
+            float clipScreenX = (p.clips[cIdx].startX * p.hZoom) - hS;
+            float clipScreenW = p.clips[cIdx].width * p.hZoom;
+            p.isResizingClip = e.x > (clipScreenX + clipScreenW - 10);
         }
         else {
             p.draggingClipIndex = -1;
@@ -139,23 +135,17 @@ public:
     void mouseDrag(const juce::MouseEvent& e, PlaylistComponent& p) override {
         if (p.draggingClipIndex == -1) return;
 
-        // --- MODIFICADO: hBar -> hNavigator ---
-        float absX = (e.x + (float)p.hNavigator.getCurrentRangeStart()) / p.hZoom;
+        float absX = p.getAbsoluteXFromMouse(e.x);
         float diff = absX - p.dragStartAbsX;
 
-        // --- EDICI N INLINE DE NOTAS ---
         if (p.draggingNoteIndex != -1) {
             auto* midiClip = p.clips[p.draggingClipIndex].linkedMidi;
             auto& note = midiClip->notes[p.draggingNoteIndex];
 
             float snappedX = std::round((p.dragStartNoteX + diff) / p.snapPixels) * p.snapPixels;
 
-            if (p.isResizingNote) {
-                note.width = juce::jmax(10.0f, p.dragStartNoteWidth + diff);
-            }
-            else {
-                note.x = juce::jmax(midiClip->startX, snappedX);
-            }
+            if (p.isResizingNote) { note.width = juce::jmax(10.0f, p.dragStartNoteWidth + diff); }
+            else { note.x = juce::jmax(midiClip->startX, snappedX); }
 
             p.notifyPatternEdited(midiClip);
             p.repaint();
@@ -200,14 +190,8 @@ public:
         else {
             if (p.clips[p.draggingClipIndex].linkedMidi != nullptr) {
                 float timeShift = snappedX - p.clips[p.draggingClipIndex].linkedMidi->startX;
-
-                for (auto& note : p.clips[p.draggingClipIndex].linkedMidi->notes) {
-                    note.x += timeShift;
-                }
-
-                auto shiftAutoLane = [timeShift](AutoLane& lane) {
-                    for (auto& node : lane.nodes) node.x += timeShift;
-                    };
+                for (auto& note : p.clips[p.draggingClipIndex].linkedMidi->notes) note.x += timeShift;
+                auto shiftAutoLane = [timeShift](AutoLane& lane) { for (auto& node : lane.nodes) node.x += timeShift; };
                 shiftAutoLane(p.clips[p.draggingClipIndex].linkedMidi->autoVol);
                 shiftAutoLane(p.clips[p.draggingClipIndex].linkedMidi->autoPan);
                 shiftAutoLane(p.clips[p.draggingClipIndex].linkedMidi->autoPitch);
@@ -230,7 +214,6 @@ public:
         int idx = p.getClipAt(e.x, e.y);
         if (idx != -1) {
             auto& clip = p.clips[idx];
-            // --- MODIFICADO: hBar -> hNavigator ---
             float hS = (float)p.hNavigator.getCurrentRangeStart();
 
             if (clip.trackPtr->isInlineEditingActive && clip.linkedMidi) {
@@ -252,7 +235,7 @@ public:
                 }
             }
 
-            float edgeX = (clip.startX * p.hZoom - hS) + clip.width * p.hZoom;
+            float edgeX = (clip.startX * p.hZoom) - hS + (clip.width * p.hZoom);
             if (e.x > edgeX - 10) p.setMouseCursor(juce::MouseCursor::LeftRightResizeCursor);
             else p.setMouseCursor(juce::MouseCursor::DraggingHandCursor);
         }

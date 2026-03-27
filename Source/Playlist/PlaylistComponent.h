@@ -49,10 +49,10 @@ public:
 
     std::vector<TrackClip> clips;
     float hZoom = 1.0f;
-    
+
     PlaylistMenuBar menuBar;
-    PlaylistNavigator hNavigator; 
-    juce::ScrollBar vBar{ true }; // Mantenemos vBar como nativo por ahora
+    PlaylistNavigator hNavigator;
+    juce::ScrollBar vBar{ true };
 
     int draggingClipIndex = -1;
     int selectedClipIndex = -1;
@@ -67,10 +67,14 @@ public:
     float dragStartNoteWidth = 0.0f;
 
     juce::CriticalSection* audioMutex = nullptr;
+
+    // --- TAMAÑOS BASADOS EN ILLUSTRATOR (Coordenadas Locales) ---
     const int menuBarH = 34;
+    const int navigatorH = 51; // Scroll horizontal convertido en Minimap
     const int timelineH = 35;
+    const int vBarWidth = 32;  // Scroll vertical más ancho
+
     const float trackHeight = 100.0f;
-    const int scrollBarSize = 16;
     double snapPixels = 80.0;
 
     void setTracksReference(const juce::OwnedArray<Track>* tracks) {
@@ -132,6 +136,11 @@ public:
     void deleteClip(int index);
     void deleteClipsByName(const juce::String& name, bool isMidi);
     void purgeClipsOfTrack(Track* track);
+
+    // HELPER MATEMÁTICO: Convierte la posición física local en pantalla a tiempo musical
+    float getAbsoluteXFromMouse(int mouseX) const {
+        return (mouseX + (float)hNavigator.getCurrentRangeStart()) / hZoom;
+    }
 
     bool isPlaying = false;
 

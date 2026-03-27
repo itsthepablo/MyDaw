@@ -5,7 +5,7 @@
 #include "Tools/ScissorTool.h" 
 #include "Tools/EraserTool.h" 
 #include "PlaylistDropHandler.h"
-#include "PlaylistActionHandler.h" // <-- NUESTRO NUEVO MANEJADOR DE LOGICA PESADA
+#include "PlaylistActionHandler.h"
 #include <cmath>
 #include <algorithm>
 
@@ -17,12 +17,12 @@ PlaylistComponent::PlaylistComponent() {
 
     addAndMakeVisible(menuBar);
     addAndMakeVisible(hNavigator);
-    
+
     hNavigator.onScrollMoved = [this](double) { repaint(); };
 
     addAndMakeVisible(vBar); vBar.addListener(this);
     vBar.setAlwaysOnTop(true);
-    
+
     updateScrollBars();
     startTimerHz(30);
 }
@@ -36,13 +36,16 @@ void PlaylistComponent::timerCallback() { repaint(); }
 
 void PlaylistComponent::updateScrollBars() {
     hNavigator.setRangeLimits(0.0, 32 * 320 * hZoom);
-    hNavigator.setCurrentRange(hNavigator.getCurrentRangeStart(), (double)getWidth() - scrollBarSize);
-    
+    hNavigator.setCurrentRange(hNavigator.getCurrentRangeStart(), (double)(getWidth() - vBarWidth));
+
     int totalH = 0;
     if (tracksRef) {
         for (auto* t : *tracksRef) if (t->isShowingInChildren) totalH += (int)trackHeight;
     }
-    double visibleH = (double)getHeight() - menuBarH - timelineH - scrollBarSize;
+
+    int topOffset = menuBarH + navigatorH + timelineH;
+    double visibleH = (double)getHeight() - topOffset;
+
     vBar.setRangeLimits(0.0, (double)totalH);
     vBar.setCurrentRange(vBar.getCurrentRangeStart(), visibleH);
     vBar.setVisible(totalH > visibleH);
@@ -56,7 +59,8 @@ void PlaylistComponent::addMidiClipToView(Track* targetTrack, MidiClipData* newC
 
 int PlaylistComponent::getTrackY(Track* targetTrack) const {
     if (!tracksRef) return -1;
-    int currentY = menuBarH + timelineH - (int)vBar.getCurrentRangeStart();
+    int topOffset = menuBarH + navigatorH + timelineH;
+    int currentY = topOffset - (int)vBar.getCurrentRangeStart();
     for (auto* t : *tracksRef) {
         if (t == targetTrack) return currentY;
         if (t->isShowingInChildren) currentY += (int)trackHeight;
@@ -65,9 +69,12 @@ int PlaylistComponent::getTrackY(Track* targetTrack) const {
 }
 
 int PlaylistComponent::getTrackAtY(int y) const {
-    if (y < menuBarH + timelineH) return -1;
+    int topOffset = menuBarH + navigatorH + timelineH;
+    if (y < topOffset) return -1;
+
     int vS = (int)vBar.getCurrentRangeStart();
-    int currentY = menuBarH + timelineH - vS;
+    int currentY = topOffset - vS;
+
     if (!tracksRef) return -1;
     for (int i = 0; i < (int)tracksRef->size(); ++i) {
         auto* t = (*tracksRef)[i];
@@ -78,25 +85,10 @@ int PlaylistComponent::getTrackAtY(int y) const {
     return -1;
 }
 
-// --- DELEGACIÓN DE ACCIONES ---
-
-void PlaylistComponent::deleteClip(int index) {
-    PlaylistActionHandler::deleteClip(*this, index);
-}
-
-void PlaylistComponent::deleteClipsByName(const juce::String& name, bool isMidi) {
-    PlaylistActionHandler::deleteClipsByName(*this, name, isMidi);
-}
-
-void PlaylistComponent::purgeClipsOfTrack(Track* track) {
-    PlaylistActionHandler::purgeClipsOfTrack(*this, track);
-}
-
-void PlaylistComponent::mouseDoubleClick(const juce::MouseEvent& e) {
-    PlaylistActionHandler::handleDoubleClick(*this, e);
-}
-
-// --- HERRAMIENTAS Y TECLADO ---
+void PlaylistComponent::deleteClip(int index) { PlaylistActionHandler::deleteClip(*this, index); }
+void PlaylistComponent::deleteClipsByName(const juce::String& name, bool isMidi) { PlaylistActionHandler::deleteClipsByName(*this, name, isMidi); }
+void PlaylistComponent::purgeClipsOfTrack(Track* track) { PlaylistActionHandler::purgeClipsOfTrack(*this, track); }
+void PlaylistComponent::mouseDoubleClick(const juce::MouseEvent& e) { PlaylistActionHandler::handleDoubleClick(*this, e); }
 
 void PlaylistComponent::setTool(int toolId) {
     if (toolId == 1) activeTool = std::make_unique<PointerTool>();
@@ -106,25 +98,21 @@ void PlaylistComponent::setTool(int toolId) {
 
 bool PlaylistComponent::keyPressed(const juce::KeyPress& key, juce::Component*) {
     if (key.getKeyCode() == juce::KeyPress::deleteKey || key.getKeyCode() == juce::KeyPress::backspaceKey) {
-        if (selectedClipIndex != -1) {
-            deleteClip(selectedClipIndex);
-            return true;
-        }
+        if (selectedClipIndex != -1) { deleteClip(selectedClipIndex); return true; }
     }
     return false;
 }
-
-// --- RENDERIZADO VISUAL ---
 
 void PlaylistComponent::paint(juce::Graphics& g) {
     g.fillAll(juce::Colour(25, 27, 30));
     float hS = (float)hNavigator.getCurrentRangeStart();
     float vS = (float)vBar.getCurrentRangeStart();
-    int viewAreaY = menuBarH + timelineH;
-    int viewAreaH = getHeight() - menuBarH - timelineH - scrollBarSize;
+
+    int topOffset = menuBarH + navigatorH + timelineH;
+    int viewAreaH = getHeight() - topOffset;
 
     g.saveState();
-    g.reduceClipRegion(0, viewAreaY, getWidth() - (vBar.isVisible() ? scrollBarSize : 0), viewAreaH);
+    g.reduceClipRegion(0, topOffset, getWidth() - (vBar.isVisible() ? vBarWidth : 0), viewAreaH);
 
     double visualSnap = (snapPixels < 10.0) ? 80.0 : snapPixels;
 
@@ -132,17 +120,13 @@ void PlaylistComponent::paint(juce::Graphics& g) {
         int dx = (int)(i * hZoom) - (int)hS;
         if (dx < 0) continue;
 
-        if (std::fmod(i, 80.0) == 0.0) {
-            g.setColour(juce::Colours::white.withAlpha(0.1f));
-        }
-        else {
-            g.setColour(juce::Colours::white.withAlpha(0.04f));
-        }
+        if (std::fmod(i, 80.0) == 0.0) g.setColour(juce::Colours::white.withAlpha(0.1f));
+        else g.setColour(juce::Colours::white.withAlpha(0.04f));
 
-        g.drawVerticalLine(dx, (float)viewAreaY, (float)getHeight());
+        g.drawVerticalLine(dx, (float)topOffset, (float)getHeight());
     }
 
-    int currentY = menuBarH + timelineH - (int)vS;
+    int currentY = topOffset - (int)vS;
     if (tracksRef) {
         for (auto* t : *tracksRef) {
             if (!t->isShowingInChildren) continue;
@@ -155,7 +139,7 @@ void PlaylistComponent::paint(juce::Graphics& g) {
     for (int i = 0; i < (int)clips.size(); ++i) {
         const auto& clip = clips[i];
         int yPos = getTrackY(clip.trackPtr);
-        if (yPos < menuBarH + timelineH - 100 || yPos > getHeight()) continue;
+        if (yPos < topOffset - 100 || yPos > getHeight()) continue;
 
         int xPos = (int)(clip.startX * hZoom) - (int)hS;
         int wPos = (int)(clip.width * hZoom);
@@ -182,9 +166,14 @@ void PlaylistComponent::paint(juce::Graphics& g) {
     }
     g.restoreState();
 
-    g.setColour(juce::Colour(20, 22, 25)); g.fillRect(0, menuBarH, getWidth(), timelineH);
+    // Dibujar el fondo del Timeline justo debajo del Navigator
+    g.setColour(juce::Colour(20, 22, 25));
+    g.fillRect(0, menuBarH + navigatorH, getWidth(), timelineH);
+
+    // Playhead rojo
     int phX = (int)(playheadAbsPos * hZoom) - (int)hS;
-    g.setColour(juce::Colours::red); g.drawVerticalLine(phX, (float)menuBarH, (float)getHeight());
+    g.setColour(juce::Colours::red);
+    g.drawVerticalLine(phX, (float)(menuBarH + navigatorH), (float)getHeight());
 
     if (isExternalFileDragging || isInternalDragging) {
         g.fillAll(juce::Colours::dodgerblue.withAlpha(0.2f));
@@ -195,9 +184,15 @@ void PlaylistComponent::paint(juce::Graphics& g) {
 }
 
 void PlaylistComponent::resized() {
+    // 1. Menu Bar: Arriba del todo, empieza en 0
     menuBar.setBounds(0, 0, getWidth(), menuBarH);
-    hNavigator.setBounds(0, getHeight() - scrollBarSize, getWidth() - scrollBarSize, scrollBarSize);
-    vBar.setBounds(getWidth() - scrollBarSize, menuBarH + timelineH, scrollBarSize, getHeight() - menuBarH - timelineH - scrollBarSize);
+
+    // 2. Navigator (Minimap): Empieza justo debajo del MenuBar (y = 34)
+    hNavigator.setBounds(0, menuBarH, getWidth() - vBarWidth, navigatorH);
+
+    // 3. Scroll Vertical: Pegado a la derecha, debajo del Minimap
+    vBar.setBounds(getWidth() - vBarWidth, menuBarH + navigatorH, vBarWidth, getHeight() - (menuBarH + navigatorH));
+
     updateScrollBars();
 }
 
@@ -217,43 +212,21 @@ void PlaylistComponent::mouseWheelMove(const juce::MouseEvent& e, const juce::Mo
 
 int PlaylistComponent::getClipAt(int x, int y) const {
     int tIdx = getTrackAtY(y); if (tIdx == -1) return -1;
-    float absX = (x + (float)hNavigator.getCurrentRangeStart()) / hZoom;
+    float absX = getAbsoluteXFromMouse(x);
     for (int i = (int)clips.size() - 1; i >= 0; --i) {
         if (clips[i].trackPtr == (*tracksRef)[tIdx] && absX >= clips[i].startX && absX <= clips[i].startX + clips[i].width) return i;
     }
     return -1;
 }
 
-void PlaylistComponent::mouseDown(const juce::MouseEvent& e) {
-    if (activeTool) activeTool->mouseDown(e, *this);
-}
-
-void PlaylistComponent::mouseDrag(const juce::MouseEvent& e) {
-    if (activeTool) activeTool->mouseDrag(e, *this);
-}
-
-void PlaylistComponent::mouseUp(const juce::MouseEvent& e) {
-    if (activeTool) activeTool->mouseUp(e, *this);
-}
-
-void PlaylistComponent::mouseMove(const juce::MouseEvent& e) {
-    if (activeTool) activeTool->mouseMove(e, *this);
-}
-
-// --- ARRASTRAR Y SOLTAR ARCHIVOS DELEGADOS ---
+void PlaylistComponent::mouseDown(const juce::MouseEvent& e) { if (activeTool) activeTool->mouseDown(e, *this); }
+void PlaylistComponent::mouseDrag(const juce::MouseEvent& e) { if (activeTool) activeTool->mouseDrag(e, *this); }
+void PlaylistComponent::mouseUp(const juce::MouseEvent& e) { if (activeTool) activeTool->mouseUp(e, *this); }
+void PlaylistComponent::mouseMove(const juce::MouseEvent& e) { if (activeTool) activeTool->mouseMove(e, *this); }
 
 bool PlaylistComponent::isInterestedInFileDrag(const juce::StringArray&) { return true; }
-
-void PlaylistComponent::fileDragEnter(const juce::StringArray&, int, int) { 
-    isExternalFileDragging = true; 
-    repaint(); 
-}
-
-void PlaylistComponent::fileDragExit(const juce::StringArray&) { 
-    isExternalFileDragging = false; 
-    repaint(); 
-}
-
+void PlaylistComponent::fileDragEnter(const juce::StringArray&, int, int) { isExternalFileDragging = true; repaint(); }
+void PlaylistComponent::fileDragExit(const juce::StringArray&) { isExternalFileDragging = false; repaint(); }
 void PlaylistComponent::filesDropped(const juce::StringArray& files, int x, int y) {
     isExternalFileDragging = false;
     PlaylistDropHandler::processExternalFiles(files, x, y, *this);
@@ -263,17 +236,8 @@ bool PlaylistComponent::isInterestedInDragSource(const juce::DragAndDropTarget::
     juce::String desc = dragSourceDetails.description.toString();
     return desc.startsWith("PickerDrag|") || desc == "FileBrowserDrag";
 }
-
-void PlaylistComponent::itemDragEnter(const juce::DragAndDropTarget::SourceDetails& dragSourceDetails) {
-    isInternalDragging = true;
-    repaint();
-}
-
-void PlaylistComponent::itemDragExit(const juce::DragAndDropTarget::SourceDetails& dragSourceDetails) {
-    isInternalDragging = false;
-    repaint();
-}
-
+void PlaylistComponent::itemDragEnter(const juce::DragAndDropTarget::SourceDetails& dragSourceDetails) { isInternalDragging = true; repaint(); }
+void PlaylistComponent::itemDragExit(const juce::DragAndDropTarget::SourceDetails& dragSourceDetails) { isInternalDragging = false; repaint(); }
 void PlaylistComponent::itemDropped(const juce::DragAndDropTarget::SourceDetails& dragSourceDetails) {
     isInternalDragging = false;
     PlaylistDropHandler::processInternalItem(dragSourceDetails, *this);
