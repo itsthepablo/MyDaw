@@ -22,7 +22,7 @@ private:
     Track* activeTrack = nullptr;
     juce::TextButton addInstrumentBtn;
 
-    // Matriz dinámica para soportar múltiples botones de apertura
+    // Matriz dinÃ¡mica para soportar mÃºltiples botones de apertura
     juce::OwnedArray<juce::TextButton> instrumentButtons;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(InstrumentPanel)

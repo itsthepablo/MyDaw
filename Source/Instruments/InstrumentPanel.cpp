@@ -1,11 +1,11 @@
-#include "InstrumentPanel.h"
+ï»¿#include "InstrumentPanel.h"
 
 InstrumentPanel::InstrumentPanel() {
     addAndMakeVisible(addInstrumentBtn);
-    // Texto más limpio para que encaje en la "caja"
+    // Texto mï¿½s limpio para que encaje en la "caja"
     addInstrumentBtn.setButtonText("+ ADD VSTi");
 
-    // Colores tipo "Slot vacío" de Ableton
+    // Colores tipo "Slot vacï¿½o" de Ableton
     addInstrumentBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(40, 43, 48));
     addInstrumentBtn.setColour(juce::TextButton::textColourOffId, juce::Colours::white.withAlpha(0.6f));
 
@@ -33,7 +33,7 @@ void InstrumentPanel::updateInstrumentView() {
                 // Creamos una caja para cada instrumento
                 auto* btn = new juce::TextButton(p->getLoadedPluginName());
 
-                // Diseño de la caja (Ableton style)
+                // Diseï¿½o de la caja (Ableton style)
                 btn->setColour(juce::TextButton::buttonColourId, juce::Colour(55, 60, 65));
                 btn->setColour(juce::TextButton::buttonOnColourId, juce::Colour(75, 80, 85));
                 btn->setColour(juce::TextButton::textColourOffId, juce::Colours::white);
@@ -60,7 +60,7 @@ void InstrumentPanel::updateInstrumentView() {
 }
 
 void InstrumentPanel::paint(juce::Graphics& g) {
-    g.fillAll(juce::Colour(30, 33, 36)); // Fondo principal un poco más oscuro
+    g.fillAll(juce::Colour(30, 33, 36)); // Fondo principal un poco mï¿½s oscuro
 
     if (activeTrack == nullptr) {
         g.setColour(juce::Colours::white.withAlpha(0.3f));
@@ -79,7 +79,7 @@ void InstrumentPanel::resized() {
     if (activeTrack != nullptr) {
         auto area = getLocalBounds();
 
-        // Dejamos un margen arriba para el texto y márgenes a los lados
+        // Dejamos un margen arriba para el texto y mï¿½rgenes a los lados
         area.removeFromTop(35);
         area.removeFromBottom(15);
         area.removeFromLeft(15);
@@ -94,7 +94,7 @@ void InstrumentPanel::resized() {
             area.removeFromLeft(padding); // Separador
         }
 
-        // Colocamos el botón de agregar al final de la cadena
+        // Colocamos el botï¿½n de agregar al final de la cadena
         addInstrumentBtn.setBounds(area.removeFromLeft(boxWidth));
     }
 }

@@ -6,6 +6,7 @@
 #include <cmath>       
 #include "../Tracks/TrackContainer.h" 
 #include "Tools/PlaylistTool.h" 
+#include "../Playlist/PlaylistMenuBar/PlaylistMenuBar.h" 
 
 struct TrackClip {
     Track* trackPtr;
@@ -49,6 +50,8 @@ public:
 
     std::vector<TrackClip> clips;
     float hZoom = 1.0f;
+
+    PlaylistMenuBar menuBar;
     juce::ScrollBar hBar{ false };
     juce::ScrollBar vBar{ true };
 
@@ -65,6 +68,7 @@ public:
     float dragStartNoteWidth = 0.0f;
 
     juce::CriticalSection* audioMutex = nullptr;
+    const int menuBarH = 34;
     const int timelineH = 35;
     const float trackHeight = 100.0f;
     const int scrollBarSize = 16;

@@ -13,6 +13,7 @@ PlaylistComponent::PlaylistComponent() {
 
     activeTool = std::make_unique<PointerTool>();
 
+    addAndMakeVisible(menuBar);
     addAndMakeVisible(hBar); hBar.addListener(this);
     addAndMakeVisible(vBar); vBar.addListener(this);
     vBar.setAlwaysOnTop(true);
@@ -34,7 +35,7 @@ void PlaylistComponent::updateScrollBars() {
     if (tracksRef) {
         for (auto* t : *tracksRef) if (t->isShowingInChildren) totalH += (int)trackHeight;
     }
-    double visibleH = (double)getHeight() - timelineH - scrollBarSize;
+    double visibleH = (double)getHeight() - menuBarH - timelineH - scrollBarSize;
     vBar.setRangeLimits(0.0, (double)totalH);
     vBar.setCurrentRange(vBar.getCurrentRangeStart(), visibleH);
     vBar.setVisible(totalH > visibleH);
@@ -48,7 +49,7 @@ void PlaylistComponent::addMidiClipToView(Track* targetTrack, MidiClipData* newC
 
 int PlaylistComponent::getTrackY(Track* targetTrack) const {
     if (!tracksRef) return -1;
-    int currentY = timelineH - (int)vBar.getCurrentRangeStart();
+    int currentY = menuBarH + timelineH - (int)vBar.getCurrentRangeStart();
     for (auto* t : *tracksRef) {
         if (t == targetTrack) return currentY;
         if (t->isShowingInChildren) currentY += (int)trackHeight;
@@ -57,9 +58,9 @@ int PlaylistComponent::getTrackY(Track* targetTrack) const {
 }
 
 int PlaylistComponent::getTrackAtY(int y) const {
-    if (y < timelineH) return -1;
+    if (y < menuBarH + timelineH) return -1;
     int vS = (int)vBar.getCurrentRangeStart();
-    int currentY = timelineH - vS;
+    int currentY = menuBarH + timelineH - vS;
     if (!tracksRef) return -1;
     for (int i = 0; i < (int)tracksRef->size(); ++i) {
         auto* t = (*tracksRef)[i];
@@ -150,8 +151,8 @@ void PlaylistComponent::paint(juce::Graphics& g) {
     g.fillAll(juce::Colour(25, 27, 30));
     float hS = (float)hBar.getCurrentRangeStart();
     float vS = (float)vBar.getCurrentRangeStart();
-    int viewAreaY = timelineH;
-    int viewAreaH = getHeight() - timelineH - scrollBarSize;
+    int viewAreaY = menuBarH + timelineH;
+    int viewAreaH = getHeight() - menuBarH - timelineH - scrollBarSize;
 
     g.saveState();
     g.reduceClipRegion(0, viewAreaY, getWidth() - (vBar.isVisible() ? scrollBarSize : 0), viewAreaH);
@@ -172,7 +173,7 @@ void PlaylistComponent::paint(juce::Graphics& g) {
         g.drawVerticalLine(dx, (float)viewAreaY, (float)getHeight());
     }
 
-    int currentY = timelineH - (int)vS;
+    int currentY = menuBarH + timelineH - (int)vS;
     if (tracksRef) {
         for (auto* t : *tracksRef) {
             if (!t->isShowingInChildren) continue;
@@ -185,7 +186,7 @@ void PlaylistComponent::paint(juce::Graphics& g) {
     for (int i = 0; i < (int)clips.size(); ++i) {
         const auto& clip = clips[i];
         int yPos = getTrackY(clip.trackPtr);
-        if (yPos < timelineH - 100 || yPos > getHeight()) continue;
+        if (yPos < menuBarH + timelineH - 100 || yPos > getHeight()) continue;
 
         int xPos = (int)(clip.startX * hZoom) - (int)hS;
         int wPos = (int)(clip.width * hZoom);
@@ -212,9 +213,9 @@ void PlaylistComponent::paint(juce::Graphics& g) {
     }
     g.restoreState();
 
-    g.setColour(juce::Colour(20, 22, 25)); g.fillRect(0, 0, getWidth(), timelineH);
+    g.setColour(juce::Colour(20, 22, 25)); g.fillRect(0, menuBarH, getWidth(), timelineH);
     int phX = (int)(playheadAbsPos * hZoom) - (int)hS;
-    g.setColour(juce::Colours::red); g.drawVerticalLine(phX, 0, (float)getHeight());
+    g.setColour(juce::Colours::red); g.drawVerticalLine(phX, (float)menuBarH, (float)getHeight());
 
     if (isExternalFileDragging || isInternalDragging) {
         g.fillAll(juce::Colours::dodgerblue.withAlpha(0.2f));
@@ -225,8 +226,9 @@ void PlaylistComponent::paint(juce::Graphics& g) {
 }
 
 void PlaylistComponent::resized() {
+    menuBar.setBounds(0, 0, getWidth(), menuBarH);
     hBar.setBounds(0, getHeight() - scrollBarSize, getWidth() - scrollBarSize, scrollBarSize);
-    vBar.setBounds(getWidth() - scrollBarSize, timelineH, scrollBarSize, getHeight() - timelineH - scrollBarSize);
+    vBar.setBounds(getWidth() - scrollBarSize, menuBarH + timelineH, scrollBarSize, getHeight() - menuBarH - timelineH - scrollBarSize);
     updateScrollBars();
 }
 
@@ -368,7 +370,6 @@ void PlaylistComponent::filesDropped(const juce::StringArray& files, int x, int 
     if (!isMidiFile) {
         juce::AudioFormatManager fmt;
         fmt.registerBasicFormats();
-        // AADIDO: Forzamos el registro del formato MP3 de forma explcita por seguridad
         fmt.registerFormat(new juce::MP3AudioFormat(), false);
 
         for (auto path : files) {
@@ -393,7 +394,6 @@ void PlaylistComponent::filesDropped(const juce::StringArray& files, int x, int 
     updateScrollBars(); repaint();
 }
 
-// AADIDO: Ahora validamos tanto el Picker como el nuevo FileBrowser
 bool PlaylistComponent::isInterestedInDragSource(const juce::DragAndDropTarget::SourceDetails& dragSourceDetails) {
     juce::String desc = dragSourceDetails.description.toString();
     return desc.startsWith("PickerDrag|") || desc == "FileBrowserDrag";
@@ -413,14 +413,12 @@ void PlaylistComponent::itemDropped(const juce::DragAndDropTarget::SourceDetails
     isInternalDragging = false;
     juce::String desc = dragSourceDetails.description.toString();
 
-    // NUEVO: Interceptamos si el archivo viene desde el FileBrowserPanel
     if (desc == "FileBrowserDrag") {
         if (auto* tree = dynamic_cast<juce::FileTreeComponent*>(dragSourceDetails.sourceComponent.get())) {
             juce::File f = tree->getSelectedFile();
             if (f.existsAsFile()) {
                 juce::StringArray arr;
                 arr.add(f.getFullPathName());
-                // Engaamos a JUCE pasndole el archivo a la funcin de soltar externo
                 filesDropped(arr, dragSourceDetails.localPosition.x, dragSourceDetails.localPosition.y);
             }
         }

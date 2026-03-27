@@ -139,6 +139,12 @@
               file="Source/Mixer/MixerComponent.h"/>
       </GROUP>
       <GROUP id="{EBD30F33-E7EC-16DD-C806-2D1CD1306523}" name="Playlist">
+        <GROUP id="{998D802D-1B90-DCD8-77FD-3BE3B3ED2356}" name="PlaylistMenuBar">
+          <FILE id="PZ2T0Y" name="PlaylistMenuBar.cpp" compile="1" resource="0"
+                file="Source/Playlist/PlaylistMenuBar/PlaylistMenuBar.cpp"/>
+          <FILE id="BD5VkH" name="PlaylistMenuBar.h" compile="0" resource="0"
+                file="Source/Playlist/PlaylistMenuBar/PlaylistMenuBar.h"/>
+        </GROUP>
         <GROUP id="{361B1AF3-F0CC-2376-25A1-51065AF40789}" name="Tools">
           <FILE id="eNp0RM" name="EraserTool.h" compile="0" resource="0" file="Source/Playlist/Tools/EraserTool.h"/>
           <FILE id="BIHoRJ" name="PlaylistTool.h" compile="0" resource="0" file="Source/Playlist/Tools/PlaylistTool.h"/>
