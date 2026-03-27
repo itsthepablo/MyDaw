@@ -4,7 +4,8 @@
 #include "Tools/PointerTool.h" 
 #include "Tools/ScissorTool.h" 
 #include "Tools/EraserTool.h" 
-#include "PlaylistDropHandler.h" // NUESTRO NUEVO GESTOR
+#include "PlaylistDropHandler.h"
+#include "PlaylistActionHandler.h" // <-- NUESTRO NUEVO MANEJADOR DE LOGICA PESADA
 #include <cmath>
 #include <algorithm>
 
@@ -17,7 +18,6 @@ PlaylistComponent::PlaylistComponent() {
     addAndMakeVisible(menuBar);
     addAndMakeVisible(hNavigator);
     
-    // Callback: cuando el navigator cambia la posición, repintamos la playlist
     hNavigator.onScrollMoved = [this](double) { repaint(); };
 
     addAndMakeVisible(vBar); vBar.addListener(this);
@@ -78,65 +78,25 @@ int PlaylistComponent::getTrackAtY(int y) const {
     return -1;
 }
 
+// --- DELEGACIÓN DE ACCIONES ---
+
 void PlaylistComponent::deleteClip(int index) {
-    if (index < 0 || index >= (int)clips.size()) return;
-
-    auto& tc = clips[index];
-
-    if (tc.linkedMidi && onMidiClipDeleted) onMidiClipDeleted(tc.linkedMidi);
-
-    std::unique_ptr<juce::ScopedLock> lock;
-    if (audioMutex != nullptr) lock = std::make_unique<juce::ScopedLock>(*audioMutex);
-
-    if (trackContainer) {
-        if (tc.linkedAudio) {
-            tc.trackPtr->audioClips.removeObject(tc.linkedAudio, false);
-            trackContainer->unusedAudioPool.add(tc.linkedAudio);
-        }
-        if (tc.linkedMidi) {
-            tc.trackPtr->midiClips.removeObject(tc.linkedMidi, false);
-            trackContainer->unusedMidiPool.add(tc.linkedMidi);
-        }
-    }
-    else {
-        if (tc.linkedAudio) tc.trackPtr->audioClips.removeObject(tc.linkedAudio, true);
-        if (tc.linkedMidi) tc.trackPtr->midiClips.removeObject(tc.linkedMidi, true);
-    }
-
-    clips.erase(clips.begin() + index);
-
-    if (selectedClipIndex == index) selectedClipIndex = -1;
-    else if (selectedClipIndex > index) selectedClipIndex--;
-
-    repaint();
+    PlaylistActionHandler::deleteClip(*this, index);
 }
 
 void PlaylistComponent::deleteClipsByName(const juce::String& name, bool isMidi) {
-    std::unique_ptr<juce::ScopedLock> lock;
-    if (audioMutex != nullptr) lock = std::make_unique<juce::ScopedLock>(*audioMutex);
-
-    for (int i = (int)clips.size() - 1; i >= 0; --i) {
-        auto& c = clips[i];
-        if (isMidi && c.linkedMidi && c.linkedMidi->name == name) {
-            if (onMidiClipDeleted) onMidiClipDeleted(c.linkedMidi);
-            c.trackPtr->midiClips.removeObject(c.linkedMidi, true);
-            clips.erase(clips.begin() + i);
-        }
-        else if (!isMidi && c.linkedAudio && c.linkedAudio->name == name) {
-            c.trackPtr->audioClips.removeObject(c.linkedAudio, true);
-            clips.erase(clips.begin() + i);
-        }
-    }
-    selectedClipIndex = -1;
-    updateScrollBars();
-    repaint();
+    PlaylistActionHandler::deleteClipsByName(*this, name, isMidi);
 }
 
 void PlaylistComponent::purgeClipsOfTrack(Track* track) {
-    clips.erase(std::remove_if(clips.begin(), clips.end(),
-        [track](const TrackClip& c) { return c.trackPtr == track; }),
-        clips.end());
+    PlaylistActionHandler::purgeClipsOfTrack(*this, track);
 }
+
+void PlaylistComponent::mouseDoubleClick(const juce::MouseEvent& e) {
+    PlaylistActionHandler::handleDoubleClick(*this, e);
+}
+
+// --- HERRAMIENTAS Y TECLADO ---
 
 void PlaylistComponent::setTool(int toolId) {
     if (toolId == 1) activeTool = std::make_unique<PointerTool>();
@@ -153,6 +113,8 @@ bool PlaylistComponent::keyPressed(const juce::KeyPress& key, juce::Component*) 
     }
     return false;
 }
+
+// --- RENDERIZADO VISUAL ---
 
 void PlaylistComponent::paint(juce::Graphics& g) {
     g.fillAll(juce::Colour(25, 27, 30));
@@ -262,71 +224,6 @@ int PlaylistComponent::getClipAt(int x, int y) const {
     return -1;
 }
 
-void PlaylistComponent::mouseDoubleClick(const juce::MouseEvent& e) {
-    if (!tracksRef) return;
-    int cIdx = getClipAt(e.x, e.y);
-
-    if (cIdx != -1 && clips[cIdx].linkedMidi != nullptr) {
-        if (onMidiClipDoubleClicked) {
-            onMidiClipDoubleClicked(clips[cIdx].trackPtr, clips[cIdx].linkedMidi);
-        }
-        return;
-    }
-
-    int tIdx = getTrackAtY(e.y);
-    if (tIdx != -1 && (*tracksRef)[tIdx]->getType() == TrackType::MIDI && cIdx == -1) {
-        float absX = (e.x + (float)hNavigator.getCurrentRangeStart()) / hZoom;
-        float snappedX = std::round(absX / snapPixels) * snapPixels;
-
-        Track* targetTrack = (*tracksRef)[tIdx];
-        MidiClipData* newMidiClip = nullptr;
-
-        if (!targetTrack->midiClips.isEmpty()) {
-            MidiClipData* sourceClip = targetTrack->midiClips.getLast();
-            newMidiClip = new MidiClipData(*sourceClip);
-
-            float timeShift = snappedX - sourceClip->startX;
-            newMidiClip->startX = snappedX;
-
-            for (auto& note : newMidiClip->notes) {
-                note.x += timeShift;
-            }
-
-            auto shiftAutoLane = [timeShift](AutoLane& lane) {
-                for (auto& node : lane.nodes) {
-                    node.x += timeShift;
-                }
-                };
-            shiftAutoLane(newMidiClip->autoVol);
-            shiftAutoLane(newMidiClip->autoPan);
-            shiftAutoLane(newMidiClip->autoPitch);
-            shiftAutoLane(newMidiClip->autoFilter);
-        }
-        else {
-            int maxPatternNum = 0;
-            for (auto* tr : *tracksRef) {
-                for (auto* mc : tr->midiClips) {
-                    if (mc->name.startsWith("Pattern ")) {
-                        int num = mc->name.substring(8).getIntValue();
-                        if (num > maxPatternNum) maxPatternNum = num;
-                    }
-                }
-            }
-            int nextPatternNum = maxPatternNum + 1;
-
-            newMidiClip = new MidiClipData();
-            newMidiClip->name = "Pattern " + juce::String(nextPatternNum);
-            newMidiClip->startX = snappedX;
-            newMidiClip->width = 320.0f;
-            newMidiClip->color = targetTrack->getColor();
-        }
-
-        targetTrack->midiClips.add(newMidiClip);
-        clips.push_back({ targetTrack, snappedX, newMidiClip->width, newMidiClip->name, nullptr, newMidiClip });
-        repaint();
-    }
-}
-
 void PlaylistComponent::mouseDown(const juce::MouseEvent& e) {
     if (activeTool) activeTool->mouseDown(e, *this);
 }
@@ -343,6 +240,8 @@ void PlaylistComponent::mouseMove(const juce::MouseEvent& e) {
     if (activeTool) activeTool->mouseMove(e, *this);
 }
 
+// --- ARRASTRAR Y SOLTAR ARCHIVOS DELEGADOS ---
+
 bool PlaylistComponent::isInterestedInFileDrag(const juce::StringArray&) { return true; }
 
 void PlaylistComponent::fileDragEnter(const juce::StringArray&, int, int) { 
@@ -357,7 +256,6 @@ void PlaylistComponent::fileDragExit(const juce::StringArray&) {
 
 void PlaylistComponent::filesDropped(const juce::StringArray& files, int x, int y) {
     isExternalFileDragging = false;
-    // Delegamos la lógica pesada a nuestra nueva clase
     PlaylistDropHandler::processExternalFiles(files, x, y, *this);
 }
 
@@ -378,6 +276,5 @@ void PlaylistComponent::itemDragExit(const juce::DragAndDropTarget::SourceDetail
 
 void PlaylistComponent::itemDropped(const juce::DragAndDropTarget::SourceDetails& dragSourceDetails) {
     isInternalDragging = false;
-    // Delegamos la lógica pesada a nuestra nueva clase
     PlaylistDropHandler::processInternalItem(dragSourceDetails, *this);
 }

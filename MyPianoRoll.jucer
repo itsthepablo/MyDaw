@@ -157,6 +157,10 @@
           <FILE id="Rb4h8T" name="PointerTool.h" compile="0" resource="0" file="Source/Playlist/Tools/PointerTool.h"/>
           <FILE id="a71jBQ" name="ScissorTool.h" compile="0" resource="0" file="Source/Playlist/Tools/ScissorTool.h"/>
         </GROUP>
+        <FILE id="o2lDTG" name="PlaylistActionHandler.cpp" compile="1" resource="0"
+              file="Source/Playlist/PlaylistActionHandler.cpp"/>
+        <FILE id="VP0zYc" name="PlaylistActionHandler.h" compile="0" resource="0"
+              file="Source/Playlist/PlaylistActionHandler.h"/>
         <FILE id="FGYWeA" name="PlaylistComponent.cpp" compile="1" resource="0"
               file="Source/Playlist/PlaylistComponent.cpp"/>
         <FILE id="UCnxE5" name="PlaylistComponent.h" compile="0" resource="0"
