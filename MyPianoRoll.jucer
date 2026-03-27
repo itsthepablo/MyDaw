@@ -22,6 +22,7 @@
         <GROUP id="{FC2AFCB8-7B6C-E19E-B615-A10781D21F88}" name="TopMenuBar">
           <FILE id="SrXLf0" name="BpmDragControl.h" compile="0" resource="0"
                 file="Source/UI/TopMenuBar/BpmDragControl.h"/>
+          <FILE id="AHkCdj" name="RecordButton.h" compile="0" resource="0" file="Source/UI/TopMenuBar/RecordButton.h"/>
           <FILE id="nKVcEQ" name="TopMenuBar.h" compile="0" resource="0" file="Source/UI/TopMenuBar/TopMenuBar.h"/>
           <FILE id="fauvAY" name="TopMenuButton.h" compile="0" resource="0" file="Source/UI/TopMenuBar/TopMenuButton.h"/>
           <FILE id="VMoPm2" name="WindowControlButton.h" compile="0" resource="0"

@@ -4,6 +4,7 @@
 #include "TopMenuButton.h"
 #include "WindowControlButton.h"
 #include "BpmDragControl.h"
+#include "RecordButton.h"
 
 class TopMenuBar : public juce::Component, public juce::Timer {
 public:
@@ -13,10 +14,18 @@ public:
     juce::TextButton stopBtn;
     BpmDragControl bpmControl;
     juce::TextButton metronomeBtn;
-    std::function<void()> onSaveRequested;
+    RecordButton recordBtn;
 
-    // Callback para que el puente le inyecte el tiempo sin tocar el DSP
+    juce::TextButton pickerBtn{ "Pick" };
+    juce::TextButton filesBtn{ "Files" };
+    juce::TextButton mixerBtn{ "Mixer" };
+    juce::TextButton rackBtn{ "Rack" };
+    juce::TextButton fxBtn{ "Effects" };
+
+    std::function<void()> onSaveRequested;
     std::function<double()> requestPlaybackTimeInSeconds;
+
+    std::function<void()> onTogglePicker, onToggleFiles, onToggleMixer, onToggleRack, onToggleFx;
 
     TopMenuBar() {
         addAndMakeVisible(btnFile);
@@ -67,6 +76,28 @@ public:
         metronomeBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(40, 45, 50));
         metronomeBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colours::orange);
 
+        addAndMakeVisible(recordBtn);
+
+        addAndMakeVisible(pickerBtn);
+        pickerBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(40, 45, 50));
+        pickerBtn.onClick = [this] { if (onTogglePicker) onTogglePicker(); };
+
+        addAndMakeVisible(filesBtn);
+        filesBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(40, 45, 50));
+        filesBtn.onClick = [this] { if (onToggleFiles) onToggleFiles(); };
+
+        addAndMakeVisible(mixerBtn);
+        mixerBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(40, 45, 50));
+        mixerBtn.onClick = [this] { if (onToggleMixer) onToggleMixer(); };
+
+        addAndMakeVisible(rackBtn);
+        rackBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(40, 45, 50));
+        rackBtn.onClick = [this] { if (onToggleRack) onToggleRack(); };
+
+        addAndMakeVisible(fxBtn);
+        fxBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(40, 45, 50));
+        fxBtn.onClick = [this] { if (onToggleFx) onToggleFx(); };
+
         addAndMakeVisible(minBtn);
         addAndMakeVisible(maxBtn);
         addAndMakeVisible(closeBtn);
@@ -87,7 +118,6 @@ public:
 
         closeBtn.onClick = [this] { juce::JUCEApplication::getInstance()->systemRequestedQuit(); };
 
-        // Arrancamos el temporizador a 30 FPS para actualizar el display visualmente
         startTimerHz(30);
     }
 
@@ -106,7 +136,6 @@ public:
 
             juce::String timeStr = juce::String::formatted("%02d:%02d:%02d", mins, secs, cs);
 
-            // Solo redibujamos si el texto realmente cambió para ahorrar CPU
             if (timeDisplayLabel.getText() != timeStr) {
                 timeDisplayLabel.setText(timeStr, juce::dontSendNotification);
             }
@@ -166,8 +195,16 @@ public:
         stopBtn.setBounds(cx - 383, 6, 40, 40);
         timeDisplayLabel.setBounds(cx - 179, 6, 163, 40);
 
+        recordBtn.setBounds(622, 6, 40, 40);
         bpmControl.setBounds(665, 12, 70, 30);
         metronomeBtn.setBounds(738, 6, 40, 40);
+
+        int currentX = 950;
+        pickerBtn.setBounds(currentX, 6, 55, 32); currentX += 58;
+        filesBtn.setBounds(currentX, 6, 55, 32); currentX += 58;
+        mixerBtn.setBounds(currentX, 6, 55, 32); currentX += 58;
+        rackBtn.setBounds(currentX, 6, 55, 32); currentX += 58;
+        fxBtn.setBounds(currentX, 6, 55, 32);
     }
 
 private:

@@ -1,6 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include "../UI/Buttons/ToolbarButtons.h"
+#include "../UI/TopMenuBar/TopMenuBar.h"
 #include "../UI/BottomDock.h"
 #include "../Effects/EffectsPanel.h"
 #include "../UI/LeftSidebar.h"
@@ -8,14 +9,14 @@
 
 class InterfaceBridge {
 public:
-    static void connect(ToolbarButtons& toolbar,
+    static void connect(ToolbarButtons& toolbar, TopMenuBar& topMenu,
         bool& isBottomDockVisible, bool& isLeftSidebarVisible,
         BottomDock& bottomDock, EffectsPanel& effectsPanelUI, LeftSidebar& leftSidebar,
         TrackContainer& trackContainer,
         std::function<void()> triggerResize,
         std::function<void()> toggleMixerMode)
     {
-        toolbar.onTogglePicker = [&isLeftSidebarVisible, &leftSidebar, triggerResize] {
+        topMenu.onTogglePicker = [&isLeftSidebarVisible, &leftSidebar, triggerResize] {
             if (!isLeftSidebarVisible) {
                 isLeftSidebarVisible = true; leftSidebar.showTab(LeftSidebar::PickerTab);
             }
@@ -26,7 +27,7 @@ public:
             triggerResize();
             };
 
-        toolbar.onToggleFiles = [&isLeftSidebarVisible, &leftSidebar, triggerResize] {
+        topMenu.onToggleFiles = [&isLeftSidebarVisible, &leftSidebar, triggerResize] {
             if (!isLeftSidebarVisible) {
                 isLeftSidebarVisible = true; leftSidebar.showTab(LeftSidebar::FilesTab);
             }
@@ -37,7 +38,7 @@ public:
             triggerResize();
             };
 
-        toolbar.onToggleFx = [&isBottomDockVisible, &bottomDock, triggerResize, &effectsPanelUI, &trackContainer] {
+        topMenu.onToggleFx = [&isBottomDockVisible, &bottomDock, triggerResize, &effectsPanelUI, &trackContainer] {
             if (!isBottomDockVisible) {
                 isBottomDockVisible = true; bottomDock.showTab(BottomDock::EffectsTab);
             }
@@ -57,11 +58,11 @@ public:
             triggerResize();
             };
 
-        toolbar.onToggleMixer = [toggleMixerMode] {
+        topMenu.onToggleMixer = [toggleMixerMode] {
             if (toggleMixerMode) toggleMixerMode();
             };
 
-        toolbar.onToggleRack = [&isBottomDockVisible, &bottomDock, triggerResize] {
+        topMenu.onToggleRack = [&isBottomDockVisible, &bottomDock, triggerResize] {
             if (!isBottomDockVisible) {
                 isBottomDockVisible = true; bottomDock.showTab(BottomDock::RackTab);
             }

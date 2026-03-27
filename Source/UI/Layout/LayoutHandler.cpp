@@ -3,15 +3,20 @@
 void LayoutHandler::performLayout(LayoutDependencies d) {
     auto area = d.area;
 
-    d.topMenuBar.setBounds(area.removeFromTop(46));
+    auto topMenuArea = area.removeFromTop(46);
+    d.topMenuBar.setBounds(topMenuArea);
+
+    // --- CORRECCIÓN: MEDIDOR DESPUÉS DE LOS EFECTOS ---
+    if (d.resourceMeter != nullptr) {
+        // El botón de FX termina en X = 1237. Lo colocamos en X = 1250 con un poco de margen superior.
+        d.resourceMeter->setBounds(1250, topMenuArea.getY() + 7, 120, 32);
+        d.resourceMeter->toFront(false); // Evita que la barra lo tape
+    }
+
     d.hintPanel.setBounds(area.removeFromBottom(28));
 
     auto topArea = area.removeFromTop(45);
     d.toolbarButtons.setBounds(topArea.removeFromRight(550));
-
-    if (d.resourceMeter != nullptr) {
-        d.resourceMeter->setBounds(topArea.removeFromRight(100).reduced(8, 10));
-    }
     d.transportBar.setBounds(topArea);
 
     if (d.isPianoRollVisible) {
