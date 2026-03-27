@@ -26,9 +26,7 @@ public:
 
                 m.showMenuAsync(juce::PopupMenu::Options(), [&p, cIdx](int result) {
                     if (result == 0) return;
-
                     if (result == 3) { p.deleteClip(cIdx); return; }
-
                     if (cIdx >= p.clips.size()) return;
 
                     MidiClipData* sourceMidi = p.clips[cIdx].linkedMidi;
@@ -52,6 +50,7 @@ public:
                         p.clips[cIdx].linkedMidi = newMidiClip;
                         p.clips[cIdx].name = newMidiClip->name;
                         p.repaint();
+                        p.hNavigator.repaint();
                     }
                     else if (result == 2 && sourceMidi) {
                         juce::MessageManager::callAsync([&p, sourceMidi]() {
@@ -69,15 +68,12 @@ public:
                                     if (newName.isNotEmpty() && newName != oldName) {
                                         if (p.tracksRef) {
                                             for (auto* tr : *p.tracksRef) {
-                                                for (auto* mc : tr->midiClips) {
-                                                    if (mc->name == oldName) mc->name = newName;
-                                                }
+                                                for (auto* mc : tr->midiClips) { if (mc->name == oldName) mc->name = newName; }
                                             }
                                         }
-                                        for (auto& cv : p.clips) {
-                                            if (cv.name == oldName) cv.name = newName;
-                                        }
+                                        for (auto& cv : p.clips) { if (cv.name == oldName) cv.name = newName; }
                                         p.repaint();
+                                        p.hNavigator.repaint();
                                     }
                                 }
                                 juce::MessageManager::callAsync([alert]() { delete alert; });
@@ -141,11 +137,10 @@ public:
         if (p.draggingNoteIndex != -1) {
             auto* midiClip = p.clips[p.draggingClipIndex].linkedMidi;
             auto& note = midiClip->notes[p.draggingNoteIndex];
-
             float snappedX = std::round((p.dragStartNoteX + diff) / p.snapPixels) * p.snapPixels;
 
-            if (p.isResizingNote) { note.width = juce::jmax(10.0f, p.dragStartNoteWidth + diff); }
-            else { note.x = juce::jmax(midiClip->startX, snappedX); }
+            if (p.isResizingNote) note.width = juce::jmax(10.0f, p.dragStartNoteWidth + diff);
+            else note.x = juce::jmax(midiClip->startX, snappedX);
 
             p.notifyPatternEdited(midiClip);
             p.repaint();
@@ -203,6 +198,7 @@ public:
             if (p.clips[p.draggingClipIndex].linkedMidi != nullptr) p.clips[p.draggingClipIndex].linkedMidi->startX = snappedX;
         }
         p.repaint();
+        p.hNavigator.repaint(); // SINCRONIZA EL MINIMAPA AL ARRASTRAR
     }
 
     void mouseUp(const juce::MouseEvent& e, PlaylistComponent& p) override {

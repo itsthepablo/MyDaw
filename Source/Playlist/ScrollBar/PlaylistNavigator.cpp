@@ -35,14 +35,26 @@ juce::Rectangle<int> PlaylistNavigator::getThumbBounds() const {
 }
 
 void PlaylistNavigator::paint(juce::Graphics& g) {
+    bool canPan = (totalMax - totalMin) > visibleSize;
+
     g.fillAll(juce::Colour(15, 17, 20));
 
-    // Dibujar botones
+    if (onDrawMinimap) {
+        onDrawMinimap(g, getTrackBounds());
+    }
+
+    auto trackB = getTrackBounds();
+    auto thumbB = getThumbBounds();
+
+    g.setColour(juce::Colours::black.withAlpha(0.6f));
+    g.fillRect(trackB.getX(), trackB.getY(), thumbB.getX() - trackB.getX(), trackB.getHeight());
+    g.fillRect(thumbB.getRight(), trackB.getY(), trackB.getRight() - thumbB.getRight(), trackB.getHeight());
+
     g.setColour(juce::Colour(30, 32, 35));
     g.fillRect(getLeftButtonBounds());
     g.fillRect(getRightButtonBounds());
 
-    g.setColour(juce::Colours::white.withAlpha(0.5f));
+    g.setColour(juce::Colours::white.withAlpha(canPan ? 0.5f : 0.1f));
     float cy = getHeight() / 2.0f;
     juce::Path pL, pR;
     pL.addTriangle(14.0f, cy - 4.0f, 14.0f, cy + 4.0f, 6.0f, cy);
@@ -50,25 +62,26 @@ void PlaylistNavigator::paint(juce::Graphics& g) {
     pR.addTriangle(getWidth() - 14.0f, cy - 4.0f, getWidth() - 14.0f, cy + 4.0f, getWidth() - 6.0f, cy);
     g.fillPath(pR);
 
-    // Dibujar Thumb
-    auto thumb = getThumbBounds();
     g.setColour(juce::Colours::white.withAlpha(0.15f));
-    g.fillRect(thumb);
+    g.fillRect(thumbB);
     g.setColour(juce::Colours::white.withAlpha(0.6f));
-    g.drawRect(thumb, 1.0f);
+    g.drawRect(thumbB, 1.0f);
 
-    // Grips visuales de Zoom en los bordes
     g.setColour(juce::Colours::white.withAlpha(0.8f));
-    g.fillRect(thumb.getX() + 2, getHeight() / 2 - 4, 2, 8);
-    g.fillRect(thumb.getRight() - 4, getHeight() / 2 - 4, 2, 8);
+    g.fillRect(thumbB.getX() + 2, getHeight() / 2 - 4, 2, 8);
+    g.fillRect(thumbB.getRight() - 4, getHeight() / 2 - 4, 2, 8);
 }
 
 void PlaylistNavigator::mouseDown(const juce::MouseEvent& e) {
+    bool canPan = (totalMax - totalMin) > visibleSize;
+
     if (getLeftButtonBounds().contains(e.getPosition())) {
-        dragMode = HoldingLeftBtn; startTimer(30); return;
+        if (canPan) { dragMode = HoldingLeftBtn; startTimer(30); }
+        return;
     }
     if (getRightButtonBounds().contains(e.getPosition())) {
-        dragMode = HoldingRightBtn; startTimer(30); return;
+        if (canPan) { dragMode = HoldingRightBtn; startTimer(30); }
+        return;
     }
 
     auto thumb = getThumbBounds();
@@ -77,21 +90,25 @@ void PlaylistNavigator::mouseDown(const juce::MouseEvent& e) {
     if (thumb.contains(e.getPosition())) {
         if (e.x <= thumb.getX() + edgeZone) dragMode = DraggingLeftEdge;
         else if (e.x >= thumb.getRight() - edgeZone) dragMode = DraggingRightEdge;
-        else dragMode = DraggingThumb;
+        else if (canPan) dragMode = DraggingThumb;
+        else dragMode = None;
 
         dragStartMouseX = e.position.x;
         dragStartThumbX = currentStart;
         dragStartZoom = currentZoom;
+        dragStartThumbLeft = thumb.getX();
+        dragStartThumbRight = thumb.getRight();
     }
-    else if (getTrackBounds().contains(e.getPosition())) {
-        double range = totalMax - totalMin;
-        double scale = range / getTrackBounds().getWidth();
-        double newStart = ((e.position.x - btnSize) * scale) + totalMin - (visibleSize / 2.0);
-        newStart = juce::jlimit(totalMin, juce::jmax(totalMin, totalMax - visibleSize), newStart);
-        if (newStart != currentStart) {
-            currentStart = newStart;
-            if (onScrollMoved) onScrollMoved(currentStart);
-            repaint();
+    else if (getTrackBounds().contains(e.getPosition()) && canPan) {
+        // --- LA MAGIA: En lugar de saltar directo, caminamos hacia el ratón ---
+        targetMouseX = e.position.x;
+        if (e.position.x < thumb.getX()) {
+            dragMode = HoldingLeftBtn;
+            startTimer(30);
+        }
+        else if (e.position.x > thumb.getRight()) {
+            dragMode = HoldingRightBtn;
+            startTimer(30);
         }
     }
 }
@@ -107,22 +124,41 @@ void PlaylistNavigator::mouseDrag(const juce::MouseEvent& e) {
             repaint();
         }
     }
-    else if (dragMode == DraggingRightEdge || dragMode == DraggingLeftEdge) {
-        // Lógica de Zoom FL Studio
-        double sensitivity = 0.005;
-        double delta = (e.position.x - dragStartMouseX) * sensitivity;
-        double newZoom = dragStartZoom;
+    else if (dragMode == DraggingRightEdge) {
+        int newThumbRight = juce::jlimit(dragStartThumbLeft + 15, getTrackBounds().getRight(), (int)e.position.x);
+        int newThumbWidth = newThumbRight - dragStartThumbLeft;
 
-        if (dragMode == DraggingRightEdge) newZoom -= delta;
-        else newZoom += delta;
-
+        double newZoom = (getTrackBounds().getWidth() * visibleSize) / (newThumbWidth * baseTotalWidth);
         newZoom = juce::jlimit(0.1, 5.0, newZoom);
-        if (newZoom != currentZoom && onZoomChanged) onZoomChanged(newZoom);
+
+        double leftTime = dragStartThumbX / dragStartZoom;
+        double newStart = leftTime * newZoom;
+
+        if (newZoom != currentZoom) {
+            currentStart = newStart;
+            if (onZoomChanged) onZoomChanged(newZoom, newStart);
+        }
+    }
+    else if (dragMode == DraggingLeftEdge) {
+        int newThumbLeft = juce::jlimit(getTrackBounds().getX(), dragStartThumbRight - 15, (int)e.position.x);
+        int newThumbWidth = dragStartThumbRight - newThumbLeft;
+
+        double newZoom = (getTrackBounds().getWidth() * visibleSize) / (newThumbWidth * baseTotalWidth);
+        newZoom = juce::jlimit(0.1, 5.0, newZoom);
+
+        double rightTime = (dragStartThumbX + visibleSize) / dragStartZoom;
+        double newStart = (rightTime * newZoom) - visibleSize;
+
+        if (newZoom != currentZoom) {
+            currentStart = newStart;
+            if (onZoomChanged) onZoomChanged(newZoom, newStart);
+        }
     }
 }
 
 void PlaylistNavigator::mouseUp(const juce::MouseEvent&) {
     dragMode = None;
+    targetMouseX = -1; // Limpiamos la memoria
     stopTimer();
 }
 
@@ -140,7 +176,16 @@ void PlaylistNavigator::mouseMove(const juce::MouseEvent& e) {
 }
 
 void PlaylistNavigator::timerCallback() {
-    double step = 20.0; // Movimiento milimetrico
+    // --- SEGURO ANTI-DESBORDAMIENTO ---
+    if (targetMouseX != -1) {
+        auto thumb = getThumbBounds();
+        if (targetMouseX >= thumb.getX() && targetMouseX <= thumb.getRight()) {
+            stopTimer(); // Se detiene justo cuando el bloque toca el ratón
+            return;
+        }
+    }
+
+    double step = 20.0;
     double newStart = currentStart;
     if (dragMode == HoldingLeftBtn) newStart -= step;
     else if (dragMode == HoldingRightBtn) newStart += step;

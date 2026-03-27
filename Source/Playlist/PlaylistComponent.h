@@ -8,6 +8,7 @@
 #include "Tools/PlaylistTool.h" 
 #include "PlaylistMenuBar/PlaylistMenuBar.h" 
 #include "ScrollBar/PlaylistNavigator.h" 
+#include "ScrollBar/VerticalNavigator.h" 
 
 struct TrackClip {
     Track* trackPtr;
@@ -22,7 +23,6 @@ class PlaylistComponent : public juce::Component,
     public juce::FileDragAndDropTarget,
     public juce::DragAndDropTarget,
     public juce::KeyListener,
-    private juce::ScrollBar::Listener,
     private juce::Timer
 {
 public:
@@ -52,7 +52,7 @@ public:
 
     PlaylistMenuBar menuBar;
     PlaylistNavigator hNavigator;
-    juce::ScrollBar vBar{ true };
+    VerticalNavigator vBar;
 
     int draggingClipIndex = -1;
     int selectedClipIndex = -1;
@@ -68,11 +68,10 @@ public:
 
     juce::CriticalSection* audioMutex = nullptr;
 
-    // --- TAMAÑOS BASADOS EN ILLUSTRATOR (Coordenadas Locales) ---
     const int menuBarH = 34;
-    const int navigatorH = 51; // Scroll horizontal convertido en Minimap
+    const int navigatorH = 51;
     const int timelineH = 35;
-    const int vBarWidth = 32;  // Scroll vertical más ancho
+    const int vBarWidth = 32;
 
     const float trackHeight = 100.0f;
     double snapPixels = 80.0;
@@ -95,9 +94,7 @@ public:
     float getLoopEndPos() const {
         double dynamicLoopEnd = 1280.0;
         for (const auto& clip : clips) {
-            if (clip.startX + clip.width > dynamicLoopEnd) {
-                dynamicLoopEnd = clip.startX + clip.width;
-            }
+            if (clip.startX + clip.width > dynamicLoopEnd) dynamicLoopEnd = clip.startX + clip.width;
         }
         return (float)(std::ceil((dynamicLoopEnd - 0.001) / 320.0) * 320.0);
     }
@@ -108,6 +105,9 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override;
 
+    // --- NUEVO: FUNCIÓN MATEMÁTICA DEL MINIMAPA ---
+    void drawMinimap(juce::Graphics& g, juce::Rectangle<int> bounds);
+
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseDrag(const juce::MouseEvent& e) override;
     void mouseUp(const juce::MouseEvent& e) override;
@@ -116,7 +116,6 @@ public:
     void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override;
 
     bool keyPressed(const juce::KeyPress& key, juce::Component* originatingComponent) override;
-    void scrollBarMoved(juce::ScrollBar* scrollBarThatHasMoved, double newRangeStart) override;
     void timerCallback() override;
 
     bool isInterestedInFileDrag(const juce::StringArray& files) override;
@@ -137,7 +136,6 @@ public:
     void deleteClipsByName(const juce::String& name, bool isMidi);
     void purgeClipsOfTrack(Track* track);
 
-    // HELPER MATEMÁTICO: Convierte la posición física local en pantalla a tiempo musical
     float getAbsoluteXFromMouse(int mouseX) const {
         return (mouseX + (float)hNavigator.getCurrentRangeStart()) / hZoom;
     }

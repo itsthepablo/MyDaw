@@ -17,11 +17,25 @@ PlaylistComponent::PlaylistComponent() {
 
     addAndMakeVisible(menuBar);
     addAndMakeVisible(hNavigator);
+    addAndMakeVisible(vBar);
 
     hNavigator.onScrollMoved = [this](double) { repaint(); };
+    hNavigator.onZoomChanged = [this](double newZoom, double newStart) {
+        hZoom = newZoom;
+        hNavigator.setRangeLimits(0.0, 32 * 320 * hZoom);
+        hNavigator.setCurrentRange(newStart, (double)(getWidth() - vBarWidth));
+        updateScrollBars();
+        repaint();
+        };
 
-    addAndMakeVisible(vBar); vBar.addListener(this);
-    vBar.setAlwaysOnTop(true);
+    hNavigator.onDrawMinimap = [this](juce::Graphics& g, juce::Rectangle<int> bounds) {
+        this->drawMinimap(g, bounds);
+        };
+
+    vBar.onScrollMoved = [this](double start) {
+        if (onVerticalScroll) onVerticalScroll((int)start);
+        repaint();
+        };
 
     updateScrollBars();
     startTimerHz(30);
@@ -35,6 +49,7 @@ PlaylistComponent::~PlaylistComponent() {
 void PlaylistComponent::timerCallback() { repaint(); }
 
 void PlaylistComponent::updateScrollBars() {
+    hNavigator.setZoomContext(hZoom, 32 * 320);
     hNavigator.setRangeLimits(0.0, 32 * 320 * hZoom);
     hNavigator.setCurrentRange(hNavigator.getCurrentRangeStart(), (double)(getWidth() - vBarWidth));
 
@@ -48,13 +63,60 @@ void PlaylistComponent::updateScrollBars() {
 
     vBar.setRangeLimits(0.0, (double)totalH);
     vBar.setCurrentRange(vBar.getCurrentRangeStart(), visibleH);
-    vBar.setVisible(totalH > visibleH);
 }
 
 void PlaylistComponent::addMidiClipToView(Track* targetTrack, MidiClipData* newClip) {
     clips.push_back({ targetTrack, newClip->startX, newClip->width, newClip->name, nullptr, newClip });
     updateScrollBars();
     repaint();
+    hNavigator.repaint();
+}
+
+// --- LÓGICA DEL MINIMAPA CENTRADO ---
+void PlaylistComponent::drawMinimap(juce::Graphics& g, juce::Rectangle<int> bounds) {
+    if (!tracksRef || tracksRef->isEmpty()) return;
+
+    double maxTime = 32.0 * 320.0;
+    double scaleX = bounds.getWidth() / maxTime;
+
+    int visibleTracks = 0;
+    for (auto* t : *tracksRef) {
+        if (t->isShowingInChildren) visibleTracks++;
+    }
+    if (visibleTracks == 0) visibleTracks = 1;
+
+    // MATEMÁTICA DE CENTRADO:
+    // 1. Definimos un alto máximo por pista (ej. 6 pixeles) para que no se estiren si hay pocas.
+    float trackMinimapH = std::min(6.0f, (float)bounds.getHeight() / visibleTracks);
+
+    // 2. Calculamos cuánto espacio vertical ocupa todo el bloque de pistas juntas.
+    float totalOccupiedH = trackMinimapH * visibleTracks;
+
+    // 3. Calculamos el offset (margen superior) para que el bloque quede en el centro de la barra.
+    float startY = bounds.getY() + (bounds.getHeight() - totalOccupiedH) / 2.0f;
+
+    for (const auto& clip : clips) {
+        int tIdx = -1;
+        int currentVisIdx = 0;
+        for (int i = 0; i < tracksRef->size(); ++i) {
+            if ((*tracksRef)[i] == clip.trackPtr) {
+                tIdx = currentVisIdx;
+                break;
+            }
+            if ((*tracksRef)[i]->isShowingInChildren) currentVisIdx++;
+        }
+        if (tIdx == -1) continue;
+
+        float x = bounds.getX() + (clip.startX * scaleX);
+        float w = clip.width * scaleX;
+        float y = startY + (tIdx * trackMinimapH);
+
+        g.setColour(clip.trackPtr->getColor().withAlpha(0.8f));
+
+        // Damos 1 pixel de margen arriba y abajo para que las pistas no se fusionen visualmente
+        float padY = trackMinimapH > 3.0f ? 1.0f : 0.0f;
+        g.fillRoundedRectangle(x, y + padY, juce::jmax(1.0f, w), juce::jmax(1.0f, trackMinimapH - (padY * 2.0f)), 1.5f);
+    }
 }
 
 int PlaylistComponent::getTrackY(Track* targetTrack) const {
@@ -166,11 +228,9 @@ void PlaylistComponent::paint(juce::Graphics& g) {
     }
     g.restoreState();
 
-    // Dibujar el fondo del Timeline justo debajo del Navigator
     g.setColour(juce::Colour(20, 22, 25));
     g.fillRect(0, menuBarH + navigatorH, getWidth(), timelineH);
 
-    // Playhead rojo
     int phX = (int)(playheadAbsPos * hZoom) - (int)hS;
     g.setColour(juce::Colours::red);
     g.drawVerticalLine(phX, (float)(menuBarH + navigatorH), (float)getHeight());
@@ -184,29 +244,23 @@ void PlaylistComponent::paint(juce::Graphics& g) {
 }
 
 void PlaylistComponent::resized() {
-    // 1. Menu Bar: Arriba del todo, empieza en 0
     menuBar.setBounds(0, 0, getWidth(), menuBarH);
-
-    // 2. Navigator (Minimap): Empieza justo debajo del MenuBar (y = 34)
     hNavigator.setBounds(0, menuBarH, getWidth() - vBarWidth, navigatorH);
-
-    // 3. Scroll Vertical: Pegado a la derecha, debajo del Minimap
     vBar.setBounds(getWidth() - vBarWidth, menuBarH + navigatorH, vBarWidth, getHeight() - (menuBarH + navigatorH));
-
     updateScrollBars();
-}
-
-void PlaylistComponent::scrollBarMoved(juce::ScrollBar* s, double start) {
-    if (s == &vBar && onVerticalScroll) onVerticalScroll((int)start);
-    repaint();
 }
 
 void PlaylistComponent::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& w) {
     if (e.mods.isCtrlDown()) {
-        hZoom = juce::jlimit(0.1f, 5.0f, hZoom + (float)w.deltaY * 0.1f);
+        double mouseAbsX = getAbsoluteXFromMouse(e.x);
+
+        hZoom = juce::jlimit(0.1, 5.0, hZoom + (double)w.deltaY * 0.1);
+        double newStart = (mouseAbsX * hZoom) - e.x;
+
+        hNavigator.setRangeLimits(0.0, 32 * 320 * hZoom);
+        hNavigator.setCurrentRange(newStart, (double)(getWidth() - vBarWidth));
         updateScrollBars();
     }
-    else vBar.mouseWheelMove(e, w);
     repaint();
 }
 

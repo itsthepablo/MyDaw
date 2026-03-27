@@ -150,6 +150,10 @@
                 file="Source/Playlist/ScrollBar/PlaylistNavigator.cpp"/>
           <FILE id="qynAAL" name="PlaylistNavigator.h" compile="0" resource="0"
                 file="Source/Playlist/ScrollBar/PlaylistNavigator.h"/>
+          <FILE id="RpFib7" name="VerticalNavigator.cpp" compile="1" resource="0"
+                file="Source/Playlist/ScrollBar/VerticalNavigator.cpp"/>
+          <FILE id="hZe8fK" name="VerticalNavigator.h" compile="0" resource="0"
+                file="Source/Playlist/ScrollBar/VerticalNavigator.h"/>
         </GROUP>
         <GROUP id="{361B1AF3-F0CC-2376-25A1-51065AF40789}" name="Tools">
           <FILE id="eNp0RM" name="EraserTool.h" compile="0" resource="0" file="Source/Playlist/Tools/EraserTool.h"/>

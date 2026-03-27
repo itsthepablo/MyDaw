@@ -34,6 +34,7 @@ void PlaylistActionHandler::deleteClip(PlaylistComponent& p, int index) {
     else if (p.selectedClipIndex > index) p.selectedClipIndex--;
 
     p.repaint();
+    p.hNavigator.repaint(); // SINCRONIZA EL MINIMAPA
 }
 
 void PlaylistActionHandler::deleteClipsByName(PlaylistComponent& p, const juce::String& name, bool isMidi) {
@@ -55,12 +56,14 @@ void PlaylistActionHandler::deleteClipsByName(PlaylistComponent& p, const juce::
     p.selectedClipIndex = -1;
     p.updateScrollBars();
     p.repaint();
+    p.hNavigator.repaint(); // SINCRONIZA EL MINIMAPA
 }
 
 void PlaylistActionHandler::purgeClipsOfTrack(PlaylistComponent& p, Track* track) {
     p.clips.erase(std::remove_if(p.clips.begin(), p.clips.end(),
         [track](const TrackClip& c) { return c.trackPtr == track; }),
         p.clips.end());
+    p.hNavigator.repaint();
 }
 
 void PlaylistActionHandler::handleDoubleClick(PlaylistComponent& p, const juce::MouseEvent& e) {
@@ -68,15 +71,13 @@ void PlaylistActionHandler::handleDoubleClick(PlaylistComponent& p, const juce::
     int cIdx = p.getClipAt(e.x, e.y);
 
     if (cIdx != -1 && p.clips[cIdx].linkedMidi != nullptr) {
-        if (p.onMidiClipDoubleClicked) {
-            p.onMidiClipDoubleClicked(p.clips[cIdx].trackPtr, p.clips[cIdx].linkedMidi);
-        }
+        if (p.onMidiClipDoubleClicked) p.onMidiClipDoubleClicked(p.clips[cIdx].trackPtr, p.clips[cIdx].linkedMidi);
         return;
     }
 
     int tIdx = p.getTrackAtY(e.y);
     if (tIdx != -1 && (*p.tracksRef)[tIdx]->getType() == TrackType::MIDI && cIdx == -1) {
-        float absX = (e.x + (float)p.hNavigator.getCurrentRangeStart()) / p.hZoom;
+        float absX = p.getAbsoluteXFromMouse(e.x);
         float snappedX = std::round(absX / p.snapPixels) * p.snapPixels;
 
         Track* targetTrack = (*p.tracksRef)[tIdx];
@@ -85,19 +86,10 @@ void PlaylistActionHandler::handleDoubleClick(PlaylistComponent& p, const juce::
         if (!targetTrack->midiClips.isEmpty()) {
             MidiClipData* sourceClip = targetTrack->midiClips.getLast();
             newMidiClip = new MidiClipData(*sourceClip);
-
             float timeShift = snappedX - sourceClip->startX;
             newMidiClip->startX = snappedX;
-
-            for (auto& note : newMidiClip->notes) {
-                note.x += timeShift;
-            }
-
-            auto shiftAutoLane = [timeShift](AutoLane& lane) {
-                for (auto& node : lane.nodes) {
-                    node.x += timeShift;
-                }
-            };
+            for (auto& note : newMidiClip->notes) note.x += timeShift;
+            auto shiftAutoLane = [timeShift](AutoLane& lane) { for (auto& node : lane.nodes) node.x += timeShift; };
             shiftAutoLane(newMidiClip->autoVol);
             shiftAutoLane(newMidiClip->autoPan);
             shiftAutoLane(newMidiClip->autoPitch);
@@ -113,10 +105,8 @@ void PlaylistActionHandler::handleDoubleClick(PlaylistComponent& p, const juce::
                     }
                 }
             }
-            int nextPatternNum = maxPatternNum + 1;
-
             newMidiClip = new MidiClipData();
-            newMidiClip->name = "Pattern " + juce::String(nextPatternNum);
+            newMidiClip->name = "Pattern " + juce::String(maxPatternNum + 1);
             newMidiClip->startX = snappedX;
             newMidiClip->width = 320.0f;
             newMidiClip->color = targetTrack->getColor();
@@ -125,5 +115,6 @@ void PlaylistActionHandler::handleDoubleClick(PlaylistComponent& p, const juce::
         targetTrack->midiClips.add(newMidiClip);
         p.clips.push_back({ targetTrack, snappedX, newMidiClip->width, newMidiClip->name, nullptr, newMidiClip });
         p.repaint();
+        p.hNavigator.repaint(); // SINCRONIZA EL MINIMAPA
     }
 }

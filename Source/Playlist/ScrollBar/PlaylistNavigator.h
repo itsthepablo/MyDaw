@@ -22,7 +22,8 @@ public:
     void setZoomContext(double currentZoom, double baseWidth);
 
     std::function<void(double)> onScrollMoved;
-    std::function<void(double)> onZoomChanged;
+    std::function<void(double, double)> onZoomChanged;
+    std::function<void(juce::Graphics&, juce::Rectangle<int>)> onDrawMinimap;
 
 private:
     double totalMin = 0.0;
@@ -39,6 +40,10 @@ private:
     double dragStartMouseX = 0.0;
     double dragStartThumbX = 0.0;
     double dragStartZoom = 1.0;
+    int dragStartThumbLeft = 0;
+    int dragStartThumbRight = 0;
+
+    int targetMouseX = -1; // NUEVO: Para saber donde frenar el bloque
 
     const int btnSize = 20;
 
