@@ -4,6 +4,7 @@
 #include "Tools/PointerTool.h" 
 #include "Tools/ScissorTool.h" 
 #include "Tools/EraserTool.h" 
+#include "PlaylistDropHandler.h" // NUESTRO NUEVO GESTOR
 #include <cmath>
 #include <algorithm>
 
@@ -15,13 +16,13 @@ PlaylistComponent::PlaylistComponent() {
 
     addAndMakeVisible(menuBar);
     addAndMakeVisible(hNavigator);
-
-    // Callback: cuando el navigator cambia la posici�n, repintamos la playlist
+    
+    // Callback: cuando el navigator cambia la posición, repintamos la playlist
     hNavigator.onScrollMoved = [this](double) { repaint(); };
 
     addAndMakeVisible(vBar); vBar.addListener(this);
     vBar.setAlwaysOnTop(true);
-
+    
     updateScrollBars();
     startTimerHz(30);
 }
@@ -36,7 +37,7 @@ void PlaylistComponent::timerCallback() { repaint(); }
 void PlaylistComponent::updateScrollBars() {
     hNavigator.setRangeLimits(0.0, 32 * 320 * hZoom);
     hNavigator.setCurrentRange(hNavigator.getCurrentRangeStart(), (double)getWidth() - scrollBarSize);
-
+    
     int totalH = 0;
     if (tracksRef) {
         for (auto* t : *tracksRef) if (t->isShowingInChildren) totalH += (int)trackHeight;
@@ -343,61 +344,21 @@ void PlaylistComponent::mouseMove(const juce::MouseEvent& e) {
 }
 
 bool PlaylistComponent::isInterestedInFileDrag(const juce::StringArray&) { return true; }
-void PlaylistComponent::fileDragEnter(const juce::StringArray&, int, int) { isExternalFileDragging = true; repaint(); }
-void PlaylistComponent::fileDragExit(const juce::StringArray&) { isExternalFileDragging = false; repaint(); }
+
+void PlaylistComponent::fileDragEnter(const juce::StringArray&, int, int) { 
+    isExternalFileDragging = true; 
+    repaint(); 
+}
+
+void PlaylistComponent::fileDragExit(const juce::StringArray&) { 
+    isExternalFileDragging = false; 
+    repaint(); 
+}
 
 void PlaylistComponent::filesDropped(const juce::StringArray& files, int x, int y) {
     isExternalFileDragging = false;
-    int tIdx = getTrackAtY(y);
-
-    bool isMidiFile = false;
-    for (auto path : files) {
-        if (path.endsWithIgnoreCase(".mid") || path.endsWithIgnoreCase(".midi")) {
-            isMidiFile = true; break;
-        }
-    }
-
-    TrackType requiredType = isMidiFile ? TrackType::MIDI : TrackType::Audio;
-
-    if (tIdx != -1 && tracksRef && (*tracksRef)[tIdx]->getType() != requiredType) {
-        tIdx = -1;
-    }
-
-    if (tIdx == -1 && onNewTrackRequested) {
-        onNewTrackRequested(requiredType);
-        if (tracksRef) tIdx = (int)tracksRef->size() - 1;
-    }
-    if (tIdx == -1) return;
-
-    float absX = (x + (float)hNavigator.getCurrentRangeStart()) / hZoom;
-    absX = std::round(absX / snapPixels) * snapPixels;
-    absX = juce::jmax(0.0f, absX);
-
-    if (!isMidiFile) {
-        juce::AudioFormatManager fmt;
-        fmt.registerBasicFormats();
-        fmt.registerFormat(new juce::MP3AudioFormat(), false);
-
-        for (auto path : files) {
-            juce::File f(path);
-            std::unique_ptr<juce::AudioFormatReader> reader(fmt.createReaderFor(f));
-            if (reader) {
-                auto* data = new AudioClipData();
-                data->name = f.getFileNameWithoutExtension();
-                data->startX = absX;
-                data->fileBuffer.setSize((int)reader->numChannels, (int)reader->lengthInSamples);
-                reader->read(&data->fileBuffer, 0, (int)reader->lengthInSamples, 0, true, true);
-
-                data->generateCache();
-
-                data->width = (float)(reader->lengthInSamples / reader->sampleRate) * (120.0f / 60.0f) * 80.0f;
-                (*tracksRef)[tIdx]->audioClips.add(data);
-                clips.push_back({ (*tracksRef)[tIdx], absX, data->width, data->name, data, nullptr });
-                absX += data->width;
-            }
-        }
-    }
-    updateScrollBars(); repaint();
+    // Delegamos la lógica pesada a nuestra nueva clase
+    PlaylistDropHandler::processExternalFiles(files, x, y, *this);
 }
 
 bool PlaylistComponent::isInterestedInDragSource(const juce::DragAndDropTarget::SourceDetails& dragSourceDetails) {
@@ -417,120 +378,6 @@ void PlaylistComponent::itemDragExit(const juce::DragAndDropTarget::SourceDetail
 
 void PlaylistComponent::itemDropped(const juce::DragAndDropTarget::SourceDetails& dragSourceDetails) {
     isInternalDragging = false;
-    juce::String desc = dragSourceDetails.description.toString();
-
-    if (desc == "FileBrowserDrag") {
-        if (auto* tree = dynamic_cast<juce::FileTreeComponent*>(dragSourceDetails.sourceComponent.get())) {
-            juce::File f = tree->getSelectedFile();
-            if (f.existsAsFile()) {
-                juce::StringArray arr;
-                arr.add(f.getFullPathName());
-                filesDropped(arr, dragSourceDetails.localPosition.x, dragSourceDetails.localPosition.y);
-            }
-        }
-        return;
-    }
-
-    juce::StringArray tokens;
-    tokens.addTokens(desc, "|", "");
-    if (tokens.size() == 3) {
-        bool isMidi = (tokens[1] == "MIDI");
-        juce::String itemName = tokens[2];
-
-        int x = dragSourceDetails.localPosition.x;
-        int y = dragSourceDetails.localPosition.y;
-
-        int tIdx = getTrackAtY(y);
-        TrackType requiredType = isMidi ? TrackType::MIDI : TrackType::Audio;
-
-        if (tIdx != -1 && tracksRef && (*tracksRef)[tIdx]->getType() != requiredType) {
-            tIdx = -1;
-        }
-
-        if (tIdx == -1 && onNewTrackRequested) {
-            onNewTrackRequested(requiredType);
-            if (tracksRef && !tracksRef->isEmpty()) {
-                tIdx = tracksRef->size() - 1;
-            }
-        }
-
-        if (tIdx == -1) {
-            repaint();
-            return;
-        }
-
-        Track* targetTrack = (*tracksRef)[tIdx];
-
-        float absX = (x + (float)hNavigator.getCurrentRangeStart()) / hZoom;
-        float snappedX = std::round(absX / snapPixels) * snapPixels;
-        snappedX = juce::jmax(0.0f, snappedX);
-
-        if (isMidi) {
-            MidiClipData* sourceMidi = nullptr;
-            for (auto* tr : *tracksRef) {
-                for (auto* mc : tr->midiClips) {
-                    if (mc->name == itemName) { sourceMidi = mc; break; }
-                }
-                if (sourceMidi) break;
-            }
-            if (!sourceMidi && trackContainer) {
-                for (auto* mc : trackContainer->unusedMidiPool) {
-                    if (mc->name == itemName) { sourceMidi = mc; break; }
-                }
-            }
-
-            if (sourceMidi) {
-                MidiClipData* newMidiClip = new MidiClipData(*sourceMidi);
-                float timeShift = snappedX - sourceMidi->startX;
-                newMidiClip->startX = snappedX;
-
-                for (auto& note : newMidiClip->notes) note.x += timeShift;
-
-                auto shiftAutoLane = [timeShift](AutoLane& lane) {
-                    for (auto& node : lane.nodes) node.x += timeShift;
-                    };
-                shiftAutoLane(newMidiClip->autoVol);
-                shiftAutoLane(newMidiClip->autoPan);
-                shiftAutoLane(newMidiClip->autoPitch);
-                shiftAutoLane(newMidiClip->autoFilter);
-
-                targetTrack->midiClips.add(newMidiClip);
-                clips.push_back({ targetTrack, snappedX, newMidiClip->width, newMidiClip->name, nullptr, newMidiClip });
-
-                notifyPatternEdited(newMidiClip);
-            }
-        }
-        else {
-            AudioClipData* sourceAudio = nullptr;
-            for (auto* tr : *tracksRef) {
-                for (auto* ac : tr->audioClips) {
-                    if (ac->name == itemName) { sourceAudio = ac; break; }
-                }
-                if (sourceAudio) break;
-            }
-            if (!sourceAudio && trackContainer) {
-                for (auto* ac : trackContainer->unusedAudioPool) {
-                    if (ac->name == itemName) { sourceAudio = ac; break; }
-                }
-            }
-
-            if (sourceAudio) {
-                AudioClipData* newAudioClip = new AudioClipData();
-                newAudioClip->name = sourceAudio->name;
-                newAudioClip->startX = snappedX;
-                newAudioClip->width = sourceAudio->width;
-                newAudioClip->sourceSampleRate = sourceAudio->sourceSampleRate;
-                newAudioClip->fileBuffer.makeCopyOf(sourceAudio->fileBuffer);
-                newAudioClip->cachedPeaksL = sourceAudio->cachedPeaksL;
-                newAudioClip->cachedPeaksR = sourceAudio->cachedPeaksR;
-                newAudioClip->cachedPeaksMid = sourceAudio->cachedPeaksMid;
-                newAudioClip->cachedPeaksSide = sourceAudio->cachedPeaksSide;
-
-                targetTrack->audioClips.add(newAudioClip);
-                clips.push_back({ targetTrack, snappedX, newAudioClip->width, newAudioClip->name, newAudioClip, nullptr });
-            }
-        }
-        updateScrollBars();
-        repaint();
-    }
+    // Delegamos la lógica pesada a nuestra nueva clase
+    PlaylistDropHandler::processInternalItem(dragSourceDetails, *this);
 }

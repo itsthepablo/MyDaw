@@ -161,6 +161,10 @@
               file="Source/Playlist/PlaylistComponent.cpp"/>
         <FILE id="UCnxE5" name="PlaylistComponent.h" compile="0" resource="0"
               file="Source/Playlist/PlaylistComponent.h"/>
+        <FILE id="JGCRS4" name="PlaylistDropHandler.cpp" compile="1" resource="0"
+              file="Source/Playlist/PlaylistDropHandler.cpp"/>
+        <FILE id="S4Ql0Q" name="PlaylistDropHandler.h" compile="0" resource="0"
+              file="Source/Playlist/PlaylistDropHandler.h"/>
       </GROUP>
       <GROUP id="{F98E9492-EAA4-A856-6CC6-2352DAB93A59}" name="Tracks">
         <FILE id="QSBRZT" name="Track.h" compile="0" resource="0" file="Source/Tracks/Track.h"/>
