@@ -15,7 +15,12 @@ EffectsPanel::EffectsPanel() {
         if (activeTrack) {
             bool isBypassed = bypassAllBtn.getToggleState();
             for (auto* p : activeTrack->plugins) {
-                if (p) p->setBypassed(isBypassed);
+                if (p) {
+                    // Evitamos bypassear el instrumento principal cuando se apagan los efectos
+                    if (!pluginIsInstrumentMap[(void*)p]) {
+                        p->setBypassed(isBypassed);
+                    }
+                }
             }
             updateSlots();
         }
@@ -87,23 +92,28 @@ void EffectsPanel::updateSlots() {
         for (int i = 0; i < activeTrack->plugins.size(); ++i) {
             auto* effectRef = activeTrack->plugins[i];
 
-            if (effectRef) {
-                hasPlugins = true;
-                if (!effectRef->isBypassed()) allBypassed = false;
+            if (!effectRef) continue;
+
+            // --- NUEVO: FILTRO VISUAL PARA INSTRUMENTOS ---
+            // Revisamos si este plugin específico está marcado como instrumento
+            bool isInst = pluginIsInstrumentMap[(void*)effectRef];
+
+            // Si es un instrumento, lo ignoramos por completo en la interfaz de efectos
+            if (isInst) {
+                continue;
             }
+            // ----------------------------------------------
 
-            bool isInst = false;
-            if (activeTrack->getType() == TrackType::MIDI && !effectRef->isNative()) {
-                isInst = pluginIsInstrumentMap[(void*)effectRef];
-            }
+            hasPlugins = true;
+            if (!effectRef->isBypassed()) allBypassed = false;
 
-            juce::String name = isInst ? "VSTi Synth" : "Plugin";
-            if (effectRef != nullptr && effectRef->isLoaded()) name = effectRef->getLoadedPluginName();
+            juce::String name = "Plugin";
+            if (effectRef->isLoaded()) name = effectRef->getLoadedPluginName();
 
-            bool isBypassed = effectRef != nullptr ? effectRef->isBypassed() : false;
+            bool isBypassed = effectRef->isBypassed();
 
-            // Pasamos effectRef al EffectDevice
-            auto* device = new EffectDevice(i, name, isInst, isBypassed, effectRef, *this);
+            // Como ya filtramos, sabemos que siempre será "isInst = false" para los efectos
+            auto* device = new EffectDevice(i, name, false, isBypassed, effectRef, *this);
             devices.add(device);
             addAndMakeVisible(device);
         }

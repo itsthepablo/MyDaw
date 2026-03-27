@@ -4,7 +4,7 @@
 #include "TrackProcessor.h"
 #include "MasterMixer.h"
 #include "SafetyProcessors.h"
-#include "Metronome.h" // <-- NUEVO
+#include "Metronome.h" 
 
 class TrackContainer;
 class PianoRollComponent;
@@ -14,11 +14,11 @@ class MixerComponent;
 class AudioEngine {
 public:
     AudioClock clock;
-    Metronome metronome; // <-- NUEVO
+    Metronome metronome;
 
     void prepareToPlay(int samples, double s, TrackContainer& trackContainer, juce::CriticalSection& audioMutex) {
         clock.prepare(s, samples);
-        metronome.prepare(s); // <-- NUEVO
+        metronome.prepare(s);
 
         const juce::ScopedLock sl(audioMutex);
         for (auto* track : trackContainer.getTracks())
@@ -40,15 +40,27 @@ public:
         bufferToFill.clearActiveBufferRegion();
         bool isPlayingNow = pianoRollUI.getIsPlaying();
 
+        // --- CORRECCIÓN DEL PÁNICO (STOP / PAUSE) ---
         if (!isPlayingNow && clock.wasPlayingLastBlock) {
-            for (auto* track : trackContainer.getTracks()) {
-                juce::MidiBuffer panic;
-                for (int ch = 1; ch <= 16; ++ch) {
-                    panic.addEvent(juce::MidiMessage::allNotesOff(ch), 0);
-                    panic.addEvent(juce::MidiMessage::controllerEvent(ch, 64, 0), 0);
-                    for (int note = 0; note < 128; ++note) panic.addEvent(juce::MidiMessage::noteOff(ch, note), 0);
+            // 1. Creamos el pánico maestro UNA SOLA VEZ para ahorrar CPU
+            juce::MidiBuffer masterPanic;
+            for (int ch = 1; ch <= 16; ++ch) {
+                masterPanic.addEvent(juce::MidiMessage::allNotesOff(ch), 0);
+                masterPanic.addEvent(juce::MidiMessage::controllerEvent(ch, 64, 0), 0); // Sustain pedal off
+                for (int note = 0; note < 128; ++note) {
+                    masterPanic.addEvent(juce::MidiMessage::noteOff(ch, note), 0);
                 }
-                for (auto* p : track->plugins) if (p->isLoaded()) p->processBlock(*bufferToFill.buffer, panic);
+            }
+
+            // 2. Repartimos un clon exacto a cada plugin
+            for (auto* track : trackContainer.getTracks()) {
+                for (auto* p : track->plugins) {
+                    if (p->isLoaded()) {
+                        juce::MidiBuffer clonedPanic;
+                        clonedPanic.addEvents(masterPanic, 0, -1, 0);
+                        p->processBlock(*bufferToFill.buffer, clonedPanic);
+                    }
+                }
             }
         }
         clock.wasPlayingLastBlock = isPlayingNow;
@@ -99,7 +111,11 @@ public:
             auto* track = tracks[i];
 
             bool isPianoRollActive = false;
-            if (activeClip != nullptr) {
+
+            if (track->isSelected) {
+                isPianoRollActive = true;
+            }
+            else if (activeClip != nullptr) {
                 for (auto* clip : track->midiClips) {
                     if (clip == activeClip) {
                         isPianoRollActive = true;
@@ -120,7 +136,6 @@ public:
                 });
         }
 
-        // --- DSP DEL METRÓNOMO ---
         metronome.process(*bufferToFill.buffer, bufferToFill.numSamples, clock, pianoRollUI.getBpm());
 
         SafetyProcessors::applyNaNKiller(*bufferToFill.buffer, bufferToFill.startSample, bufferToFill.numSamples);

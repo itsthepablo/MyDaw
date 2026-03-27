@@ -2,7 +2,8 @@
 #include <JuceHeader.h>
 #include "AudioClock.h"
 #include "../Tracks/Track.h"
-#include "../UI/GainStation/GainStationDSP.h" // Importación del Motor DSP modular
+#include "../UI/GainStation/GainStationDSP.h" 
+#include "../Effects/EffectsPanel.h" 
 
 class TrackProcessor {
 public:
@@ -83,60 +84,94 @@ public:
         GainStationDSP::processPreFX(track, track->audioBuffer);
 
         // ==============================================================================
-        // PROCESAMIENTO DE PLUGINS CON MATRIZ MID/SIDE NATIVA (ZERO-ALLOCATION)
+        // 1. LAYERING: PROCESAMIENTO DE INSTRUMENTOS (PARALELO)
         // ==============================================================================
         int numChannels = track->audioBuffer.getNumChannels();
         int numSamplesBlock = track->audioBuffer.getNumSamples();
 
+        float mixL[4096] = { 0 }; float mixR[4096] = { 0 };
+        float tempL[4096] = { 0 }; float tempR[4096] = { 0 };
+
+        int safeSamples = juce::jmin(numSamplesBlock, 4096);
+        int safeChannels = juce::jmin(numChannels, 2);
+
+        float* mixPointers[] = { mixL, mixR };
+        float* tempPointers[] = { tempL, tempR };
+
+        juce::AudioBuffer<float> instrumentMixBuffer(mixPointers, safeChannels, safeSamples);
+        juce::AudioBuffer<float> tempSynthBuffer(tempPointers, safeChannels, safeSamples);
+
+        instrumentMixBuffer.clear();
+        bool hasInstruments = false;
+
         for (auto* p : track->plugins) {
-            if (p->isLoaded()) {
+            if (p->isLoaded() && EffectsPanel::pluginIsInstrumentMap[(void*)p]) {
+                hasInstruments = true;
+                tempSynthBuffer.clear();
+
+                // --- CORRECCIÓN CRÍTICA: CLONAR EL MIDI BUFFER ---
+                // Le entregamos a cada instrumento una copia fresca de los eventos MIDI
+                // para evitar que el primero consuma los eventos y silencie al resto.
+                juce::MidiBuffer midiForThisSynth;
+                midiForThisSynth.addEvents(trackMidi, 0, numSamplesBlock, 0);
+
+                p->processBlock(tempSynthBuffer, midiForThisSynth);
+
+                for (int ch = 0; ch < safeChannels; ++ch) {
+                    instrumentMixBuffer.addFrom(ch, 0, tempSynthBuffer, ch, 0, safeSamples);
+                }
+            }
+        }
+
+        if (hasInstruments) {
+            for (int ch = 0; ch < safeChannels; ++ch) {
+                track->audioBuffer.addFrom(ch, 0, instrumentMixBuffer, ch, 0, safeSamples);
+            }
+        }
+
+        // ==============================================================================
+        // 2. EFECTOS: PROCESAMIENTO EN SERIE (CON MATRIZ MID/SIDE)
+        // ==============================================================================
+        for (auto* p : track->plugins) {
+            if (p->isLoaded() && !EffectsPanel::pluginIsInstrumentMap[(void*)p]) {
                 PluginRouting r = p->getRouting();
 
                 if (r == PluginRouting::Stereo || numChannels < 2) {
-                    // Flujo Estéreo Normal
                     p->processBlock(track->audioBuffer, trackMidi);
                 }
                 else {
-                    // MATRIZ M/S NATIVA
-                    // Usamos un buffer de pila en lugar de alojar memoria dinámica para no romper el hilo de audio en tiempo real
                     float preservedSignal[4096];
                     int samplesToProcess = juce::jmin(numSamplesBlock, 4096);
 
                     auto* left = track->audioBuffer.getWritePointer(0);
                     auto* right = track->audioBuffer.getWritePointer(1);
 
-                    // 1. CODIFICAR: Separar M/S y alimentar al plugin solo la señal elegida
                     for (int i = 0; i < samplesToProcess; ++i) {
                         float mid = (left[i] + right[i]) * 0.5f;
                         float side = (left[i] - right[i]) * 0.5f;
 
                         if (r == PluginRouting::Mid) {
-                            preservedSignal[i] = side; // Salvamos el Side para no alterarlo
+                            preservedSignal[i] = side;
                             left[i] = mid;
-                            right[i] = mid;            // Alimentamos Mid puro a ambos canales del VST
+                            right[i] = mid;
                         }
                         else if (r == PluginRouting::Side) {
-                            preservedSignal[i] = mid;  // Salvamos el Mid para no alterarlo
+                            preservedSignal[i] = mid;
                             left[i] = side;
-                            right[i] = side;           // Alimentamos Side puro a ambos canales del VST
+                            right[i] = side;
                         }
                     }
 
-                    // 2. PROCESAR: El VST ahora solo está procesando el centro (Mid) o los bordes (Side)
                     p->processBlock(track->audioBuffer, trackMidi);
 
-                    // 3. DECODIFICAR: Mezclar la señal tratada por el VST con la que mantuvimos intacta
                     for (int i = 0; i < samplesToProcess; ++i) {
-                        // Promediamos L y R del VST para evitar artefactos si el usuario paneó dentro del plugin
                         float processedMono = (left[i] + right[i]) * 0.5f;
 
                         if (r == PluginRouting::Mid) {
-                            // Reconstruimos el estéreo: (Nuevo Mid) + (Side Original)
                             left[i] = processedMono + preservedSignal[i];
                             right[i] = processedMono - preservedSignal[i];
                         }
                         else if (r == PluginRouting::Side) {
-                            // Reconstruimos el estéreo: (Mid Original) + (Nuevo Side)
                             left[i] = preservedSignal[i] + processedMono;
                             right[i] = preservedSignal[i] - processedMono;
                         }

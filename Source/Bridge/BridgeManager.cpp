@@ -4,7 +4,7 @@
 #include "TrackMixerPlaylistBridge.h"
 #include "TransportBridge.h" 
 #include "InterfaceBridge.h"
-#include "TrackInstrumentBridge.h" // <-- NUEVO
+#include "TrackInstrumentBridge.h"
 
 void BridgeManager::initializeAllBridges(BridgeDependencies d) {
     TrackPianoRollBridge::connect(d.trackContainer, d.playlistUI, d.pianoRollUI, d.openPianoRoll);
@@ -21,7 +21,7 @@ void BridgeManager::initializeAllBridges(BridgeDependencies d) {
         d.bottomDock, d.effectsPanelUI, d.leftSidebar, d.trackContainer,
         d.onResized, d.onToggleView);
 
-    // ---> NUEVA CONEXIÓN DE INSTRUMENTOS VÍA BRIDGE <---
+    // ---> CORRECCIÓN: PASAMOS LA REFERENCIA COMPLETA DEL MOTOR <---
     TrackInstrumentBridge::connect(
         d.trackContainer,
         d.instrumentPanelUI,
@@ -29,7 +29,7 @@ void BridgeManager::initializeAllBridges(BridgeDependencies d) {
         d.bottomDock,
         d.isBottomDockVisible,
         d.audioMutex,
-        d.audioEngine.clock.sampleRate,
+        d.audioEngine, // Cambiado aquí
         d.onResized
     );
 }

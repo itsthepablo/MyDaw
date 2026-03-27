@@ -1,7 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include "../Tracks/Track.h"
-#include "../Effects/EffectsPanel.h" // Necesario para acceder a pluginIsInstrumentMap
+#include "../Effects/EffectsPanel.h" 
 
 class InstrumentPanel : public juce::Component {
 public:
@@ -12,17 +12,18 @@ public:
     void resized() override;
 
     void setTrack(Track* t);
-    void updateInstrumentView(); // <-- NUEVO: Actualiza la vista si ya hay un VSTi cargado
+    void updateInstrumentView();
 
-    // Callbacks que enviaremos al Bridge/MainComponent
+    // Callbacks que enviamos al Bridge
     std::function<void(Track&)> onAddInstrument;
     std::function<void(Track&, BaseEffect*)> onOpenInstrumentWindow;
 
 private:
     Track* activeTrack = nullptr;
     juce::TextButton addInstrumentBtn;
-    juce::TextButton openInstrumentBtn; // <-- NUEVO: Botara reabrir la ventana del VSTi
-    BaseEffect* currentInstrument = nullptr;
+
+    // Matriz dinámica para soportar múltiples botones de apertura
+    juce::OwnedArray<juce::TextButton> instrumentButtons;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(InstrumentPanel)
 };

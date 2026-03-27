@@ -2,19 +2,16 @@
 
 InstrumentPanel::InstrumentPanel() {
     addAndMakeVisible(addInstrumentBtn);
-    addInstrumentBtn.setButtonText("+ ADD INSTRUMENT (VSTi)");
-    addInstrumentBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(60, 65, 70));
+    // Texto más limpio para que encaje en la "caja"
+    addInstrumentBtn.setButtonText("+ ADD VSTi");
+
+    // Colores tipo "Slot vacío" de Ableton
+    addInstrumentBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(40, 43, 48));
+    addInstrumentBtn.setColour(juce::TextButton::textColourOffId, juce::Colours::white.withAlpha(0.6f));
+
     addInstrumentBtn.onClick = [this] {
         if (activeTrack != nullptr && onAddInstrument) {
             onAddInstrument(*activeTrack);
-        }
-        };
-
-    addAndMakeVisible(openInstrumentBtn);
-    openInstrumentBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(45, 100, 150));
-    openInstrumentBtn.onClick = [this] {
-        if (activeTrack != nullptr && currentInstrument != nullptr && onOpenInstrumentWindow) {
-            onOpenInstrumentWindow(*activeTrack, currentInstrument);
         }
         };
 }
@@ -28,30 +25,34 @@ void InstrumentPanel::setTrack(Track* t) {
 }
 
 void InstrumentPanel::updateInstrumentView() {
-    currentInstrument = nullptr;
+    instrumentButtons.clear();
 
-    // Buscar si la pista ya tiene un VSTi cargado usando el mapa global de EffectsPanel
     if (activeTrack != nullptr) {
         for (auto* p : activeTrack->plugins) {
             if (EffectsPanel::pluginIsInstrumentMap[(void*)p]) {
-                currentInstrument = p;
-                break;
+                // Creamos una caja para cada instrumento
+                auto* btn = new juce::TextButton(p->getLoadedPluginName());
+
+                // Diseño de la caja (Ableton style)
+                btn->setColour(juce::TextButton::buttonColourId, juce::Colour(55, 60, 65));
+                btn->setColour(juce::TextButton::buttonOnColourId, juce::Colour(75, 80, 85));
+                btn->setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+                btn->setTooltip("Clic para abrir la ventana del sintetizador");
+
+                btn->onClick = [this, p] {
+                    if (activeTrack != nullptr && onOpenInstrumentWindow) {
+                        onOpenInstrumentWindow(*activeTrack, p);
+                    }
+                    };
+
+                instrumentButtons.add(btn);
+                addAndMakeVisible(btn);
             }
         }
-    }
-
-    if (currentInstrument != nullptr) {
-        addInstrumentBtn.setVisible(false);
-        openInstrumentBtn.setVisible(true);
-        openInstrumentBtn.setButtonText("OPEN: " + currentInstrument->getLoadedPluginName());
-    }
-    else if (activeTrack != nullptr) {
         addInstrumentBtn.setVisible(true);
-        openInstrumentBtn.setVisible(false);
     }
     else {
         addInstrumentBtn.setVisible(false);
-        openInstrumentBtn.setVisible(false);
     }
 
     resized();
@@ -59,28 +60,41 @@ void InstrumentPanel::updateInstrumentView() {
 }
 
 void InstrumentPanel::paint(juce::Graphics& g) {
-    g.fillAll(juce::Colour(20, 22, 25)); // Fondo del BottomDock
+    g.fillAll(juce::Colour(30, 33, 36)); // Fondo principal un poco más oscuro
 
     if (activeTrack == nullptr) {
-        g.setColour(juce::Colours::grey);
-        g.drawText("Selecciona una pista MIDI para cargar un Instrumento.", getLocalBounds(), juce::Justification::centred, true);
+        g.setColour(juce::Colours::white.withAlpha(0.3f));
+        g.setFont(juce::Font(18.0f, juce::Font::bold));
+        g.drawText("SELECCIONA UNA PISTA MIDI", getLocalBounds(), juce::Justification::centred, true);
     }
     else {
-        g.setColour(juce::Colours::white);
-        g.drawText("INSTRUMENT PANEL - Pista: " + activeTrack->getName(), getLocalBounds().removeFromTop(40), juce::Justification::centred, true);
+        // Etiqueta sutil en la esquina superior izquierda
+        g.setColour(juce::Colours::white.withAlpha(0.5f));
+        g.setFont(juce::Font(12.0f, juce::Font::bold));
+        g.drawText("INSTRUMENT CHAIN: " + activeTrack->getName(), 15, 10, 300, 20, juce::Justification::centredLeft);
     }
 }
 
 void InstrumentPanel::resized() {
     if (activeTrack != nullptr) {
         auto area = getLocalBounds();
-        area.removeFromTop(50); // Dejamos espacio para el texto superior
 
-        if (currentInstrument != nullptr) {
-            openInstrumentBtn.setBounds(area.removeFromTop(40).withSizeKeepingCentre(250, 40));
+        // Dejamos un margen arriba para el texto y márgenes a los lados
+        area.removeFromTop(35);
+        area.removeFromBottom(15);
+        area.removeFromLeft(15);
+        area.removeFromRight(15);
+
+        int boxWidth = 140; // Ancho fijo de la caja tipo Ableton
+        int padding = 10;   // Espacio entre cajas
+
+        // Colocamos las cajas de los VSTi de izquierda a derecha
+        for (auto* btn : instrumentButtons) {
+            btn->setBounds(area.removeFromLeft(boxWidth));
+            area.removeFromLeft(padding); // Separador
         }
-        else {
-            addInstrumentBtn.setBounds(area.removeFromTop(30).withSizeKeepingCentre(220, 30));
-        }
+
+        // Colocamos el botón de agregar al final de la cadena
+        addInstrumentBtn.setBounds(area.removeFromLeft(boxWidth));
     }
 }
