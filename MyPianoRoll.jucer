@@ -5,6 +5,12 @@
               companyCopyright="Two Levels Audio" version="1.0.0">
   <MAINGROUP id="OgOeCb" name="FatPuppy Studio">
     <GROUP id="{832B9725-4498-E7CC-3428-6D1D4B31D6DB}" name="Source">
+      <GROUP id="{9BE8723D-5C5A-42B2-938A-BE8BB236FD35}" name="Instruments">
+        <FILE id="DH4AH2" name="InstrumentPanel.cpp" compile="1" resource="0"
+              file="Source/Instruments/InstrumentPanel.cpp"/>
+        <FILE id="XB6lrf" name="InstrumentPanel.h" compile="0" resource="0"
+              file="Source/Instruments/InstrumentPanel.h"/>
+      </GROUP>
       <GROUP id="{C1405057-646F-29F2-ADE5-EE3D759DC311}" name="Project">
         <FILE id="VvWl44" name="ProjectManager.cpp" compile="1" resource="0"
               file="Source/Project/ProjectManager.cpp"/>
@@ -105,6 +111,8 @@
               file="Source/Bridge/InterfaceBridge.h"/>
         <FILE id="E9uxC2" name="TrackEffectsBridge.h" compile="1" resource="0"
               file="Source/Bridge/TrackEffectsBridge.h"/>
+        <FILE id="NDVttX" name="TrackInstrumentBridge.h" compile="0" resource="0"
+              file="Source/Bridge/TrackInstrumentBridge.h"/>
         <FILE id="MoyJcG" name="TrackMixerPlaylistBridge.h" compile="0" resource="0"
               file="Source/Bridge/TrackMixerPlaylistBridge.h"/>
         <FILE id="Xu9v5w" name="TrackPianoRollBridge.h" compile="1" resource="0"

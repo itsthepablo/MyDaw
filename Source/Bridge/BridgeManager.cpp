@@ -4,6 +4,7 @@
 #include "TrackMixerPlaylistBridge.h"
 #include "TransportBridge.h" 
 #include "InterfaceBridge.h"
+#include "TrackInstrumentBridge.h" // <-- NUEVO
 
 void BridgeManager::initializeAllBridges(BridgeDependencies d) {
     TrackPianoRollBridge::connect(d.trackContainer, d.playlistUI, d.pianoRollUI, d.openPianoRoll);
@@ -19,6 +20,18 @@ void BridgeManager::initializeAllBridges(BridgeDependencies d) {
     InterfaceBridge::connect(d.toolbarButtons, d.topMenuBar, d.isBottomDockVisible, d.isLeftSidebarVisible,
         d.bottomDock, d.effectsPanelUI, d.leftSidebar, d.trackContainer,
         d.onResized, d.onToggleView);
+
+    // ---> NUEVA CONEXIÓN DE INSTRUMENTOS VÍA BRIDGE <---
+    TrackInstrumentBridge::connect(
+        d.trackContainer,
+        d.instrumentPanelUI,
+        d.effectsPanelUI,
+        d.bottomDock,
+        d.isBottomDockVisible,
+        d.audioMutex,
+        d.audioEngine.clock.sampleRate,
+        d.onResized
+    );
 }
 
 void BridgeManager::cleanupTrack(Track* track, PianoRollComponent& pianoRoll, std::function<void()> closePianoRollCallback) {

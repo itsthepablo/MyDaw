@@ -82,6 +82,9 @@ void MainComponent::setupCallbacks() {
 
             if (ui.bottomDock.getCurrentTab() == BottomDock::EffectsTab)
                 ui.effectsPanelUI.setTrack(nullptr);
+            
+            if (ui.bottomDock.getCurrentTab() == BottomDock::InstrumentTab)
+                ui.instrumentPanelUI.setTrack(nullptr);
 
             resized();
         }
@@ -91,6 +94,7 @@ void MainComponent::setupCallbacks() {
 void MainComponent::setupBridges() {
     BridgeManager::initializeAllBridges({
         ui.trackContainer, ui.playlistUI, ui.pianoRollUI, ui.mixerUI, ui.effectsPanelUI,
+        ui.instrumentPanelUI, // <-- SE AÑADE AQUÍ
         ui.transportBar, ui.topMenuBar, ui.toolbarButtons, ui.bottomDock, ui.leftSidebar, audioEngine, audioMutex,
         isBottomDockVisible, isLeftSidebarVisible,
         [this] { openPianoRoll(); }, [this] { closePianoRoll(); },

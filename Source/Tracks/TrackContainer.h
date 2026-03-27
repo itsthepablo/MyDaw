@@ -8,6 +8,7 @@ class TrackContainer : public juce::Component,
     public juce::FileDragAndDropTarget {
 public:
     std::function<void(Track&, TrackControlPanel&)> onLoadFx;
+    std::function<void(Track&)> onOpenInstrument; // NUEVO
     std::function<void(Track&, int)> onOpenFx;
     std::function<void(Track&)> onOpenPianoRoll;
     std::function<void(int)> onDeleteTrack;
@@ -78,6 +79,7 @@ public:
         auto* p = new TrackControlPanel(*t);
 
         p->onFxClick = [this, t, p] { if (onLoadFx) onLoadFx(*t, *p); };
+        p->onInstrumentClick = [this, t] { if (onOpenInstrument) onOpenInstrument(*t); }; // NUEVO
         p->onPluginClick = [this, t](int i) { if (onOpenFx) onOpenFx(*t, i); };
         p->onPianoRollClick = [this, t] { if (onOpenPianoRoll) onOpenPianoRoll(*t); };
         p->onDeleteClick = [this, t] { if (onDeleteTrack) onDeleteTrack(tracks.indexOf(t)); };

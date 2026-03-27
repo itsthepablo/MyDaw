@@ -7,7 +7,7 @@
 
 class TrackControlPanel : public juce::Component, private juce::Timer {
 public:
-    std::function<void()> onFxClick, onPianoRollClick, onDeleteClick, onEffectsClick, onFolderStateChange;
+    std::function<void()> onFxClick, onInstrumentClick, onPianoRollClick, onDeleteClick, onEffectsClick, onFolderStateChange;
     std::function<void()> onWaveformViewChanged;
     std::function<void(int)> onPluginClick;
     std::function<void(const juce::ModifierKeys&)> onTrackSelected;
@@ -120,8 +120,8 @@ public:
                 };
 
             addAndMakeVisible(fxButton); fxButton.setButtonText("+ VSTi");
-            fxButton.setTooltip("Añadir Instrumento VSTi a esta pista.");
-            fxButton.onClick = [this] { if (onFxClick) onFxClick(); };
+            fxButton.setTooltip("Abrir Panel de Instrumento VSTi.");
+            fxButton.onClick = [this] { if (onInstrumentClick) onInstrumentClick(); };
         }
 
         addAndMakeVisible(levelMeter);

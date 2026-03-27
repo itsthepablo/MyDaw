@@ -6,6 +6,7 @@
 #include "../Mixer/MixerComponent.h"
 #include "../Mixer/MasterChannelUI.h" 
 #include "../Effects/EffectsPanel.h"
+#include "../Instruments/InstrumentPanel.h"
 #include "../UI/TransportBar.h"
 #include "../UI/Buttons/ToolbarButtons.h"
 #include "../UI/ResourceMeter.h"
@@ -30,7 +31,8 @@ struct DAWUIComponents {
     MasterChannelUI masterChannelUI{ mixerUI };
     ChannelRackPanel rackPanelUI;
     EffectsPanel effectsPanelUI;
-    BottomDock bottomDock{ rackPanelUI, effectsPanelUI };
+    InstrumentPanel instrumentPanelUI;
+    BottomDock bottomDock{ rackPanelUI, effectsPanelUI, instrumentPanelUI };
     BottomDockResizer bottomDockResizer;
     PickerPanel pickerPanelUI;
     FileBrowserPanel fileBrowserPanelUI;

@@ -5,6 +5,7 @@
 #include "../PianoRoll/PianoRollComponent.h"
 #include "../Mixer/MixerComponent.h"
 #include "../Effects/EffectsPanel.h"
+#include "../Instruments/InstrumentPanel.h" // <-- NUEVO
 #include "../UI/TransportBar.h"
 #include "../UI/TopMenuBar/TopMenuBar.h"
 #include "../UI/Buttons/ToolbarButtons.h"
@@ -18,6 +19,7 @@ struct BridgeDependencies {
     PianoRollComponent& pianoRollUI;
     MixerComponent& mixerUI;
     EffectsPanel& effectsPanelUI;
+    InstrumentPanel& instrumentPanelUI; // <-- NUEVO
     TransportBar& transportBar;
     TopMenuBar& topMenuBar;
     ToolbarButtons& toolbarButtons;
