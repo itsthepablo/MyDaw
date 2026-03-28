@@ -18,7 +18,9 @@ public:
     virtual void prepareToPlay(double sampleRate, int maximumExpectedSamplesPerBlock) = 0;
     virtual void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) = 0;
 
-    // --- PDC: REPORTE Y MEMORIA DE LATENCIA ---
+    // --- NUEVO: ANTENA DE RELOJ PARA QUE EL VST3 DIBUJE EL FFT CORRECTAMENTE ---
+    virtual void updatePlayHead(bool isPlaying, int64_t samplePos) {}
+
     virtual int getLatencySamples() const = 0;
     virtual int getLastKnownLatency() const { return lastKnownLatency; }
     virtual void setLastKnownLatency(int l) { lastKnownLatency = l; }
@@ -31,5 +33,5 @@ public:
 
 protected:
     PluginRouting routing = PluginRouting::Stereo;
-    int lastKnownLatency = 0; // <-- Memoria del estado del plugin
+    int lastKnownLatency = 0;
 };

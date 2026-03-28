@@ -47,6 +47,22 @@ void VSTHost::loadPluginAsync(double sampleRate, std::function<void(bool)> callb
 
                             if (vstPlugin != nullptr)
                             {
+                                // ==============================================================================
+                                // FIX COMERCIAL: APAGAR SIDECHAINS Y ACTIVAR RELOJ
+                                // ==============================================================================
+
+                                // 1. Le inyectamos el reloj maestro
+                                vstPlugin->setPlayHead(&playHead);
+
+                                // 2. Desactivamos a la fuerza cualquier Bus de entrada/salida que NO sea el principal (Bus 0).
+                                // Esto aniquila el espectro gris fantasma.
+                                for (int i = 1; i < vstPlugin->getBusCount(true); ++i) {
+                                    if (auto* bus = vstPlugin->getBus(true, i)) bus->enable(false);
+                                }
+                                for (int i = 1; i < vstPlugin->getBusCount(false); ++i) {
+                                    if (auto* bus = vstPlugin->getBus(false, i)) bus->enable(false);
+                                }
+
                                 vstWindow = std::make_unique<VSTWindow>(vstPlugin.get());
                                 callback(true);
                                 return;
@@ -83,25 +99,17 @@ void VSTHost::prepareToPlay(double sampleRate, int maximumExpectedSamplesPerBloc
         vstPlugin->prepareToPlay(sampleRate, maximumExpectedSamplesPerBlock);
 }
 
+void VSTHost::updatePlayHead(bool isPlaying, int64_t samplePos)
+{
+    // Actualizamos el reloj milisegundo a milisegundo
+    playHead.isPlaying = isPlaying;
+    playHead.currentSample = samplePos;
+}
+
 void VSTHost::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     if (vstPlugin != nullptr && !bypassed) {
-        // ==============================================================================
-        // FIX COMERCIAL: BLINDAJE ESTÉREO
-        // Creamos un sub-búfer que "engaña" al VST3 para que solo vea 2 canales.
-        // Esto evita que Pro-Q 3 active Sidechains fantasma y se coma el audio original.
-        // ==============================================================================
-        int safeChans = juce::jmin(2, buffer.getNumChannels());
-
-        if (safeChans > 0) {
-            juce::AudioBuffer<float> stereoBuffer(buffer.getArrayOfWritePointers(), safeChans, buffer.getNumSamples());
-            vstPlugin->processBlock(stereoBuffer, midiMessages);
-        }
-
-        // Destruimos cualquier basura residual en los canales 3 al 16 
-        for (int ch = safeChans; ch < buffer.getNumChannels(); ++ch) {
-            buffer.clear(ch, 0, buffer.getNumSamples());
-        }
+        vstPlugin->processBlock(buffer, midiMessages);
     }
 }
 

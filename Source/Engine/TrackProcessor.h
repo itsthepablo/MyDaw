@@ -11,7 +11,7 @@ public:
         const AudioClock& clock,
         int numSamples,
         bool isPlayingNow,
-        bool isStoppingNow, // <-- NUEVA VARIABLE
+        bool isStoppingNow,
         const juce::MidiBuffer& previewMidi,
         bool isPianoRollActive,
         float loopEndPos)
@@ -25,7 +25,6 @@ public:
         bool hasPlugins = false;
         for (auto* p : track->plugins) if (p->isLoaded()) { hasPlugins = true; break; }
 
-        // Si estamos enviando el Pánico (isStoppingNow), prohibimos el Smart Disable
         if (!hasClipsOrNotes && !isPianoRollActive && isSilent && !hasPlugins && !isStoppingNow) {
             track->audioBuffer.clear();
             return;
@@ -40,15 +39,10 @@ public:
         juce::MidiBuffer trackMidi;
         trackMidi.ensureSize(2048);
 
-        // ==============================================================================
-        // INYECCIÓN QUIRÚRGICA DE PÁNICO
-        // Si acabamos de darle a Stop, apagamos los sintes aquí adentro, de forma
-        // perfectamente sincronizada con el PDC.
-        // ==============================================================================
         if (isStoppingNow) {
             for (int ch = 1; ch <= 16; ++ch) {
                 trackMidi.addEvent(juce::MidiMessage::allNotesOff(ch), 0);
-                trackMidi.addEvent(juce::MidiMessage::controllerEvent(ch, 64, 0), 0); // Apagar Pedal Sustain
+                trackMidi.addEvent(juce::MidiMessage::controllerEvent(ch, 64, 0), 0);
                 for (int note = 0; note < 128; ++note) {
                     trackMidi.addEvent(juce::MidiMessage::noteOff(ch, note), 0);
                 }
@@ -131,6 +125,8 @@ public:
                 midiForThisSynth.ensureSize(2048);
                 midiForThisSynth.addEvents(trackMidi, 0, numSamples, 0);
 
+                // ---> ACTUALIZAMOS RELOJ ANTES DE PROCESAR <---
+                p->updatePlayHead(isPlayingNow, clock.currentSamplePos);
                 p->processBlock(track->tempSynthBuffer, midiForThisSynth);
 
                 for (int ch = 0; ch < safeChannels; ++ch) {
@@ -148,6 +144,9 @@ public:
         for (auto* p : track->plugins) {
             if (p->isLoaded() && !EffectsPanel::pluginIsInstrumentMap[(void*)p]) {
                 PluginRouting r = p->getRouting();
+
+                // ---> ACTUALIZAMOS RELOJ ANTES DE PROCESAR <---
+                p->updatePlayHead(isPlayingNow, clock.currentSamplePos);
 
                 if (r == PluginRouting::Stereo || numChannels < 2) {
                     p->processBlock(track->audioBuffer, trackMidi);

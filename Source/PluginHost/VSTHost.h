@@ -3,6 +3,23 @@
 #include <functional>
 #include "../Native_Plugins/BaseEffect.h"
 
+// ==============================================================================
+// RELOJ MAESTRO PARA EL VST3 (Requerido para EQs Lineales y LFO Tools)
+// ==============================================================================
+class DawPlayHead : public juce::AudioPlayHead {
+public:
+    juce::Optional<PositionInfo> getPosition() const override {
+        juce::AudioPlayHead::PositionInfo info;
+        info.setIsPlaying(isPlaying);
+        info.setTimeInSamples(currentSample);
+        info.setBpm(120.0); // Bpm genérico para mantener la estabilidad
+        return info;
+    }
+
+    bool isPlaying = false;
+    int64_t currentSample = 0;
+};
+
 class VSTCustomHeader : public juce::Component {
 public:
     VSTCustomHeader(juce::DocumentWindow* w) : window(w) {
@@ -89,7 +106,9 @@ public:
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override;
     juce::String getLoadedPluginName() const override;
 
-    // --- NUEVO: REPORTE DE LATENCIA DEL VST ---
+    // Conexión del reloj
+    void updatePlayHead(bool isPlaying, int64_t samplePos) override;
+
     int getLatencySamples() const override;
 
     bool isBypassed() const override { return bypassed; }
@@ -101,4 +120,6 @@ private:
     std::unique_ptr<VSTWindow> vstWindow;
     std::unique_ptr<juce::FileChooser> fileChooser;
     bool bypassed = false;
+
+    DawPlayHead playHead; // El reloj interno del host
 };
