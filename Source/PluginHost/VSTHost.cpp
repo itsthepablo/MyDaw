@@ -48,20 +48,34 @@ void VSTHost::loadPluginAsync(double sampleRate, std::function<void(bool)> callb
                             if (vstPlugin != nullptr)
                             {
                                 // ==============================================================================
-                                // FIX COMERCIAL: APAGAR SIDECHAINS Y ACTIVAR RELOJ
+                                // LA DICTADURA DEL VST3: Sometiendo a FabFilter y plugins rebeldes
                                 // ==============================================================================
 
-                                // 1. Le inyectamos el reloj maestro
+                                // 1. Inyectamos el reloj maestro para que el FFT rojo se mueva a tiempo
                                 vstPlugin->setPlayHead(&playHead);
 
-                                // 2. Desactivamos a la fuerza cualquier Bus de entrada/salida que NO sea el principal (Bus 0).
-                                // Esto aniquila el espectro gris fantasma.
-                                for (int i = 1; i < vstPlugin->getBusCount(true); ++i) {
-                                    if (auto* bus = vstPlugin->getBus(true, i)) bus->enable(false);
-                                }
-                                for (int i = 1; i < vstPlugin->getBusCount(false); ++i) {
-                                    if (auto* bus = vstPlugin->getBus(false, i)) bus->enable(false);
-                                }
+                                // 2. Obtenemos la arquitectura completa que el VST3 quiere usar por defecto
+                                juce::AudioProcessor::BusesLayout layout = vstPlugin->getBusesLayout();
+
+                                // 3. Obligamos al Bus 0 (El Principal) a ser Estéreo puro
+                                if (layout.inputBuses.size() > 0)
+                                    layout.inputBuses.getReference(0) = juce::AudioChannelSet::stereo();
+                                if (layout.outputBuses.size() > 0)
+                                    layout.outputBuses.getReference(0) = juce::AudioChannelSet::stereo();
+
+                                // 4. EL TIRO DE GRACIA AL ESPECTRO GRIS: 
+                                // Marcamos cualquier otro Bus (Sidechain, Surround) como INEXISTENTE.
+                                for (int i = 1; i < layout.inputBuses.size(); ++i)
+                                    layout.inputBuses.getReference(i) = juce::AudioChannelSet::disabled();
+
+                                for (int i = 1; i < layout.outputBuses.size(); ++i)
+                                    layout.outputBuses.getReference(i) = juce::AudioChannelSet::disabled();
+
+                                // 5. Le inyectamos esta nueva realidad al plugin a la fuerza
+                                vstPlugin->setBusesLayout(layout);
+
+                                // 6. Nos aseguramos de que JUCE respete esta decisión
+                                vstPlugin->enableAllBuses();
 
                                 vstWindow = std::make_unique<VSTWindow>(vstPlugin.get());
                                 callback(true);
@@ -101,7 +115,6 @@ void VSTHost::prepareToPlay(double sampleRate, int maximumExpectedSamplesPerBloc
 
 void VSTHost::updatePlayHead(bool isPlaying, int64_t samplePos)
 {
-    // Actualizamos el reloj milisegundo a milisegundo
     playHead.isPlaying = isPlaying;
     playHead.currentSample = samplePos;
 }
@@ -109,7 +122,19 @@ void VSTHost::updatePlayHead(bool isPlaying, int64_t samplePos)
 void VSTHost::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     if (vstPlugin != nullptr && !bypassed) {
-        vstPlugin->processBlock(buffer, midiMessages);
+
+        // Bloqueo final de seguridad: Aislamos solo el estéreo puro para el VST
+        int safeChans = juce::jmin(2, buffer.getNumChannels());
+
+        if (safeChans > 0) {
+            juce::AudioBuffer<float> stereoBuffer(buffer.getArrayOfWritePointers(), safeChans, buffer.getNumSamples());
+            vstPlugin->processBlock(stereoBuffer, midiMessages);
+        }
+
+        // El inodoro del Sidechain (Matamos cualquier basura residual de los demás canales)
+        for (int ch = safeChans; ch < buffer.getNumChannels(); ++ch) {
+            buffer.clear(ch, 0, buffer.getNumSamples());
+        }
     }
 }
 
