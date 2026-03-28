@@ -277,7 +277,7 @@ void PianoRollComponent::resized() {
 void PianoRollComponent::timerCallback() {
     bool needsRepaint = isPlaying;
 
-    // CORRECCIÓN DE RACE CONDITION: Protegemos contra actualizaciones conflictivas 
+    // CORRECCIN DE RACE CONDITION: Protegemos contra actualizaciones conflictivas 
     if (isPlaying && getPlaybackPosition && !isDraggingPlayhead) {
         float newPos = getPlaybackPosition();
         if (playheadAbsPos != newPos) {

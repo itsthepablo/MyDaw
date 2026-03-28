@@ -18,6 +18,9 @@ public:
     virtual void prepareToPlay(double sampleRate, int maximumExpectedSamplesPerBlock) = 0;
     virtual void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) = 0;
 
+    // --- PDC: MÉTODO PARA REPORTAR LATENCIA ---
+    virtual int getLatencySamples() const = 0;
+
     // --- MÉTODOS DE RUTEO MID/SIDE NATIVO ---
     virtual PluginRouting getRouting() const { return routing; }
     virtual void setRouting(PluginRouting r) { routing = r; }

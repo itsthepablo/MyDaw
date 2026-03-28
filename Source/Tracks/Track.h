@@ -15,7 +15,7 @@ struct AudioClipData {
     juce::String name;
     float startX = 0.0f;
     float width = 0.0f;
-    juce::String sourceFilePath; // <-- Agregado para arreglar el error de ProjectManager
+    juce::String sourceFilePath; 
     juce::AudioBuffer<float> fileBuffer;
     double sourceSampleRate = 44100.0;
 
@@ -109,7 +109,6 @@ public:
     juce::StringArray getPluginNames() const { return pluginNames; }
     void addPluginName(juce::String n) { pluginNames.add(n); }
 
-    // --- GAIN STATION STATE ---
     float getPreGain() const { return preGain; }
     void setPreGain(float v) { preGain = v; }
 
@@ -121,7 +120,6 @@ public:
 
     std::vector<Note> notes;
 
-    // --- CAMBIO CLAVE: Ahora acepta BaseEffect para alojar Nativos y VST3 ---
     juce::OwnedArray<BaseEffect> plugins;
 
     juce::OwnedArray<AudioClipData> audioClips;
@@ -139,11 +137,16 @@ public:
     bool isSelected = false;
     bool isInlineEditingActive = false;
 
-    // --- PRE-ASIGNACIÓN DE BÚFERES (TIEMPO REAL COMERCIAL) ---
     juce::AudioBuffer<float> audioBuffer;
     juce::AudioBuffer<float> instrumentMixBuffer;
     juce::AudioBuffer<float> tempSynthBuffer;
     juce::AudioBuffer<float> midSideBuffer;
+    
+    // --- PDC (COMPENSACIÃ“N DE LATENCIA) ---
+    juce::AudioBuffer<float> pdcBuffer;
+    int pdcWritePtr = 0;
+    int currentLatency = 0;
+    int requiredDelay = 0;
 
     float currentPeakLevelL = 0.0f;
     float currentPeakLevelR = 0.0f;

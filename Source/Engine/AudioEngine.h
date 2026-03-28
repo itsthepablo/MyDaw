@@ -5,6 +5,7 @@
 #include "MasterMixer.h"
 #include "SafetyProcessors.h"
 #include "Metronome.h" 
+#include "PDCManager.h" // <-- CONECTAMOS EL NUEVO MÓDULO
 
 class TrackContainer;
 class PianoRollComponent;
@@ -21,9 +22,20 @@ public:
         metronome.prepare(s);
 
         const juce::ScopedLock sl(audioMutex);
-        for (auto* track : trackContainer.getTracks())
+        for (auto* track : trackContainer.getTracks()) {
+            track->audioBuffer.setSize(16, samples, false, true, true);
+            track->instrumentMixBuffer.setSize(2, samples, false, true, true);
+            track->tempSynthBuffer.setSize(2, samples, false, true, true);
+            track->midSideBuffer.setSize(1, samples, false, true, true);
+            
+            // Reservamos memoria para soportar hasta ~3 segundos de retraso por VSTs pesados
+            track->pdcBuffer.setSize(2, 131072, false, true, true);
+            track->pdcBuffer.clear();
+            track->pdcWritePtr = 0;
+
             for (auto* p : track->plugins)
                 if (p->isLoaded()) p->prepareToPlay(s, samples);
+        }
     }
 
     void releaseResources() {
@@ -40,23 +52,22 @@ public:
         bufferToFill.clearActiveBufferRegion();
         bool isPlayingNow = pianoRollUI.getIsPlaying();
 
-        // --- CORRECCIÓN DEL PÁNICO (STOP / PAUSE) ---
         if (!isPlayingNow && clock.wasPlayingLastBlock) {
-            // 1. Creamos el pánico maestro UNA SOLA VEZ para ahorrar CPU
             juce::MidiBuffer masterPanic;
+            masterPanic.ensureSize(8192); 
             for (int ch = 1; ch <= 16; ++ch) {
                 masterPanic.addEvent(juce::MidiMessage::allNotesOff(ch), 0);
-                masterPanic.addEvent(juce::MidiMessage::controllerEvent(ch, 64, 0), 0); // Sustain pedal off
+                masterPanic.addEvent(juce::MidiMessage::controllerEvent(ch, 64, 0), 0); 
                 for (int note = 0; note < 128; ++note) {
                     masterPanic.addEvent(juce::MidiMessage::noteOff(ch, note), 0);
                 }
             }
 
-            // 2. Repartimos un clon exacto a cada plugin
             for (auto* track : trackContainer.getTracks()) {
                 for (auto* p : track->plugins) {
                     if (p->isLoaded()) {
                         juce::MidiBuffer clonedPanic;
+                        clonedPanic.ensureSize(8192);
                         clonedPanic.addEvents(masterPanic, 0, -1, 0);
                         p->processBlock(*bufferToFill.buffer, clonedPanic);
                     }
@@ -66,6 +77,7 @@ public:
         clock.wasPlayingLastBlock = isPlayingNow;
 
         juce::MidiBuffer previewMidi;
+        previewMidi.ensureSize(1024);
         int currentPreview = pianoRollUI.getPreviewPitch();
         if (pianoRollUI.getIsPreviewing()) {
             if (currentPreview != clock.lastPreviewPitch) {
@@ -79,20 +91,21 @@ public:
             clock.lastPreviewPitch = -1;
         }
 
-        int safeNumChannels = juce::jmax(16, bufferToFill.buffer->getNumChannels());
         int hardwareOutChannels = bufferToFill.buffer->getNumChannels();
         auto& tracks = trackContainer.getTracks();
 
         for (auto* track : tracks) {
-            if (track->audioBuffer.getNumChannels() < safeNumChannels || track->audioBuffer.getNumSamples() < bufferToFill.numSamples) {
-                track->audioBuffer.setSize(safeNumChannels, bufferToFill.numSamples);
-            }
+            int requiredChannels = juce::jmax(16, hardwareOutChannels);
+            track->audioBuffer.setSize(requiredChannels, bufferToFill.numSamples, false, false, true);
             track->audioBuffer.clear();
             track->currentPeakLevelL = 0.0f; track->currentPeakLevelR = 0.0f;
         }
 
         float finalLoopEnd = juce::jmax(pianoRollUI.getLoopEndPos(), playlistUI.getLoopEndPos());
         clock.update(bufferToFill.numSamples, isPlayingNow, pianoRollUI.getPlayheadPos(), finalLoopEnd, pianoRollUI.getBpm());
+
+        // ---> ESCANEO DE LATENCIA GLOBAL <---
+        PDCManager::calculateLatencies(trackContainer);
 
         std::vector<int> parentIndices(tracks.size(), -1);
         std::vector<int> parentStack;
@@ -109,7 +122,6 @@ public:
 
         for (int i = (int)tracks.size() - 1; i >= 0; --i) {
             auto* track = tracks[i];
-
             bool isPianoRollActive = false;
 
             if (track->isSelected) {
@@ -126,14 +138,6 @@ public:
 
             TrackProcessor::process(track, clock, bufferToFill.numSamples, isPlayingNow, previewMidi, isPianoRollActive, finalLoopEnd);
             MasterMixer::processTrackVolumeAndRouting(track, bufferToFill.numSamples, hardwareOutChannels, parentIndices[i], tracks, bufferToFill);
-        }
-
-        if (isPlayingNow) {
-            float nPh = clock.nextPh;
-            juce::MessageManager::callAsync([&pianoRollUI, &playlistUI, nPh]() {
-                pianoRollUI.setPlayheadPos(nPh);
-                playlistUI.setPlayheadPos(nPh);
-                });
         }
 
         metronome.process(*bufferToFill.buffer, bufferToFill.numSamples, clock, pianoRollUI.getBpm());

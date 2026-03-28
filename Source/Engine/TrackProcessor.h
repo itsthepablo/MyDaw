@@ -4,6 +4,7 @@
 #include "../Tracks/Track.h"
 #include "../UI/GainStation/GainStationDSP.h" 
 #include "../Effects/EffectsPanel.h" 
+#include "PDCManager.h"
 
 class TrackProcessor {
 public:
@@ -15,19 +16,15 @@ public:
         bool isPianoRollActive,
         float loopEndPos)
     {
-        // ==============================================================================
-        // SMART DISABLE (OPTIMIZACIÓN DE CPU DE NIVEL COMERCIAL)
-        // ==============================================================================
         bool hasClipsOrNotes = !(track->audioClips.isEmpty() && track->midiClips.isEmpty() && track->notes.empty());
-
+        
         float magL = track->audioBuffer.getMagnitude(0, 0, numSamples);
         float magR = track->audioBuffer.getNumChannels() > 1 ? track->audioBuffer.getMagnitude(1, 0, numSamples) : 0.0f;
         bool isSilent = (magL < 0.00001f && magR < 0.00001f);
 
-        // Si la pista está vacía, no recibe MIDI en vivo y no tiene colas de Reverb sonando:
         if (!hasClipsOrNotes && !isPianoRollActive && isSilent) {
-            track->audioBuffer.clear(); // Garantizamos silencio absoluto
-            return; // ¡El motor salta la pista! 0% de CPU consumido.
+            track->audioBuffer.clear(); 
+            return; 
         }
 
         if (!track->isAnalyzersPrepared) {
@@ -101,7 +98,7 @@ public:
 
         track->instrumentMixBuffer.setSize(safeChannels, numSamples, false, false, true);
         track->tempSynthBuffer.setSize(safeChannels, numSamples, false, false, true);
-
+        
         track->instrumentMixBuffer.clear();
         bool hasInstruments = false;
 
@@ -177,5 +174,10 @@ public:
         }
 
         GainStationDSP::processPostFX(track, track->audioBuffer);
+
+        // ==============================================================================
+        // PDC: APLICAR COMPENSACIÓN DE LATENCIA (RETRASO ALINEADO)
+        // ==============================================================================
+        PDCManager::applyDelay(track, numSamples);
     }
 };

@@ -94,6 +94,7 @@
         <FILE id="jWdwyO" name="AudioEngine.h" compile="0" resource="0" file="Source/Engine/AudioEngine.h"/>
         <FILE id="kbAMkm" name="MasterMixer.h" compile="0" resource="0" file="Source/Engine/MasterMixer.h"/>
         <FILE id="uwXG7u" name="Metronome.h" compile="0" resource="0" file="Source/Engine/Metronome.h"/>
+        <FILE id="MX6xQr" name="PDCManager.h" compile="0" resource="0" file="Source/Engine/PDCManager.h"/>
         <FILE id="YPFnVd" name="SafetyProcessors.h" compile="0" resource="0"
               file="Source/Engine/SafetyProcessors.h"/>
         <FILE id="f8Nvgg" name="SimpleLoudness.h" compile="0" resource="0"

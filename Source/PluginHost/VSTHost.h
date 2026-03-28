@@ -77,19 +77,20 @@ public:
     void closeButtonPressed() override { setVisible(false); }
 };
 
-// --- AHORA HEREDA DE BaseEffect ---
 class VSTHost : public BaseEffect {
 public:
     VSTHost();
     ~VSTHost();
     void loadPluginAsync(double sampleRate, std::function<void(bool)> callback);
-    
-    // --- MÉTODOS OBLIGATORIOS (Overrides) ---
+
     bool isLoaded() const override;
     void showWindow() override;
     void prepareToPlay(double sampleRate, int maximumExpectedSamplesPerBlock) override;
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override;
     juce::String getLoadedPluginName() const override;
+
+    // --- NUEVO: REPORTE DE LATENCIA DEL VST ---
+    int getLatencySamples() const override;
 
     bool isBypassed() const override { return bypassed; }
     void setBypassed(bool shouldBypass) override { bypassed = shouldBypass; }

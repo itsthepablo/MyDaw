@@ -81,16 +81,13 @@ public:
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&) override {
         if (bypassed) return;
 
-        float p = pan.load();   // Rango: -1.0 (Izquierda) a 1.0 (Derecha)
-        float g = gain.load();  // Rango: 0.0 a 2.0
+        float p = pan.load();
+        float g = gain.load();
 
         if (buffer.getNumChannels() >= 2) {
             float* left = buffer.getWritePointer(0);
             float* right = buffer.getWritePointer(1);
 
-            // Factor de compensación (Normalización) para evitar Clipping al sumar canales
-            // Si p=0 (centro), norm=1.0 (0dB de ganancia). 
-            // Si p=1 (extremo), norm=0.707 (-3dB de ganancia) para compensar la suma de L+R.
             float norm = 1.0f / std::sqrt(1.0f + std::abs(p));
 
             for (int i = 0; i < buffer.getNumSamples(); ++i) {
@@ -101,29 +98,26 @@ public:
                 float outR = inR;
 
                 if (p < 0.0f) {
-                    // Paneando Izquierda (-1 a 0):
-                    // El altavoz Izquierdo conserva su sonido y absorbe la energía del Derecho
-                    float panVal = -p; // Convertimos a positivo para el cálculo
+                    float panVal = -p;
                     outL = inL + (inR * panVal);
-                    outR = inR * (1.0f - panVal); // A -1.0 absoluto, outR se multiplica por 0
+                    outR = inR * (1.0f - panVal);
                 }
                 else if (p > 0.0f) {
-                    // Paneando Derecha (0 a 1):
-                    // El altavoz Derecho conserva su sonido y absorbe la energía del Izquierdo
-                    outL = inL * (1.0f - p); // A 1.0 absoluto, outL se multiplica por 0
+                    outL = inL * (1.0f - p);
                     outR = inR + (inL * p);
                 }
 
-                // Aplicamos la normalización anti-clip y la ganancia maestra del Utility
                 left[i] = outL * norm * g;
                 right[i] = outR * norm * g;
             }
         }
         else if (buffer.getNumChannels() == 1) {
-            // Protección para pistas Mono
             buffer.applyGain(0, 0, buffer.getNumSamples(), g);
         }
     }
+
+    // --- EL UTILITY ES MATEMÁTICA PURA, NO TIENE LATENCIA ---
+    int getLatencySamples() const override { return 0; }
 
     bool isNative() const override { return true; }
     juce::Component* getCustomEditor() override { return editor.get(); }
