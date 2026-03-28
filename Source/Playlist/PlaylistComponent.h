@@ -105,7 +105,7 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override;
 
-    // --- NUEVO: FUNCI”N MATEM¡TICA DEL MINIMAPA ---
+    // --- NUEVO: FUNCI√ìN MATEM√ÅTICA DEL MINIMAPA ---
     void drawMinimap(juce::Graphics& g, juce::Rectangle<int> bounds);
 
     void mouseDown(const juce::MouseEvent& e) override;
