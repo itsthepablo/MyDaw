@@ -4,7 +4,6 @@
 #include "../Tracks/Track.h"
 #include "../UI/GainStation/GainStationDSP.h" 
 #include "../Effects/EffectsPanel.h" 
-#include "PDCManager.h"
 
 class TrackProcessor {
 public:
@@ -12,19 +11,24 @@ public:
         const AudioClock& clock,
         int numSamples,
         bool isPlayingNow,
+        bool isStoppingNow, // <-- NUEVA VARIABLE
         const juce::MidiBuffer& previewMidi,
         bool isPianoRollActive,
         float loopEndPos)
     {
         bool hasClipsOrNotes = !(track->audioClips.isEmpty() && track->midiClips.isEmpty() && track->notes.empty());
-        
+
         float magL = track->audioBuffer.getMagnitude(0, 0, numSamples);
         float magR = track->audioBuffer.getNumChannels() > 1 ? track->audioBuffer.getMagnitude(1, 0, numSamples) : 0.0f;
         bool isSilent = (magL < 0.00001f && magR < 0.00001f);
 
-        if (!hasClipsOrNotes && !isPianoRollActive && isSilent) {
-            track->audioBuffer.clear(); 
-            return; 
+        bool hasPlugins = false;
+        for (auto* p : track->plugins) if (p->isLoaded()) { hasPlugins = true; break; }
+
+        // Si estamos enviando el Pánico (isStoppingNow), prohibimos el Smart Disable
+        if (!hasClipsOrNotes && !isPianoRollActive && isSilent && !hasPlugins && !isStoppingNow) {
+            track->audioBuffer.clear();
+            return;
         }
 
         if (!track->isAnalyzersPrepared) {
@@ -35,6 +39,21 @@ public:
 
         juce::MidiBuffer trackMidi;
         trackMidi.ensureSize(2048);
+
+        // ==============================================================================
+        // INYECCIÓN QUIRÚRGICA DE PÁNICO
+        // Si acabamos de darle a Stop, apagamos los sintes aquí adentro, de forma
+        // perfectamente sincronizada con el PDC.
+        // ==============================================================================
+        if (isStoppingNow) {
+            for (int ch = 1; ch <= 16; ++ch) {
+                trackMidi.addEvent(juce::MidiMessage::allNotesOff(ch), 0);
+                trackMidi.addEvent(juce::MidiMessage::controllerEvent(ch, 64, 0), 0); // Apagar Pedal Sustain
+                for (int note = 0; note < 128; ++note) {
+                    trackMidi.addEvent(juce::MidiMessage::noteOff(ch, note), 0);
+                }
+            }
+        }
 
         if (isPianoRollActive) trackMidi.addEvents(previewMidi, 0, numSamples, 0);
 
@@ -82,7 +101,8 @@ public:
                         samplesToWrite = clip->fileBuffer.getNumSamples() - readStart;
 
                     if (samplesToWrite > 0) {
-                        for (int ch = 0; ch < track->audioBuffer.getNumChannels(); ++ch) {
+                        int destChannels = juce::jmin(2, track->audioBuffer.getNumChannels());
+                        for (int ch = 0; ch < destChannels; ++ch) {
                             int sourceCh = juce::jmin(ch, clip->fileBuffer.getNumChannels() - 1);
                             track->audioBuffer.addFrom(ch, writeStart, clip->fileBuffer, sourceCh, readStart, samplesToWrite);
                         }
@@ -98,7 +118,7 @@ public:
 
         track->instrumentMixBuffer.setSize(safeChannels, numSamples, false, false, true);
         track->tempSynthBuffer.setSize(safeChannels, numSamples, false, false, true);
-        
+
         track->instrumentMixBuffer.clear();
         bool hasInstruments = false;
 
@@ -175,9 +195,10 @@ public:
 
         GainStationDSP::processPostFX(track, track->audioBuffer);
 
-        // ==============================================================================
-        // PDC: APLICAR COMPENSACIÓN DE LATENCIA (RETRASO ALINEADO)
-        // ==============================================================================
-        PDCManager::applyDelay(track, numSamples);
+        if (numChannels > 2) {
+            for (int ch = 2; ch < numChannels; ++ch) {
+                track->audioBuffer.clear(ch, 0, numSamples);
+            }
+        }
     }
 };

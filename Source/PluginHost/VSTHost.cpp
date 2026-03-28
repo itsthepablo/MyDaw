@@ -86,15 +86,21 @@ void VSTHost::prepareToPlay(double sampleRate, int maximumExpectedSamplesPerBloc
 void VSTHost::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     if (vstPlugin != nullptr && !bypassed) {
-        int reqChans = juce::jmax(2, juce::jmax(vstPlugin->getTotalNumInputChannels(), vstPlugin->getTotalNumOutputChannels()));
-        int safeChans = juce::jmin(reqChans, buffer.getNumChannels());
+        // ==============================================================================
+        // FIX COMERCIAL: BLINDAJE ESTÉREO
+        // Creamos un sub-búfer que "engaña" al VST3 para que solo vea 2 canales.
+        // Esto evita que Pro-Q 3 active Sidechains fantasma y se coma el audio original.
+        // ==============================================================================
+        int safeChans = juce::jmin(2, buffer.getNumChannels());
 
         if (safeChans > 0) {
-            juce::AudioBuffer<float> pluginBuffer(buffer.getArrayOfWritePointers(), safeChans, buffer.getNumSamples());
-            vstPlugin->processBlock(pluginBuffer, midiMessages);
+            juce::AudioBuffer<float> stereoBuffer(buffer.getArrayOfWritePointers(), safeChans, buffer.getNumSamples());
+            vstPlugin->processBlock(stereoBuffer, midiMessages);
         }
-        else {
-            vstPlugin->processBlock(buffer, midiMessages);
+
+        // Destruimos cualquier basura residual en los canales 3 al 16 
+        for (int ch = safeChans; ch < buffer.getNumChannels(); ++ch) {
+            buffer.clear(ch, 0, buffer.getNumSamples());
         }
     }
 }
@@ -105,11 +111,9 @@ juce::String VSTHost::getLoadedPluginName() const
     return "VST";
 }
 
-// --- NUEVO: IMPLEMENTACIÓN DEL REPORTE DE LATENCIA ---
 int VSTHost::getLatencySamples() const
 {
     if (vstPlugin != nullptr) {
-        // Le preguntamos directamente a la API del VST cuántos samples de latencia genera
         return vstPlugin->getLatencySamples();
     }
     return 0;

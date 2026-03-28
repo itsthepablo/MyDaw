@@ -18,17 +18,18 @@ public:
     virtual void prepareToPlay(double sampleRate, int maximumExpectedSamplesPerBlock) = 0;
     virtual void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) = 0;
 
-    // --- PDC: MÉTODO PARA REPORTAR LATENCIA ---
+    // --- PDC: REPORTE Y MEMORIA DE LATENCIA ---
     virtual int getLatencySamples() const = 0;
+    virtual int getLastKnownLatency() const { return lastKnownLatency; }
+    virtual void setLastKnownLatency(int l) { lastKnownLatency = l; }
 
-    // --- MÉTODOS DE RUTEO MID/SIDE NATIVO ---
     virtual PluginRouting getRouting() const { return routing; }
     virtual void setRouting(PluginRouting r) { routing = r; }
 
-    // --- MÉTODOS PARA DETECTAR Y DIBUJAR PLUGINS NATIVOS ---
     virtual bool isNative() const { return false; }
     virtual juce::Component* getCustomEditor() { return nullptr; }
 
 protected:
     PluginRouting routing = PluginRouting::Stereo;
+    int lastKnownLatency = 0; // <-- Memoria del estado del plugin
 };

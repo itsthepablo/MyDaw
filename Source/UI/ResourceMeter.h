@@ -1,7 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
+#include "../Engine/PDCManager.h" // Importamos el cerebro PDC
 
-// --- EL ESCUDO CONTRA LA BASURA DE WINDOWS ---
 #if JUCE_WINDOWS
 #define NOMINMAX  
 #include <windows.h>
@@ -11,7 +11,6 @@
 class ResourceMeter : public juce::Component, private juce::Timer {
 public:
     ResourceMeter(juce::AudioAppComponent& app) : audioApp(app) {
-        // 4 Hz es el estándar de la industria para medidores de UI para no consumir recursos
         startTimerHz(4);
     }
 
@@ -20,58 +19,60 @@ public:
     }
 
     void paint(juce::Graphics& g) override {
-        // Fondo oscuro del medidor
         g.fillAll(juce::Colour(20, 22, 25));
         g.setColour(juce::Colours::grey.withAlpha(0.3f));
         g.drawRoundedRectangle(getLocalBounds().toFloat(), 4.0f, 1.0f);
 
-        // Lógica de colores de advertencia para DSP
         juce::Colour meterColor = juce::Colours::limegreen;
         if (dspLoad > 70.0) meterColor = juce::Colours::orange;
         if (dspLoad > 85.0) meterColor = juce::Colours::red;
 
-        g.setFont(11.0f); // Fuente optimizada para panel de diagnóstico a 4 variables
+        g.setFont(11.0f);
 
         auto area = getLocalBounds();
-        auto topRow = area.removeFromTop(getHeight() / 2);
-        auto bottomRow = area;
+        int colWidth = getWidth() / 3; // Dividimos en 3 paneles técnicos
 
-        int colWidth = getWidth() / 2; // Dividimos en 2 columnas
-
-        // --- COLUMNA IZQUIERDA (Carga del Sistema) ---
+        // --- COLUMNA 1: Sistema ---
+        auto col1 = area.removeFromLeft(colWidth);
         g.setColour(meterColor);
         g.drawText("DSP: " + juce::String(dspLoad, 1) + "%",
-            topRow.removeFromLeft(colWidth), juce::Justification::centred, false);
-
+            col1.removeFromTop(getHeight() / 2), juce::Justification::centred, false);
         g.setColour(juce::Colours::cyan.darker(0.1f));
         g.drawText("RAM: " + juce::String(ramLoadMB) + "MB",
-            bottomRow.removeFromLeft(colWidth), juce::Justification::centred, false);
+            col1, juce::Justification::centred, false);
 
-        // --- COLUMNA DERECHA (Estado del Motor de Audio) ---
+        // --- COLUMNA 2: Hardware ---
+        auto col2 = area.removeFromLeft(colWidth);
         g.setColour(juce::Colours::lightgrey);
         g.drawText("BUF: " + juce::String(bufferSize),
-            topRow, juce::Justification::centred, false);
-
+            col2.removeFromTop(getHeight() / 2), juce::Justification::centred, false);
         g.setColour(juce::Colours::yellow);
         g.drawText("LAT: " + juce::String(latencyMs, 1) + "ms",
-            bottomRow, juce::Justification::centred, false);
+            col2, juce::Justification::centred, false);
+
+        // --- COLUMNA 3: PDC (NUEVO) ---
+        auto col3 = area;
+        g.setColour(juce::Colours::orange);
+        g.drawText("PDC SMP",
+            col3.removeFromTop(getHeight() / 2), juce::Justification::centred, false);
+        g.setColour(juce::Colours::white);
+        // Leemos la latencia global matemáticamente
+        g.drawText(juce::String(PDCManager::currentGlobalLatency),
+            col3, juce::Justification::centred, false);
     }
 
     void timerCallback() override {
-        // 1. Leer DSP
         dspLoad = audioApp.deviceManager.getCpuUsage() * 100.0;
 
-        // 2. Leer consumo exacto de RAM del DAW en Windows
 #if JUCE_WINDOWS
         PROCESS_MEMORY_COUNTERS_EX pmc;
         if (GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc))) {
             ramLoadMB = (int)(pmc.PrivateUsage / (1024 * 1024));
         }
 #else
-        ramLoadMB = 0; // Fallback por si compilas en Mac/Linux después
+        ramLoadMB = 0;
 #endif
 
-        // 3. Leer estado del hardware de Audio (Búfer y Latencia Real)
         if (auto* device = audioApp.deviceManager.getCurrentAudioDevice()) {
             bufferSize = device->getCurrentBufferSizeSamples();
             sampleRate = device->getCurrentSampleRate();

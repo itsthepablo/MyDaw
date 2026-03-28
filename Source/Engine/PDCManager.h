@@ -4,10 +4,12 @@
 
 class PDCManager {
 public:
-    static void calculateLatencies(TrackContainer& trackContainer) {
-        int globalMaxLatency = 0;
+    // Exponemos la latencia global para que el medidor visual la lea
+    static inline int currentGlobalLatency = 0;
 
-        // 1. Encontrar cuál es el VST más lento de todo el proyecto
+    static void calculateLatencies(TrackContainer& trackContainer) {
+        int maxLatency = 0;
+
         for (auto* track : trackContainer.getTracks()) {
             int trackLatency = 0;
             for (auto* p : track->plugins) {
@@ -17,14 +19,15 @@ public:
             }
             track->currentLatency = trackLatency;
 
-            if (trackLatency > globalMaxLatency) {
-                globalMaxLatency = trackLatency;
+            if (trackLatency > maxLatency) {
+                maxLatency = trackLatency;
             }
         }
 
-        // 2. Calcular cuánto retraso necesita cada pista para igualar a la más lenta
+        currentGlobalLatency = maxLatency; // Actualizamos el panel visual
+
         for (auto* track : trackContainer.getTracks()) {
-            track->requiredDelay = globalMaxLatency - track->currentLatency;
+            track->requiredDelay = maxLatency - track->currentLatency;
         }
     }
 
@@ -32,15 +35,13 @@ public:
         int delay = track->requiredDelay;
         int bufferSize = track->pdcBuffer.getNumSamples();
 
-        // Seguridad Anti-Crash
-        if (bufferSize == 0 || delay >= bufferSize) return;
+        if (bufferSize == 0) return;
 
         int numChannels = track->audioBuffer.getNumChannels();
         int safeChannels = juce::jmin(numChannels, track->pdcBuffer.getNumChannels());
 
         int currentWritePtr = track->pdcWritePtr;
 
-        // Búfer Circular Perfeccionado (Zero-Allocation)
         for (int ch = 0; ch < safeChannels; ++ch) {
             float* audioData = track->audioBuffer.getWritePointer(ch);
             float* delayData = track->pdcBuffer.getWritePointer(ch);
@@ -48,12 +49,11 @@ public:
             for (int i = 0; i < numSamples; ++i) {
                 int writePos = (currentWritePtr + i) % bufferSize;
 
-                // 1. SIEMPRE grabamos el audio presente en el historial
+                // Siempre grabamos la realidad en el historial
                 float currentSample = audioData[i];
                 delayData[writePos] = currentSample;
 
-                // 2. Si la pista necesita retrasarse, sobrescribimos la salida leyendo el pasado
-                // Si delay es 0, dejamos el audioData intacto (0 latencia)
+                // Sobrescribimos la salida leyendo el pasado
                 if (delay > 0) {
                     int readPtr = (currentWritePtr + i - delay + bufferSize) % bufferSize;
                     audioData[i] = delayData[readPtr];
@@ -61,7 +61,6 @@ public:
             }
         }
 
-        // Avanzar el cabezal del historial
         track->pdcWritePtr = (currentWritePtr + numSamples) % bufferSize;
     }
 };

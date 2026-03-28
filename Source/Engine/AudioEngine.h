@@ -5,7 +5,7 @@
 #include "MasterMixer.h"
 #include "SafetyProcessors.h"
 #include "Metronome.h" 
-#include "PDCManager.h" // <-- CONECTAMOS EL NUEVO MÓDULO
+#include "PDCManager.h" 
 
 class TrackContainer;
 class PianoRollComponent;
@@ -27,9 +27,10 @@ public:
             track->instrumentMixBuffer.setSize(2, samples, false, true, true);
             track->tempSynthBuffer.setSize(2, samples, false, true, true);
             track->midSideBuffer.setSize(1, samples, false, true, true);
-            
-            // Reservamos memoria para soportar hasta ~3 segundos de retraso por VSTs pesados
-            track->pdcBuffer.setSize(2, 131072, false, true, true);
+
+            if (track->pdcBuffer.getNumSamples() != 524288) {
+                track->pdcBuffer.setSize(2, 524288, false, true, true);
+            }
             track->pdcBuffer.clear();
             track->pdcWritePtr = 0;
 
@@ -52,28 +53,21 @@ public:
         bufferToFill.clearActiveBufferRegion();
         bool isPlayingNow = pianoRollUI.getIsPlaying();
 
-        if (!isPlayingNow && clock.wasPlayingLastBlock) {
-            juce::MidiBuffer masterPanic;
-            masterPanic.ensureSize(8192); 
-            for (int ch = 1; ch <= 16; ++ch) {
-                masterPanic.addEvent(juce::MidiMessage::allNotesOff(ch), 0);
-                masterPanic.addEvent(juce::MidiMessage::controllerEvent(ch, 64, 0), 0); 
-                for (int note = 0; note < 128; ++note) {
-                    masterPanic.addEvent(juce::MidiMessage::noteOff(ch, note), 0);
-                }
-            }
-
+        if (isPlayingNow && !clock.wasPlayingLastBlock) {
             for (auto* track : trackContainer.getTracks()) {
+                track->pdcBuffer.clear();
+                track->pdcWritePtr = 0;
+
                 for (auto* p : track->plugins) {
                     if (p->isLoaded()) {
-                        juce::MidiBuffer clonedPanic;
-                        clonedPanic.ensureSize(8192);
-                        clonedPanic.addEvents(masterPanic, 0, -1, 0);
-                        p->processBlock(*bufferToFill.buffer, clonedPanic);
+                        p->prepareToPlay(clock.sampleRate, bufferToFill.numSamples);
                     }
                 }
             }
         }
+
+        // --- FIX DEL GLITCH DE STOP: Detectamos el instante exacto de la parada ---
+        bool isStoppingNow = (!isPlayingNow && clock.wasPlayingLastBlock);
         clock.wasPlayingLastBlock = isPlayingNow;
 
         juce::MidiBuffer previewMidi;
@@ -98,13 +92,19 @@ public:
             int requiredChannels = juce::jmax(16, hardwareOutChannels);
             track->audioBuffer.setSize(requiredChannels, bufferToFill.numSamples, false, false, true);
             track->audioBuffer.clear();
+
+            if (track->pdcBuffer.getNumSamples() != 524288) {
+                track->pdcBuffer.setSize(2, 524288, false, true, true);
+                track->pdcBuffer.clear();
+                track->pdcWritePtr = 0;
+            }
+
             track->currentPeakLevelL = 0.0f; track->currentPeakLevelR = 0.0f;
         }
 
         float finalLoopEnd = juce::jmax(pianoRollUI.getLoopEndPos(), playlistUI.getLoopEndPos());
         clock.update(bufferToFill.numSamples, isPlayingNow, pianoRollUI.getPlayheadPos(), finalLoopEnd, pianoRollUI.getBpm());
 
-        // ---> ESCANEO DE LATENCIA GLOBAL <---
         PDCManager::calculateLatencies(trackContainer);
 
         std::vector<int> parentIndices(tracks.size(), -1);
@@ -136,7 +136,9 @@ public:
                 }
             }
 
-            TrackProcessor::process(track, clock, bufferToFill.numSamples, isPlayingNow, previewMidi, isPianoRollActive, finalLoopEnd);
+            // Pasamos "isStoppingNow" al procesador para que el Pánico sea quirúrgico
+            TrackProcessor::process(track, clock, bufferToFill.numSamples, isPlayingNow, isStoppingNow, previewMidi, isPianoRollActive, finalLoopEnd);
+            PDCManager::applyDelay(track, bufferToFill.numSamples);
             MasterMixer::processTrackVolumeAndRouting(track, bufferToFill.numSamples, hardwareOutChannels, parentIndices[i], tracks, bufferToFill);
         }
 
