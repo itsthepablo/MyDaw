@@ -38,7 +38,7 @@ PlaylistComponent::PlaylistComponent() {
         };
 
     updateScrollBars();
-    startTimerHz(30);
+    startTimerHz(60);
 }
 
 PlaylistComponent::~PlaylistComponent() {
@@ -46,7 +46,16 @@ PlaylistComponent::~PlaylistComponent() {
     stopTimer();
 }
 
-void PlaylistComponent::timerCallback() { repaint(); }
+void PlaylistComponent::timerCallback() {
+    // CORRECCIÓN DE RACE CONDITION: Solo lee el motor si está en Play
+    if (isPlaying && getPlaybackPosition) {
+        float newPos = getPlaybackPosition();
+        if (playheadAbsPos != newPos) {
+            playheadAbsPos = newPos;
+            repaint();
+        }
+    }
+}
 
 void PlaylistComponent::updateScrollBars() {
     hNavigator.setZoomContext(hZoom, 32 * 320);
@@ -72,7 +81,6 @@ void PlaylistComponent::addMidiClipToView(Track* targetTrack, MidiClipData* newC
     hNavigator.repaint();
 }
 
-// --- LÓGICA DEL MINIMAPA CENTRADO ---
 void PlaylistComponent::drawMinimap(juce::Graphics& g, juce::Rectangle<int> bounds) {
     if (!tracksRef || tracksRef->isEmpty()) return;
 
@@ -85,14 +93,8 @@ void PlaylistComponent::drawMinimap(juce::Graphics& g, juce::Rectangle<int> boun
     }
     if (visibleTracks == 0) visibleTracks = 1;
 
-    // MATEMÁTICA DE CENTRADO:
-    // 1. Definimos un alto máximo por pista (ej. 6 pixeles) para que no se estiren si hay pocas.
     float trackMinimapH = std::min(6.0f, (float)bounds.getHeight() / visibleTracks);
-
-    // 2. Calculamos cuánto espacio vertical ocupa todo el bloque de pistas juntas.
     float totalOccupiedH = trackMinimapH * visibleTracks;
-
-    // 3. Calculamos el offset (margen superior) para que el bloque quede en el centro de la barra.
     float startY = bounds.getY() + (bounds.getHeight() - totalOccupiedH) / 2.0f;
 
     for (const auto& clip : clips) {
@@ -112,8 +114,6 @@ void PlaylistComponent::drawMinimap(juce::Graphics& g, juce::Rectangle<int> boun
         float y = startY + (tIdx * trackMinimapH);
 
         g.setColour(clip.trackPtr->getColor().withAlpha(0.8f));
-
-        // Damos 1 pixel de margen arriba y abajo para que las pistas no se fusionen visualmente
         float padY = trackMinimapH > 3.0f ? 1.0f : 0.0f;
         g.fillRoundedRectangle(x, y + padY, juce::jmax(1.0f, w), juce::jmax(1.0f, trackMinimapH - (padY * 2.0f)), 1.5f);
     }

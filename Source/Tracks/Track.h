@@ -139,7 +139,12 @@ public:
     bool isSelected = false;
     bool isInlineEditingActive = false;
 
+    // --- PRE-ASIGNACIÓN DE BÚFERES (TIEMPO REAL COMERCIAL) ---
     juce::AudioBuffer<float> audioBuffer;
+    juce::AudioBuffer<float> instrumentMixBuffer;
+    juce::AudioBuffer<float> tempSynthBuffer;
+    juce::AudioBuffer<float> midSideBuffer;
+
     float currentPeakLevelL = 0.0f;
     float currentPeakLevelR = 0.0f;
 

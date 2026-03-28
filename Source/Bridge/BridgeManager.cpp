@@ -21,7 +21,6 @@ void BridgeManager::initializeAllBridges(BridgeDependencies d) {
         d.bottomDock, d.effectsPanelUI, d.leftSidebar, d.trackContainer,
         d.onResized, d.onToggleView);
 
-    // ---> CORRECCIÓN: PASAMOS LA REFERENCIA COMPLETA DEL MOTOR <---
     TrackInstrumentBridge::connect(
         d.trackContainer,
         d.instrumentPanelUI,
@@ -29,9 +28,14 @@ void BridgeManager::initializeAllBridges(BridgeDependencies d) {
         d.bottomDock,
         d.isBottomDockVisible,
         d.audioMutex,
-        d.audioEngine, // Cambiado aquí
+        d.audioEngine,
         d.onResized
     );
+
+    // ---> NUEVO: CONEXIÓN GRÁFICA A 60 FPS (Zero-Allocation) <---
+    auto& engine = d.audioEngine; // Captura segura del motor
+    d.playlistUI.getPlaybackPosition = [&engine]() -> float { return engine.clock.currentPh; };
+    d.pianoRollUI.getPlaybackPosition = [&engine]() -> float { return engine.clock.currentPh; };
 }
 
 void BridgeManager::cleanupTrack(Track* track, PianoRollComponent& pianoRoll, std::function<void()> closePianoRollCallback) {

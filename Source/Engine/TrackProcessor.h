@@ -15,6 +15,21 @@ public:
         bool isPianoRollActive,
         float loopEndPos)
     {
+        // ==============================================================================
+        // SMART DISABLE (OPTIMIZACIÓN DE CPU DE NIVEL COMERCIAL)
+        // ==============================================================================
+        bool hasClipsOrNotes = !(track->audioClips.isEmpty() && track->midiClips.isEmpty() && track->notes.empty());
+
+        float magL = track->audioBuffer.getMagnitude(0, 0, numSamples);
+        float magR = track->audioBuffer.getNumChannels() > 1 ? track->audioBuffer.getMagnitude(1, 0, numSamples) : 0.0f;
+        bool isSilent = (magL < 0.00001f && magR < 0.00001f);
+
+        // Si la pista está vacía, no recibe MIDI en vivo y no tiene colas de Reverb sonando:
+        if (!hasClipsOrNotes && !isPianoRollActive && isSilent) {
+            track->audioBuffer.clear(); // Garantizamos silencio absoluto
+            return; // ¡El motor salta la pista! 0% de CPU consumido.
+        }
+
         if (!track->isAnalyzersPrepared) {
             track->preLoudness.prepare(44100.0, 512);
             track->postLoudness.prepare(44100.0, 512);
@@ -22,6 +37,7 @@ public:
         }
 
         juce::MidiBuffer trackMidi;
+        trackMidi.ensureSize(2048);
 
         if (isPianoRollActive) trackMidi.addEvents(previewMidi, 0, numSamples, 0);
 
@@ -78,60 +94,40 @@ public:
             }
         }
 
-        // ==============================================================================
-        // GAIN STATION: PRE-FX
-        // ==============================================================================
         GainStationDSP::processPreFX(track, track->audioBuffer);
 
-        // ==============================================================================
-        // 1. LAYERING: PROCESAMIENTO DE INSTRUMENTOS (PARALELO)
-        // ==============================================================================
         int numChannels = track->audioBuffer.getNumChannels();
-        int numSamplesBlock = track->audioBuffer.getNumSamples();
-
-        float mixL[4096] = { 0 }; float mixR[4096] = { 0 };
-        float tempL[4096] = { 0 }; float tempR[4096] = { 0 };
-
-        int safeSamples = juce::jmin(numSamplesBlock, 4096);
         int safeChannels = juce::jmin(numChannels, 2);
 
-        float* mixPointers[] = { mixL, mixR };
-        float* tempPointers[] = { tempL, tempR };
+        track->instrumentMixBuffer.setSize(safeChannels, numSamples, false, false, true);
+        track->tempSynthBuffer.setSize(safeChannels, numSamples, false, false, true);
 
-        juce::AudioBuffer<float> instrumentMixBuffer(mixPointers, safeChannels, safeSamples);
-        juce::AudioBuffer<float> tempSynthBuffer(tempPointers, safeChannels, safeSamples);
-
-        instrumentMixBuffer.clear();
+        track->instrumentMixBuffer.clear();
         bool hasInstruments = false;
 
         for (auto* p : track->plugins) {
             if (p->isLoaded() && EffectsPanel::pluginIsInstrumentMap[(void*)p]) {
                 hasInstruments = true;
-                tempSynthBuffer.clear();
+                track->tempSynthBuffer.clear();
 
-                // --- CORRECCIÓN CRÍTICA: CLONAR EL MIDI BUFFER ---
-                // Le entregamos a cada instrumento una copia fresca de los eventos MIDI
-                // para evitar que el primero consuma los eventos y silencie al resto.
                 juce::MidiBuffer midiForThisSynth;
-                midiForThisSynth.addEvents(trackMidi, 0, numSamplesBlock, 0);
+                midiForThisSynth.ensureSize(2048);
+                midiForThisSynth.addEvents(trackMidi, 0, numSamples, 0);
 
-                p->processBlock(tempSynthBuffer, midiForThisSynth);
+                p->processBlock(track->tempSynthBuffer, midiForThisSynth);
 
                 for (int ch = 0; ch < safeChannels; ++ch) {
-                    instrumentMixBuffer.addFrom(ch, 0, tempSynthBuffer, ch, 0, safeSamples);
+                    track->instrumentMixBuffer.addFrom(ch, 0, track->tempSynthBuffer, ch, 0, numSamples);
                 }
             }
         }
 
         if (hasInstruments) {
             for (int ch = 0; ch < safeChannels; ++ch) {
-                track->audioBuffer.addFrom(ch, 0, instrumentMixBuffer, ch, 0, safeSamples);
+                track->audioBuffer.addFrom(ch, 0, track->instrumentMixBuffer, ch, 0, numSamples);
             }
         }
 
-        // ==============================================================================
-        // 2. EFECTOS: PROCESAMIENTO EN SERIE (CON MATRIZ MID/SIDE)
-        // ==============================================================================
         for (auto* p : track->plugins) {
             if (p->isLoaded() && !EffectsPanel::pluginIsInstrumentMap[(void*)p]) {
                 PluginRouting r = p->getRouting();
@@ -140,13 +136,13 @@ public:
                     p->processBlock(track->audioBuffer, trackMidi);
                 }
                 else {
-                    float preservedSignal[4096];
-                    int samplesToProcess = juce::jmin(numSamplesBlock, 4096);
+                    track->midSideBuffer.setSize(1, numSamples, false, false, true);
+                    auto* preservedSignal = track->midSideBuffer.getWritePointer(0);
 
                     auto* left = track->audioBuffer.getWritePointer(0);
                     auto* right = track->audioBuffer.getWritePointer(1);
 
-                    for (int i = 0; i < samplesToProcess; ++i) {
+                    for (int i = 0; i < numSamples; ++i) {
                         float mid = (left[i] + right[i]) * 0.5f;
                         float side = (left[i] - right[i]) * 0.5f;
 
@@ -164,7 +160,7 @@ public:
 
                     p->processBlock(track->audioBuffer, trackMidi);
 
-                    for (int i = 0; i < samplesToProcess; ++i) {
+                    for (int i = 0; i < numSamples; ++i) {
                         float processedMono = (left[i] + right[i]) * 0.5f;
 
                         if (r == PluginRouting::Mid) {
@@ -180,9 +176,6 @@ public:
             }
         }
 
-        // ==============================================================================
-        // GAIN STATION: POST-FX
-        // ==============================================================================
         GainStationDSP::processPostFX(track, track->audioBuffer);
     }
 };

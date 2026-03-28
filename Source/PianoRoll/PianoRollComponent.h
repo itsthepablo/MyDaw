@@ -2,6 +2,7 @@
 #include <JuceHeader.h>
 #include <vector>
 #include <set>
+#include <functional>
 #include "../GlobalData.h" 
 #include "../Tracks/Track.h" 
 #include "AutomationEditor.h" 
@@ -26,7 +27,8 @@ public:
     PianoRollComponent();
     ~PianoRollComponent() override;
 
-    // --- Antena transmisora del Piano Roll ---
+    std::function<float()> getPlaybackPosition;
+
     std::function<void(MidiClipData*)> onPatternEdited;
     void notifyPatternEdited() {
         if (onPatternEdited && activeClip) onPatternEdited(activeClip);

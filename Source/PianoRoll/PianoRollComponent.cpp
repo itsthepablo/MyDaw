@@ -215,7 +215,6 @@ void PianoRollComponent::paint(juce::Graphics& g) {
         }
     }
 
-    // --- NUEVO: SOMBREADO VISUAL DE LOS LIMITES DEL PATRON ---
     if (activeClip != nullptr) {
         int startScreenX = (int)(activeClip->startX * hZoom) + keyW - (int)hS;
         int endScreenX = (int)((activeClip->startX + activeClip->width) * hZoom) + keyW - (int)hS;
@@ -277,6 +276,16 @@ void PianoRollComponent::resized() {
 
 void PianoRollComponent::timerCallback() {
     bool needsRepaint = isPlaying;
+
+    // CORRECCIÓN DE RACE CONDITION: Protegemos contra actualizaciones conflictivas 
+    if (isPlaying && getPlaybackPosition && !isDraggingPlayhead) {
+        float newPos = getPlaybackPosition();
+        if (playheadAbsPos != newPos) {
+            playheadAbsPos = newPos;
+            needsRepaint = true;
+        }
+    }
+
     for (int i = (int)animations.size() - 1; i >= 0; --i) { animations[i].alpha -= 0.08f; if (animations[i].alpha <= 0.0f) animations.erase(animations.begin() + i); needsRepaint = true; }
     if (isPlaying) { automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, (float)getSnapPixels(), playheadAbsPos); }
     if (needsRepaint) repaint();

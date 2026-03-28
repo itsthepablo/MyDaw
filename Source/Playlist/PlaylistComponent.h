@@ -29,6 +29,9 @@ public:
     PlaylistComponent();
     ~PlaylistComponent() override;
 
+    // --- NUEVO: Antena receptora del Reloj Maestro ---
+    std::function<float()> getPlaybackPosition;
+
     std::function<void(TrackType)> onNewTrackRequested;
     std::function<void(int)> onVerticalScroll;
     std::function<void(Track*, MidiClipData*)> onMidiClipDoubleClicked;
@@ -104,8 +107,6 @@ public:
 
     void paint(juce::Graphics& g) override;
     void resized() override;
-
-    // --- NUEVO: FUNCIÓN MATEMÁTICA DEL MINIMAPA ---
     void drawMinimap(juce::Graphics& g, juce::Rectangle<int> bounds);
 
     void mouseDown(const juce::MouseEvent& e) override;
