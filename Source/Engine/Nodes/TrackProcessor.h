@@ -67,14 +67,20 @@ public:
             }
 
             for (auto* clip : track->midiClips) {
-                if (clip) {
+                if (clip && !clip->isMuted) {
                     for (const auto& note : clip->notes) {
-                        bool triggerOn = clock.looped ? ((note.x >= clock.currentPh && note.x < clock.nextPh + clock.looped) || (note.x >= 0 && note.x < clock.nextPh)) : (note.x >= clock.currentPh && note.x < clock.nextPh);
-                        if (triggerOn) trackMidi.addEvent(juce::MidiMessage::noteOn(1, note.pitch, 0.8f), 0);
+                        float noteWorldX = clip->startX + (note.x - clip->offsetX);
+                        
+                        if (noteWorldX >= clip->startX && noteWorldX < clip->startX + clip->width) {
+                            bool triggerOn = clock.looped ? ((noteWorldX >= clock.currentPh && noteWorldX < clock.nextPh + clock.looped) || (noteWorldX >= 0 && noteWorldX < clock.nextPh)) : (noteWorldX >= clock.currentPh && noteWorldX < clock.nextPh);
+                            if (triggerOn) trackMidi.addEvent(juce::MidiMessage::noteOn(1, note.pitch, 0.8f), 0);
 
-                        float offX = note.x + note.width;
-                        bool triggerOff = clock.looped ? ((offX >= clock.currentPh && offX < clock.nextPh + clock.looped) || (offX >= 0 && offX < clock.nextPh)) : (offX >= clock.currentPh && offX < clock.nextPh);
-                        if (triggerOff) trackMidi.addEvent(juce::MidiMessage::noteOff(1, note.pitch), 0);
+                            float offX = noteWorldX + note.width;
+                            if (offX <= clip->startX + clip->width) {
+                                bool triggerOff = clock.looped ? ((offX >= clock.currentPh && offX < clock.nextPh + clock.looped) || (offX >= 0 && offX < clock.nextPh)) : (offX >= clock.currentPh && offX < clock.nextPh);
+                                if (triggerOff) trackMidi.addEvent(juce::MidiMessage::noteOff(1, note.pitch), 0);
+                            }
+                        }
                     }
                 }
             }
@@ -82,9 +88,11 @@ public:
 
         if (isPlayingNow) {
             for (auto* clip : track->audioClips) {
-                if (!clip) continue;
+                if (!clip || clip->isMuted) continue;
+                
                 long long clipStartSample = (long long)(clip->startX * clock.samplesPerPixel);
-                long long clipEndSample = clipStartSample + clip->fileBuffer.getNumSamples();
+                long long clipEndSample = clipStartSample + (long long)(clip->width * clock.samplesPerPixel);
+                long long offsetSamples = (long long)(clip->offsetX * clock.samplesPerPixel);
 
                 if (clipStartSample < clock.blockEndSamplePos && clipEndSample > clock.currentSamplePos) {
                     int readStart = 0;
@@ -98,20 +106,26 @@ public:
                         readStart = (int)(clock.currentSamplePos - clipStartSample);
                     }
 
-                    if (readStart + samplesToWrite > clip->fileBuffer.getNumSamples())
-                        samplesToWrite = clip->fileBuffer.getNumSamples() - readStart;
+                    if (clock.currentSamplePos + writeStart + samplesToWrite > clipEndSample) {
+                        samplesToWrite = (int)(clipEndSample - (clock.currentSamplePos + writeStart));
+                    }
+
+                    int fileReadStart = readStart + (int)offsetSamples;
+
+                    if (fileReadStart + samplesToWrite > clip->fileBuffer.getNumSamples())
+                        samplesToWrite = clip->fileBuffer.getNumSamples() - fileReadStart;
 
                     if (writeStart + samplesToWrite > track->audioBuffer.getNumSamples())
                         samplesToWrite = track->audioBuffer.getNumSamples() - writeStart;
 
-                    if (samplesToWrite > 0) {
+                    if (samplesToWrite > 0 && fileReadStart >= 0) {
                         PDCManager::dbgSamplesWritten.store(samplesToWrite, std::memory_order_relaxed);
                         PDCManager::dbgAddCount.fetch_add(1, std::memory_order_relaxed);
                         int destChannels = juce::jmin(2, track->audioBuffer.getNumChannels());
                         for (int ch = 0; ch < destChannels; ++ch) {
                             int sourceCh = juce::jmin(ch, clip->fileBuffer.getNumChannels() - 1);
                             if (sourceCh >= 0) {
-                                track->audioBuffer.addFrom(ch, writeStart, clip->fileBuffer, sourceCh, readStart, samplesToWrite);
+                                track->audioBuffer.addFrom(ch, writeStart, clip->fileBuffer, sourceCh, fileReadStart, samplesToWrite);
                             }
                         }
                     }

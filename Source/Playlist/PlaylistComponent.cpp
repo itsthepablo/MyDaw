@@ -4,6 +4,7 @@
 #include "Tools/PointerTool.h" 
 #include "Tools/ScissorTool.h" 
 #include "Tools/EraserTool.h" 
+#include "Tools/MuteTool.h"
 #include "PlaylistDropHandler.h"
 #include "PlaylistActionHandler.h"
 #include <cmath>
@@ -18,6 +19,15 @@ PlaylistComponent::PlaylistComponent() {
     addAndMakeVisible(menuBar);
     addAndMakeVisible(hNavigator);
     addAndMakeVisible(vBar);
+
+    menuBar.onToolChanged = [this](int toolId) { setTool(toolId); };
+    menuBar.onSnapChanged = [this](double snap) { snapPixels = snap; repaint(); };
+    menuBar.onUndo = [this] {
+        // TODO: Llamar al motor de Undo local 
+    };
+    menuBar.onRedo = [this] {
+        // TODO: Llamar al motor de Redo local
+    };
 
     hNavigator.onScrollMoved = [this](double) { repaint(); };
     hNavigator.onZoomChanged = [this](double newZoom, double newStart) {
@@ -156,6 +166,7 @@ void PlaylistComponent::setTool(int toolId) {
     if (toolId == 1) activeTool = std::make_unique<PointerTool>();
     else if (toolId == 3) activeTool = std::make_unique<ScissorTool>();
     else if (toolId == 4) activeTool = std::make_unique<EraserTool>();
+    else if (toolId == 5) activeTool = std::make_unique<MuteTool>();
 }
 
 bool PlaylistComponent::keyPressed(const juce::KeyPress& key, juce::Component*) {
@@ -210,6 +221,11 @@ void PlaylistComponent::paint(juce::Graphics& g) {
         g.setColour(clip.trackPtr->getColor().withAlpha(0.2f));
         g.fillRoundedRectangle(clipRect.toFloat(), 4.0f);
 
+        bool isMutedLocally = (clip.linkedAudio && clip.linkedAudio->isMuted) || (clip.linkedMidi && clip.linkedMidi->isMuted);
+        float alphaMult = isMutedLocally ? 0.3f : 1.0f;
+
+        g.setOpacity(alphaMult);
+
         if (clip.linkedAudio != nullptr) {
             WaveformRenderer::drawWaveform(g, *clip.linkedAudio, clipRect, clip.trackPtr->getColor(), clip.trackPtr->getWaveformViewMode());
         }
@@ -218,8 +234,10 @@ void PlaylistComponent::paint(juce::Graphics& g) {
             MidiClipRenderer::drawMidiClip(g, *clip.linkedMidi, clipRect, clip.trackPtr->getColor(), clip.trackPtr->isInlineEditingActive, hZoom, hS);
         }
 
-        g.setColour(juce::Colours::white.withAlpha(0.9f));
+        g.setColour(juce::Colours::white.withAlpha(0.9f * alphaMult));
         g.drawText(clip.name, clipRect.reduced(5, 2), juce::Justification::topLeft, true);
+        
+        g.setOpacity(1.0f);
 
         if (i == selectedClipIndex) {
             g.setColour(juce::Colours::white);

@@ -46,8 +46,26 @@ public:
         }
         else if (clip.linkedAudio) {
             auto* oldAudio = clip.linkedAudio;
+            
+            auto* newAudio = new AudioClipData();
+            newAudio->name = oldAudio->name + " (Cortado)";
+            newAudio->startX = splitX;
+            newAudio->width = newWidthRight;
+            newAudio->offsetX = oldAudio->offsetX + newWidthLeft;
+            newAudio->isMuted = oldAudio->isMuted;
+            newAudio->sourceFilePath = oldAudio->sourceFilePath;
+            newAudio->fileBuffer.makeCopyOf(oldAudio->fileBuffer);
+            newAudio->sourceSampleRate = oldAudio->sourceSampleRate;
+            newAudio->cachedPeaksL = oldAudio->cachedPeaksL;
+            newAudio->cachedPeaksR = oldAudio->cachedPeaksR;
+            newAudio->cachedPeaksMid = oldAudio->cachedPeaksMid;
+            newAudio->cachedPeaksSide = oldAudio->cachedPeaksSide;
+
             oldAudio->width = newWidthLeft;
             clip.width = newWidthLeft;
+
+            clip.trackPtr->audioClips.add(newAudio);
+            p.clips.push_back({ clip.trackPtr, newAudio->startX, newAudio->width, newAudio->name, newAudio, nullptr });
         }
         p.repaint();
     }
