@@ -57,7 +57,7 @@ void PlaylistMenuBar::resized()
     auto area = getLocalBounds().reduced(2);
     
     // Herramientas
-    int btnW = 40;
+    int btnW = 56;
     btnPointer.setBounds(area.removeFromLeft(btnW).reduced(2));
     btnScissor.setBounds(area.removeFromLeft(btnW).reduced(2));
     btnEraser.setBounds(area.removeFromLeft(btnW).reduced(2));
@@ -71,6 +71,6 @@ void PlaylistMenuBar::resized()
     area.removeFromLeft(10); // Spacing
 
     // Undo/Redo
-    btnUndo.setBounds(area.removeFromLeft(50).reduced(2));
-    btnRedo.setBounds(area.removeFromLeft(50).reduced(2));
+    btnUndo.setBounds(area.removeFromLeft(56).reduced(2));
+    btnRedo.setBounds(area.removeFromLeft(56).reduced(2));
 }

@@ -11,7 +11,8 @@ public:
         const AudioClipData& clipData,
         juce::Rectangle<int> area,
         juce::Colour baseColor,
-        WaveformViewMode viewMode)
+        WaveformViewMode viewMode,
+        double hZoom = 1.0)
     {
         const auto& cacheL = clipData.cachedPeaksL;
         const auto& cacheR = clipData.cachedPeaksR;
@@ -26,7 +27,11 @@ public:
 
         const juce::Colour outlineColor = baseColor.brighter(0.2f).withAlpha(0.9f);
         const juce::Colour fillColor = baseColor.withAlpha(0.9f);
-        const float pointsPerPixel = (float)cacheL.size() / (float)width;
+        
+        float baseW = clipData.originalWidth <= 0 ? clipData.width : clipData.originalWidth;
+        const float originalWidthPx = baseW * (float)hZoom;
+        const float pointsPerPixel = originalWidthPx > 0 ? ((float)cacheL.size() / originalWidthPx) : 1.0f;
+        const int cacheOffset = (int)(clipData.offsetX * (float)hZoom * pointsPerPixel);
 
         bool isStereo = !cacheR.empty();
 
@@ -42,7 +47,8 @@ public:
             g.drawHorizontalLine((int)(area.getY() + halfHeight), (float)area.getX(), (float)(area.getX() + width));
 
             for (int x = 0; x < width; ++x) {
-                int cacheIdx = (int)(x * pointsPerPixel);
+                int cacheIdx = cacheOffset + (int)(x * pointsPerPixel);
+                if (cacheIdx < 0) continue;
                 if (cacheIdx >= (int)cacheL.size()) break;
 
                 float peakL = juce::jmin(1.0f, cacheL[cacheIdx] * 1.05f);
@@ -83,7 +89,8 @@ public:
             g.drawHorizontalLine((int)(area.getY() + halfHeight), (float)area.getX(), (float)(area.getX() + width));
 
             for (int x = 0; x < width; ++x) {
-                int cacheIdx = (int)(x * pointsPerPixel);
+                int cacheIdx = cacheOffset + (int)(x * pointsPerPixel);
+                if (cacheIdx < 0) continue;
                 if (cacheIdx >= (int)cacheMid.size()) break;
 
                 float peakMid = juce::jmin(1.0f, cacheMid[cacheIdx] * 1.05f);
@@ -120,7 +127,8 @@ public:
             const float halfHeight = (float)height / 2.0f;
 
             for (int x = 0; x < width; ++x) {
-                int cacheIdx = (int)(x * pointsPerPixel);
+                int cacheIdx = cacheOffset + (int)(x * pointsPerPixel);
+                if (cacheIdx < 0) continue;
                 if (cacheIdx >= (int)cacheL.size()) break;
 
                 float peak = cacheL[cacheIdx];

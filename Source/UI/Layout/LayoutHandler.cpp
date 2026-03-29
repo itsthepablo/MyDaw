@@ -16,7 +16,6 @@ void LayoutHandler::performLayout(LayoutDependencies d) {
     d.hintPanel.setBounds(area.removeFromBottom(28));
 
     auto topArea = area.removeFromTop(45);
-    d.toolbarButtons.setBounds(topArea.removeFromRight(550));
     d.transportBar.setBounds(topArea);
 
     if (d.isPianoRollVisible) {

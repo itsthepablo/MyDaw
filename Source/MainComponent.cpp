@@ -80,9 +80,6 @@ void MainComponent::setupCallbacks() {
         resized();
         };
 
-    ui.toolbarButtons.onSnapChanged = [this](double s) { ui.playlistUI.snapPixels = s; };
-    ui.toolbarButtons.onToolChanged = [this](int t) { ui.playlistUI.setTool(t); };
-
     ui.playlistUI.onMidiClipDeleted = [this](MidiClipData* c) {
         if (ui.pianoRollUI.getActiveClip() == c) closePianoRoll();
         };
@@ -118,7 +115,7 @@ void MainComponent::setupBridges() {
     BridgeManager::initializeAllBridges({
         ui.trackContainer, ui.playlistUI, ui.pianoRollUI, ui.mixerUI, ui.effectsPanelUI,
         ui.instrumentPanelUI, // <-- SE AÑADE AQUÍ
-        ui.transportBar, ui.topMenuBar, ui.toolbarButtons, ui.bottomDock, ui.leftSidebar, audioEngine, audioMutex,
+        ui.transportBar, ui.topMenuBar, ui.bottomDock, ui.leftSidebar, audioEngine, audioMutex,
         isBottomDockVisible, isLeftSidebarVisible,
         [this] { openPianoRoll(); }, [this] { closePianoRoll(); },
         [this] { resized(); }, [this] { toggleViewMode(); },
@@ -202,7 +199,7 @@ void MainComponent::saveProject() {
 
 void MainComponent::resized() {
     LayoutHandler::performLayout({
-        getLocalBounds(), ui.topMenuBar, ui.hintPanel, ui.toolbarButtons, ui.resourceMeter.get(), ui.transportBar,
+        getLocalBounds(), ui.topMenuBar, ui.hintPanel, ui.resourceMeter.get(), ui.transportBar,
         ui.pianoRollUI, ui.closePianoRollBtn, ui.mixerUI, ui.masterChannelUI, ui.trackContainer, ui.playlistUI,
         ui.bottomDock, ui.bottomDockResizer, ui.leftSidebar, ui.sidebarResizer,
         currentView, isPianoRollVisible, isBottomDockVisible, bottomDockHeight, isLeftSidebarVisible, leftSidebarWidth

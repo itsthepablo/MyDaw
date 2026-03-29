@@ -227,7 +227,7 @@ void PlaylistComponent::paint(juce::Graphics& g) {
         g.setOpacity(alphaMult);
 
         if (clip.linkedAudio != nullptr) {
-            WaveformRenderer::drawWaveform(g, *clip.linkedAudio, clipRect, clip.trackPtr->getColor(), clip.trackPtr->getWaveformViewMode());
+            WaveformRenderer::drawWaveform(g, *clip.linkedAudio, clipRect, clip.trackPtr->getColor(), clip.trackPtr->getWaveformViewMode(), hZoom);
         }
 
         if (clip.linkedMidi != nullptr) {

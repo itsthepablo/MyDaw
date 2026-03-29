@@ -12,7 +12,7 @@
 #include "../../UI/TopMenuBar/TopMenuBar.h"
 #include "../../UI/HintPanel.h"
 #include "../../UI/TransportBar.h"
-#include "../../UI/Buttons/ToolbarButtons.h"
+
 #include "../../UI/ResourceMeter.h"
 
 // Definimos ViewMode aquí o lo importamos si es accesible globalmente
@@ -27,7 +27,6 @@ struct LayoutDependencies {
     // Componentes
     TopMenuBar& topMenuBar;
     HintPanel& hintPanel;
-    ToolbarButtons& toolbarButtons;
     ResourceMeter* resourceMeter; // Puntero porque es unique_ptr
     TransportBar& transportBar;
     

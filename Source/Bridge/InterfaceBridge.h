@@ -9,7 +9,7 @@
 
 class InterfaceBridge {
 public:
-    static void connect(ToolbarButtons& toolbar, TopMenuBar& topMenu,
+    static void connect(TopMenuBar& topMenu,
         bool& isBottomDockVisible, bool& isLeftSidebarVisible,
         BottomDock& bottomDock, EffectsPanel& effectsPanelUI, LeftSidebar& leftSidebar,
         TrackContainer& trackContainer,

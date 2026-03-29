@@ -16,6 +16,7 @@ struct AudioClipData {
     float startX = 0.0f;
     float width = 0.0f;
     float offsetX = 0.0f;
+    float originalWidth = 0.0f;
     bool isMuted = false;
     bool isSelected = false;
     juce::String sourceFilePath; 

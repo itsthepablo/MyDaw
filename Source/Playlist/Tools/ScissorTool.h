@@ -52,6 +52,7 @@ public:
             newAudio->startX = splitX;
             newAudio->width = newWidthRight;
             newAudio->offsetX = oldAudio->offsetX + newWidthLeft;
+            newAudio->originalWidth = oldAudio->originalWidth;
             newAudio->isMuted = oldAudio->isMuted;
             newAudio->sourceFilePath = oldAudio->sourceFilePath;
             newAudio->fileBuffer.makeCopyOf(oldAudio->fileBuffer);

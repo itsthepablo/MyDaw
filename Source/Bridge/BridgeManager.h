@@ -8,7 +8,6 @@
 #include "../Instruments/InstrumentPanel.h" // <-- NUEVO
 #include "../UI/TransportBar.h"
 #include "../UI/TopMenuBar/TopMenuBar.h"
-#include "../UI/Buttons/ToolbarButtons.h"
 #include "../UI/BottomDock.h"
 #include "../UI/LeftSidebar.h"
 #include "../Engine/Core/AudioEngine.h"
@@ -22,7 +21,6 @@ struct BridgeDependencies {
     InstrumentPanel& instrumentPanelUI; // <-- NUEVO
     TransportBar& transportBar;
     TopMenuBar& topMenuBar;
-    ToolbarButtons& toolbarButtons;
     BottomDock& bottomDock;
     LeftSidebar& leftSidebar;
     AudioEngine& audioEngine;

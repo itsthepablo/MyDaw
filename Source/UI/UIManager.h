@@ -39,7 +39,7 @@ struct DAWUIComponents {
     LeftSidebar leftSidebar{ pickerPanelUI, fileBrowserPanelUI };
     SidebarResizer sidebarResizer;
     TransportBar transportBar;
-    ToolbarButtons toolbarButtons;
+
     std::unique_ptr<ResourceMeter> resourceMeter;
 };
 

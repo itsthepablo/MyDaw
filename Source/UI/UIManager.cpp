@@ -4,7 +4,6 @@ void UIManager::setupUI(DAWUIComponents& ui, juce::Component& parent, std::funct
     parent.addAndMakeVisible(ui.topMenuBar);
     parent.addAndMakeVisible(ui.hintPanel);
     parent.addAndMakeVisible(ui.transportBar);
-    parent.addAndMakeVisible(ui.toolbarButtons);
     
     if (ui.resourceMeter != nullptr)
         parent.addAndMakeVisible(*ui.resourceMeter);
