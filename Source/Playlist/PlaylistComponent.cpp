@@ -228,9 +228,9 @@ void PlaylistComponent::paint(juce::Graphics& g) {
     for (double i = startLineSearch; i <= endLineSearch; i += currentDrawSnap) {
         int dx = (int)(i * hZoom) - (int)hS;
         
-        if (std::fmod(i, 320.0) == 0.0) g.setColour(juce::Colours::white.withAlpha(0.12f));
-        else if (std::fmod(i, 80.0) == 0.0) g.setColour(juce::Colours::white.withAlpha(0.06f));
-        else g.setColour(juce::Colours::white.withAlpha(0.03f));
+        if (std::fmod(i, 320.0) == 0.0) g.setColour(juce::Colours::black.withAlpha(0.5f));
+        else if (std::fmod(i, 80.0) == 0.0) g.setColour(juce::Colours::black.withAlpha(0.25f));
+        else g.setColour(juce::Colours::black.withAlpha(0.12f));
 
         g.drawVerticalLine(dx, (float)topOffset, (float)getHeight());
     }
@@ -314,8 +314,40 @@ void PlaylistComponent::paint(juce::Graphics& g) {
     }
 
     int phX = (int)(playheadAbsPos * hZoom) - (int)hS;
-    g.setColour(juce::Colours::red);
-    g.drawVerticalLine(phX, (float)(menuBarH + navigatorH), (float)getHeight());
+    if (phX >= 0 && phX <= getWidth()) {
+        float phTop = (float)(menuBarH + navigatorH);
+        float phBottom = (float)getHeight();
+        
+        // 1. Cola difuminada (Fade estela)
+        int tailWidth = 40; // Pixels
+        juce::Rectangle<float> tailRect(phX - tailWidth, phTop, tailWidth, phBottom - phTop);
+        juce::ColourGradient tailGrad(
+            juce::Colours::transparentWhite, phX - tailWidth, 0.0f,
+            juce::Colours::white.withAlpha(0.15f), phX, 0.0f,
+            false // horizontal
+        );
+        g.setGradientFill(tailGrad);
+        g.fillRect(tailRect);
+
+        // 2. Línea principal (Blanca)
+        g.setColour(juce::Colours::white.withAlpha(0.85f));
+        g.drawVerticalLine(phX, phTop, phBottom);
+
+        // 3. Triángulo invertido en el timeline
+        juce::Path triangle;
+        float triTopY = phTop;
+        float triBottomY = phTop + timelineH;
+        float triHalfWidth = 6.0f; // 12 píxeles de ancho en el tope
+        
+        triangle.addTriangle(
+            phX - triHalfWidth, triTopY,
+            phX + triHalfWidth, triTopY,
+            phX, triBottomY
+        );
+        
+        g.setColour(juce::Colours::white.withAlpha(0.9f));
+        g.fillPath(triangle);
+    }
 
     if (isExternalFileDragging || isInternalDragging) {
         g.fillAll(juce::Colours::dodgerblue.withAlpha(0.2f));
