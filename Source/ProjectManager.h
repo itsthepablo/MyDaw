@@ -133,8 +133,8 @@ public:
                                 audio->sourceFilePath = sampleFile.getFullPathName();
                                 audio->fileBuffer.setSize((int)reader->numChannels, (int)reader->lengthInSamples);
                                 reader->read(&audio->fileBuffer, 0, (int)reader->lengthInSamples, 0, true, true);
-                                audio->generateCache();
                                 audio->width = cTree.getProperty("width");
+                                audio->generateCache();
 
                                 newTrack->audioClips.add(audio);
                                 playlist.clips.push_back({ newTrack, audio->startX, audio->width, audio->name, audio, nullptr });

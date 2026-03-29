@@ -39,8 +39,8 @@ void PlaylistDropHandler::processExternalFiles(const juce::StringArray& files, i
                 data->startX = absX;
                 data->fileBuffer.setSize((int)reader->numChannels, (int)reader->lengthInSamples);
                 reader->read(&data->fileBuffer, 0, (int)reader->lengthInSamples, 0, true, true);
-                data->generateCache();
                 data->width = (float)(reader->lengthInSamples / reader->sampleRate) * (120.0f / 60.0f) * 80.0f;
+                data->generateCache();
                 (*playlist.tracksRef)[tIdx]->audioClips.add(data);
                 playlist.clips.push_back({ (*playlist.tracksRef)[tIdx], absX, data->width, data->name, data, nullptr });
                 absX += data->width;

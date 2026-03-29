@@ -119,7 +119,8 @@ public:
             }
         }
 
-        GainStationDSP::processPreFX(track, track->audioBuffer);
+        juce::AudioBuffer<float> mainProxyBuffer(track->audioBuffer.getArrayOfWritePointers(), track->audioBuffer.getNumChannels(), numSamples);
+        GainStationDSP::processPreFX(track, mainProxyBuffer);
 
         int numChannels = track->audioBuffer.getNumChannels();
         int safeChannels = juce::jmin(numChannels, 2);
@@ -203,7 +204,7 @@ public:
             }
         }
 
-        GainStationDSP::processPostFX(track, track->audioBuffer);
+        GainStationDSP::processPostFX(track, mainProxyBuffer);
 
         if (numChannels > 2) {
             for (int ch = 2; ch < numChannels; ++ch) {

@@ -23,8 +23,9 @@ public:
         g.setColour(juce::Colours::grey.withAlpha(0.3f));
         g.drawRoundedRectangle(getLocalBounds().toFloat(), 4.0f, 1.0f);
 
-        auto debugArea = getLocalBounds().removeFromBottom(14);
-        auto area = getLocalBounds().withBottom(debugArea.getY()).reduced(4, 0);
+        auto bounds = getLocalBounds().reduced(4);
+        auto topRow = bounds.removeFromTop(bounds.getHeight() / 2);
+        auto botRow = bounds;
 
         juce::Colour meterColor = juce::Colours::limegreen;
         if (dspLoad > 70.0) meterColor = juce::Colours::orange;
@@ -32,42 +33,33 @@ public:
 
         g.setFont(12.0f);
 
-        int colWidth = area.getWidth() / 5; // Reorganizamos de forma 100% horizontal en 5 columnas
+        // --- FILA SUPERIOR (CPU, RAM, BUF) ---
+        int topCols = 3;
+        int wTop = topRow.getWidth() / topCols;
 
-        // --- CPU ---
-        auto c1 = area.removeFromLeft(colWidth);
+        auto cCPU = topRow.removeFromLeft(wTop);
         g.setColour(meterColor);
-        g.drawText("CPU: " + juce::String(dspLoad, 1) + "%", c1, juce::Justification::centred, false);
+        g.drawText("CPU: " + juce::String(dspLoad, 0) + "%", cCPU, juce::Justification::centred, false);
 
-        // --- RAM ---
-        auto c2 = area.removeFromLeft(colWidth);
+        auto cRAM = topRow.removeFromLeft(wTop);
         g.setColour(juce::Colours::cyan.darker(0.1f));
-        g.drawText("RAM: " + juce::String(ramLoadMB) + "M", c2, juce::Justification::centred, false);
+        g.drawText("RAM: " + juce::String(ramLoadMB) + "MB", cRAM, juce::Justification::centred, false);
 
-        // --- Buffer Size ---
-        auto c3 = area.removeFromLeft(colWidth);
+        auto cBUF = topRow;
         g.setColour(juce::Colours::lightgrey);
-        g.drawText("BUF: " + juce::String(bufferSize), c3, juce::Justification::centred, false);
+        g.drawText("BUF: " + juce::String(bufferSize), cBUF, juce::Justification::centred, false);
 
-        // --- Latencia ---
-        auto c4 = area.removeFromLeft(colWidth);
+        // --- FILA INFERIOR (LAT, PDC) ---
+        int botCols = 2;
+        int wBot = botRow.getWidth() / botCols;
+
+        auto cLAT = botRow.removeFromLeft(wBot);
         g.setColour(juce::Colours::yellow);
-        g.drawText("LAT: " + juce::String(latencyMs, 1) + "ms", c4, juce::Justification::centred, false);
+        g.drawText("LAT: " + juce::String(latencyMs, 1) + "ms", cLAT, juce::Justification::centred, false);
 
-        // --- PDC Global ---
-        auto c5 = area;
+        auto cPDC = botRow;
         g.setColour(juce::Colours::orange);
-        g.drawText("PDC: " + juce::String(PDCManager::currentGlobalLatency), c5, juce::Justification::centred, false);
-
-        // --- DEBUG PANEL ---
-        g.setColour(juce::Colours::white);
-        g.setFont(10.0f);
-        juce::String debugInfo = "Trks: " + juce::String(PDCManager::dbgTracks.load()) +
-                                 " | Play: " + juce::String(PDCManager::dbgPlaying.load()) +
-                                 " | Clips: " + juce::String(PDCManager::dbgClips.load()) +
-                                 " | Wrtn: " + juce::String(PDCManager::dbgSamplesWritten.load()) +
-                                 " | Adds: " + juce::String(PDCManager::dbgAddCount.load());
-        g.drawText(debugInfo, debugArea, juce::Justification::centred, false);
+        g.drawText("PDC: " + juce::String(PDCManager::currentGlobalLatency), cPDC, juce::Justification::centred, false);
     }
 
     void timerCallback() override {

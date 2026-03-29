@@ -20,7 +20,7 @@ struct AudioClock {
     void prepare(double s, int bufSize) {
         sampleRate = s;
         maxBlockSize = bufSize;
-        samplesPerPixel = s / ((120.0 / 60.0) * 320.0); // Valor estricto 120bpm para inicializar
+        samplesPerPixel = s / ((120.0 / 60.0) * 80.0); // Valor estricto 120bpm para inicializar (1 beat = 80px)
         currentSamplePos = 0;
         currentPh = 0.0f;
     }
@@ -32,7 +32,7 @@ struct AudioClock {
         float currentBpm = ts.bpm.load(std::memory_order_relaxed);
         
         // El reloj asegura que los cálculos de física (samples) coincidan simétricamente con el dibujo (px)
-        samplesPerPixel = sampleRate / ((currentBpm / 60.0) * 320.0);
+        samplesPerPixel = sampleRate / ((currentBpm / 60.0) * 80.0);
 
         // Si no estamos tocando, sincronizamos visualmente con la UI (Playhead)
         if (!isPlayingNow) {
@@ -49,7 +49,7 @@ struct AudioClock {
 
         // Si estamos tocando, el Clock de Audio domina el avance de la UI
         looped = false;
-        double pixelsPerSample = (currentBpm / 60.0) * (320.0 / sampleRate);
+        double pixelsPerSample = (currentBpm / 60.0) * (80.0 / sampleRate);
         float deltaPh = (float)(numSamples * pixelsPerSample);
 
         nextPh = currentPh + deltaPh;
