@@ -34,6 +34,7 @@ public:
                         host->prepareToPlay(sampleRate, currentBlockSize);
                         
                         t.plugins.add(host);
+                        t.allocatePdcBuffer(); // RAM: alocar PDC buffer ahora que hay un plugin
                         EffectsPanel::pluginIsInstrumentMap[(void*)host] = (t.getType() == TrackType::MIDI && t.plugins.size() == 1);
                         ui.updateSlots();
                     });
@@ -54,6 +55,7 @@ public:
                 utility->prepareToPlay(sampleRate, currentBlockSize);
                 
                 t.plugins.add(utility);
+                t.allocatePdcBuffer(); // RAM: alocar PDC buffer ahora que hay un plugin
                 // No actualizamos pluginIsInstrumentMap porque Utility siempre es un Efecto
                 ui.updateSlots();
             });

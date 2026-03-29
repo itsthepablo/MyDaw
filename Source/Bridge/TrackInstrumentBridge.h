@@ -37,6 +37,7 @@ public:
                     {
                         const juce::ScopedLock sl(audioMutex);
                         t.plugins.add(newPlugin);
+                        t.allocatePdcBuffer(); // RAM: alocar PDC buffer ahora que hay un instrumento
                         t.addPluginName(newPlugin->getLoadedPluginName());
                         EffectsPanel::pluginIsInstrumentMap[(void*)newPlugin] = true;
 

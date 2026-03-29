@@ -88,6 +88,7 @@ void PlaylistComponent::updateScrollBars() {
 
 void PlaylistComponent::addMidiClipToView(Track* targetTrack, MidiClipData* newClip) {
     clips.push_back({ targetTrack, newClip->startX, newClip->width, newClip->name, nullptr, newClip });
+    if (targetTrack != nullptr) targetTrack->commitSnapshot(); // DOUBLE BUFFER: clip MIDI añadido desde Piano Roll
     updateScrollBars();
     repaint();
     hNavigator.repaint();

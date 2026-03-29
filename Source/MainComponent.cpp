@@ -71,7 +71,11 @@ void MainComponent::setupCallbacks() {
             newTrack->instrumentMixBuffer.setSize(2, maxSamples, false, true, false);
             newTrack->tempSynthBuffer.setSize(2, maxSamples, false, true, false);
             newTrack->midSideBuffer.setSize(1, maxSamples, false, true, false);
-            newTrack->pdcBuffer.setSize(2, 524288, false, true, false);
+            // pdcBuffer NO se pre-aloca para pistas vacias (ahorra 4MB por pista).
+            // Se aloca bajo demanda en allocatePdcBuffer() cuando se carga un plugin.
+            // PDCManager::applyDelay() ya tiene guard 'if (bufferSize == 0) return'.
+            // DOUBLE BUFFER: inicializar snapshot vacio antes de exponer el track al audio thread
+            newTrack->commitSnapshot();
         }
         audioEngine.routingMatrix.commitNewTopology(ui.trackContainer.getTracks());
     };
@@ -152,19 +156,26 @@ void MainComponent::setupBridges() {
 void MainComponent::prepareToPlay(int samples, double s) {
     audioEngine.prepareToPlay(samples, s);
     
-    // Alocar recursos estables para pistas cargadas previamente vía Proyecto
+    // Alocar recursos estables para pistas cargadas previamente via Proyecto
     for (auto* t : ui.trackContainer.getTracks()) {
         int maxSamples = 8192;
         t->audioBuffer.setSize(2, maxSamples, false, true, false);
         t->instrumentMixBuffer.setSize(2, maxSamples, false, true, false);
         t->tempSynthBuffer.setSize(2, maxSamples, false, true, false);
         t->midSideBuffer.setSize(1, maxSamples, false, true, false);
-        t->pdcBuffer.setSize(2, 524288, false, true, false);
         t->audioBuffer.clear();
-        t->pdcBuffer.clear();
+        // pdcBuffer: solo alocar si el track tiene plugins (ahorra 4MB por pista vacia).
+        // Si ya tenia tamano por carga previa de plugins, lo respetamos y limpiamos.
+        bool hasPlugins = !t->plugins.isEmpty();
+        if (hasPlugins) {
+            t->allocatePdcBuffer();
+            t->pdcBuffer.clear();
+        }
+        // DOUBLE BUFFER: publicar snapshot inicial con los clips/notas cargados del proyecto
+        t->commitSnapshot();
     }
     
-    // Primera carga topológica
+    // Primera carga topologica
     audioEngine.routingMatrix.commitNewTopology(ui.trackContainer.getTracks());
 }
 

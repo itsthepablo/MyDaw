@@ -38,6 +38,15 @@ void PlaylistActionHandler::deleteSelectedClips(PlaylistComponent& p) {
     p.selectedClipIndices.clear();
     p.draggingClipIndex = -1;
 
+    // DOUBLE BUFFER: notificar a los tracks afectados para actualizar sus snapshots.
+    // Iteramos sobre los clips eliminados (ya borrados de p.clips) usando un set de tracks.
+    // Como ya fueron eliminados, usamos una pass previa para colectar los trackPtrs.
+    // Nota: lo más simple es hacer commitSnapshot de TODOS los tracks visibles.
+    if (p.tracksRef) {
+        for (auto* tr : *p.tracksRef)
+            tr->commitSnapshot();
+    }
+
     p.repaint();
     p.hNavigator.repaint(); // SINCRONIZA EL MINIMAPA
 }
@@ -57,6 +66,11 @@ void PlaylistActionHandler::deleteClipsByName(PlaylistComponent& p, const juce::
             c.trackPtr->audioClips.removeObject(c.linkedAudio, true);
             p.clips.erase(p.clips.begin() + i);
         }
+    }
+    // DOUBLE BUFFER: actualizar snapshots de los tracks afectados
+    if (p.tracksRef) {
+        for (auto* tr : *p.tracksRef)
+            tr->commitSnapshot();
     }
     p.selectedClipIndices.clear();
     p.updateScrollBars();
@@ -119,6 +133,7 @@ void PlaylistActionHandler::handleDoubleClick(PlaylistComponent& p, const juce::
 
         targetTrack->midiClips.add(newMidiClip);
         p.clips.push_back({ targetTrack, snappedX, newMidiClip->width, newMidiClip->name, nullptr, newMidiClip });
+        targetTrack->commitSnapshot(); // DOUBLE BUFFER: nuevo clip MIDI creado
         p.repaint();
         p.hNavigator.repaint(); // SINCRONIZA EL MINIMAPA
     }

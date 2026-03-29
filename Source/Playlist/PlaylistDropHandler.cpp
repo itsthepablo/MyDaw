@@ -44,6 +44,7 @@ void PlaylistDropHandler::processExternalFiles(const juce::StringArray& files, i
                 data->generateCache();
                 (*playlist.tracksRef)[tIdx]->audioClips.add(data);
                 playlist.clips.push_back({ (*playlist.tracksRef)[tIdx], absX, data->width, data->name, data, nullptr });
+                (*playlist.tracksRef)[tIdx]->commitSnapshot(); // DOUBLE BUFFER: clip de audio añadido
                 absX += data->width;
             }
         }
@@ -116,6 +117,7 @@ void PlaylistDropHandler::processInternalItem(const juce::DragAndDropTarget::Sou
                 shiftAutoLane(newMidiClip->autoFilter);
                 targetTrack->midiClips.add(newMidiClip);
                 playlist.clips.push_back({ targetTrack, snappedX, newMidiClip->width, newMidiClip->name, nullptr, newMidiClip });
+                targetTrack->commitSnapshot(); // DOUBLE BUFFER: clip MIDI añadido por drop
                 playlist.notifyPatternEdited(newMidiClip);
             }
         }
@@ -142,6 +144,7 @@ void PlaylistDropHandler::processInternalItem(const juce::DragAndDropTarget::Sou
                 newAudioClip->cachedPeaksSide = sourceAudio->cachedPeaksSide;
                 targetTrack->audioClips.add(newAudioClip);
                 playlist.clips.push_back({ targetTrack, snappedX, newAudioClip->width, newAudioClip->name, newAudioClip, nullptr });
+                targetTrack->commitSnapshot(); // DOUBLE BUFFER: clip de audio añadido por drop
             }
         }
         playlist.updateScrollBars();

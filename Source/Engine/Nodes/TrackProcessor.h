@@ -54,45 +54,64 @@ public:
 
         if (isSelected) trackMidi.addEvents(previewMidi, 0, numSamples, 0);
 
-        if (isPlayingNow) {
-            // Nota: Este bucle asume que 'notes' y 'midiClips' no mutan desde la UI mientras procesamos.
-            // La solución 100% estricta requeriría iterar sobre un clon atómico (AudioNodeData).
-            for (const auto& note : track->notes) {
-                bool triggerOn = clock.looped ? ((note.x >= clock.currentPh && note.x < clock.nextPh + clock.looped) || (note.x >= 0 && note.x < clock.nextPh)) : (note.x >= clock.currentPh && note.x < clock.nextPh);
+        // ==============================================================
+        // SNAPSHOT — Adquirir la vista inmutable del audio thread.
+        // Load con memory_order_acquire garantiza que vemos el snapshot
+        // completo publicado por la UI mediante release/acq_rel.
+        // Si el snapshot es nullptr (track recien creado), se omiten
+        // clips/notas de forma segura hasta el primer commitSnapshot().
+        // ==============================================================
+        const TrackSnapshot* snap = track->snapshot.load(std::memory_order_acquire);
+
+        if (isPlayingNow && snap) {
+            // --- Notas directas (Piano Roll) ---
+            for (const auto& note : snap->notes) {
+                bool triggerOn = clock.looped
+                    ? ((note.x >= clock.currentPh && note.x < clock.nextPh + clock.looped) || (note.x >= 0 && note.x < clock.nextPh))
+                    : (note.x >= clock.currentPh && note.x < clock.nextPh);
                 if (triggerOn) trackMidi.addEvent(juce::MidiMessage::noteOn(1, note.pitch, 0.8f), 0);
 
-                float offX = note.x + note.width;
-                bool triggerOff = clock.looped ? ((offX >= clock.currentPh && offX < clock.nextPh + clock.looped) || (offX >= 0 && offX < clock.nextPh)) : (offX >= clock.currentPh && offX < clock.nextPh);
+                float offX = (float)(note.x + note.width);
+                bool triggerOff = clock.looped
+                    ? ((offX >= clock.currentPh && offX < clock.nextPh + clock.looped) || (offX >= 0 && offX < clock.nextPh))
+                    : (offX >= clock.currentPh && offX < clock.nextPh);
                 if (triggerOff) trackMidi.addEvent(juce::MidiMessage::noteOff(1, note.pitch), 0);
             }
 
-            for (auto* clip : track->midiClips) {
-                if (clip && !clip->isMuted) {
-                    for (const auto& note : clip->notes) {
-                        float noteWorldX = clip->startX + (note.x - clip->offsetX);
-                        
-                        if (noteWorldX >= clip->startX && noteWorldX < clip->startX + clip->width) {
-                            bool triggerOn = clock.looped ? ((noteWorldX >= clock.currentPh && noteWorldX < clock.nextPh + clock.looped) || (noteWorldX >= 0 && noteWorldX < clock.nextPh)) : (noteWorldX >= clock.currentPh && noteWorldX < clock.nextPh);
-                            if (triggerOn) trackMidi.addEvent(juce::MidiMessage::noteOn(1, note.pitch, 0.8f), 0);
+            // --- MIDI clips ---
+            for (const auto& clipSnap : snap->midiClips) {
+                if (clipSnap.isMuted) continue;
+                for (const auto& note : clipSnap.notes) {
+                    float noteWorldX = clipSnap.startX + ((float)note.x - clipSnap.offsetX);
 
-                            float offX = noteWorldX + note.width;
-                            if (offX <= clip->startX + clip->width) {
-                                bool triggerOff = clock.looped ? ((offX >= clock.currentPh && offX < clock.nextPh + clock.looped) || (offX >= 0 && offX < clock.nextPh)) : (offX >= clock.currentPh && offX < clock.nextPh);
-                                if (triggerOff) trackMidi.addEvent(juce::MidiMessage::noteOff(1, note.pitch), 0);
-                            }
+                    if (noteWorldX >= clipSnap.startX && noteWorldX < clipSnap.startX + clipSnap.width) {
+                        bool triggerOn = clock.looped
+                            ? ((noteWorldX >= clock.currentPh && noteWorldX < clock.nextPh + clock.looped) || (noteWorldX >= 0 && noteWorldX < clock.nextPh))
+                            : (noteWorldX >= clock.currentPh && noteWorldX < clock.nextPh);
+                        if (triggerOn) trackMidi.addEvent(juce::MidiMessage::noteOn(1, note.pitch, 0.8f), 0);
+
+                        float offX = noteWorldX + (float)note.width;
+                        if (offX <= clipSnap.startX + clipSnap.width) {
+                            bool triggerOff = clock.looped
+                                ? ((offX >= clock.currentPh && offX < clock.nextPh + clock.looped) || (offX >= 0 && offX < clock.nextPh))
+                                : (offX >= clock.currentPh && offX < clock.nextPh);
+                            if (triggerOff) trackMidi.addEvent(juce::MidiMessage::noteOff(1, note.pitch), 0);
                         }
                     }
                 }
             }
         }
 
-        if (isPlayingNow) {
-            for (auto* clip : track->audioClips) {
-                if (!clip || clip->isMuted) continue;
-                
-                long long clipStartSample = (long long)(clip->startX * clock.samplesPerPixel);
-                long long clipEndSample = clipStartSample + (long long)(clip->width * clock.samplesPerPixel);
-                long long offsetSamples = (long long)(clip->offsetX * clock.samplesPerPixel);
+        if (isPlayingNow && snap) {
+            // --- Audio clips ---
+            for (const auto& clipSnap : snap->audioClips) {
+                if (clipSnap.isMuted || !clipSnap.fileBufferPtr) continue;
+
+                const juce::AudioBuffer<float>& fileBuf = *clipSnap.fileBufferPtr;
+
+                long long clipStartSample = (long long)(clipSnap.startX * clock.samplesPerPixel);
+                long long clipEndSample   = clipStartSample + (long long)(clipSnap.width * clock.samplesPerPixel);
+                long long offsetSamples   = (long long)(clipSnap.offsetX * clock.samplesPerPixel);
 
                 if (clipStartSample < clock.blockEndSamplePos && clipEndSample > clock.currentSamplePos) {
                     int readStart = 0;
@@ -112,8 +131,8 @@ public:
 
                     int fileReadStart = readStart + (int)offsetSamples;
 
-                    if (fileReadStart + samplesToWrite > clip->fileBuffer.getNumSamples())
-                        samplesToWrite = clip->fileBuffer.getNumSamples() - fileReadStart;
+                    if (fileReadStart + samplesToWrite > fileBuf.getNumSamples())
+                        samplesToWrite = fileBuf.getNumSamples() - fileReadStart;
 
                     if (writeStart + samplesToWrite > track->audioBuffer.getNumSamples())
                         samplesToWrite = track->audioBuffer.getNumSamples() - writeStart;
@@ -123,9 +142,9 @@ public:
                         PDCManager::dbgAddCount.fetch_add(1, std::memory_order_relaxed);
                         int destChannels = juce::jmin(2, track->audioBuffer.getNumChannels());
                         for (int ch = 0; ch < destChannels; ++ch) {
-                            int sourceCh = juce::jmin(ch, clip->fileBuffer.getNumChannels() - 1);
+                            int sourceCh = juce::jmin(ch, fileBuf.getNumChannels() - 1);
                             if (sourceCh >= 0) {
-                                track->audioBuffer.addFrom(ch, writeStart, clip->fileBuffer, sourceCh, fileReadStart, samplesToWrite);
+                                track->audioBuffer.addFrom(ch, writeStart, fileBuf, sourceCh, fileReadStart, samplesToWrite);
                             }
                         }
                     }

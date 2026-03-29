@@ -57,6 +57,7 @@ public:
                         targetTrack->midiClips.add(newMidiClip);
                         p.clips[cIdx].linkedMidi = newMidiClip;
                         p.clips[cIdx].name = newMidiClip->name;
+                        targetTrack->commitSnapshot(); // DOUBLE BUFFER: nuevo clip independiente
                         p.repaint();
                         p.hNavigator.repaint();
                     }
@@ -225,17 +226,29 @@ public:
     }
 
     void mouseUp(const juce::MouseEvent& e, PlaylistComponent& p) override {
-        if (p.draggingClipIndex != -1 && p.draggingNoteIndex == -1) {
+        if (p.draggingClipIndex != -1) {
             auto& clip = p.clips[p.draggingClipIndex];
 
-            if (p.isResizingClip) {
-                if (clip.linkedAudio != nullptr) clip.linkedAudio->width = clip.width;
+            if (p.draggingNoteIndex == -1) {
+                // Fin de movimiento/resize de clip
+                if (p.isResizingClip) {
+                    if (clip.linkedAudio != nullptr) clip.linkedAudio->width = clip.width;
+                }
+                else {
+                    if (clip.linkedAudio != nullptr) clip.linkedAudio->startX = clip.startX;
+                }
+                // DOUBLE BUFFER: publicar la posición/tamaño final al audio thread
+                if (clip.trackPtr != nullptr)
+                    clip.trackPtr->commitSnapshot();
             }
             else {
-                if (clip.linkedAudio != nullptr) clip.linkedAudio->startX = clip.startX;
+                // Fin de edición inline de nota MIDI
+                auto* midiClip = clip.linkedMidi;
+                if (midiClip != nullptr && clip.trackPtr != nullptr)
+                    clip.trackPtr->commitSnapshot(); // DOUBLE BUFFER: nota movida/resizada
             }
         }
-        
+
         p.draggingClipIndex = -1;
         p.draggingNoteIndex = -1;
     }
