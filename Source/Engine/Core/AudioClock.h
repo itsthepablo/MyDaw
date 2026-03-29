@@ -16,6 +16,7 @@ struct AudioClock {
     bool wasPlayingLastBlock = false;
     int lastPreviewPitch = -1;
     bool looped = false;
+    bool justSeeked = false;
 
     void prepare(double s, int bufSize) {
         sampleRate = s;
@@ -34,10 +35,22 @@ struct AudioClock {
         // El reloj asegura que los cálculos de física (samples) coincidan simétricamente con el dibujo (px)
         samplesPerPixel = sampleRate / ((currentBpm / 60.0) * 80.0);
 
+        // --- Intercepción de Seek Inmediato por parte del UI ---
+        float reqPh = ts.seekRequestPh.exchange(-1.0f, std::memory_order_relaxed);
+        if (reqPh >= 0.0f) {
+            currentPh = reqPh;
+            nextPh = reqPh;
+            ts.playheadPos.store(reqPh, std::memory_order_relaxed);
+            justSeeked = true;
+        }
+
         // Si no estamos tocando, sincronizamos visualmente con la UI (Playhead)
         if (!isPlayingNow) {
-            currentPh = ts.playheadPos.load(std::memory_order_relaxed);
-            nextPh = currentPh;
+            float staticPh = ts.playheadPos.load(std::memory_order_relaxed);
+            if (staticPh != currentPh) {
+                currentPh = staticPh;
+                nextPh = currentPh;
+            }
             currentSamplePos = (long long)(currentPh * samplesPerPixel);
             blockEndSamplePos = currentSamplePos + numSamples;
             ts.currentAudioPlayhead.store(currentPh, std::memory_order_relaxed);

@@ -48,7 +48,10 @@ public:
 
     void setTrackContainer(TrackContainer* tc) {
         trackContainer = tc;
-        if (tc) setTracksReference(&(tc->getTracks()));
+        if (tc) {
+            setTracksReference(&(tc->getTracks()));
+            tc->setTrackHeight(trackHeight);
+        }
     }
 
     std::vector<TrackClip> clips;

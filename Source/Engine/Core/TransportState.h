@@ -11,6 +11,7 @@ struct TransportState {
     std::atomic<float> bpm { 120.0f };
     std::atomic<float> loopEndPos { 32.0f * 320.0f };
     std::atomic<float> playheadPos { 0.0f };
+    std::atomic<float> seekRequestPh { -1.0f };
     
     // Comunicación de vuelta desde Audio -> UI (Lock-Free)
     std::atomic<float> currentAudioPlayhead { 0.0f };

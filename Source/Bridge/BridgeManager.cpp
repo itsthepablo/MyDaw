@@ -36,6 +36,12 @@ void BridgeManager::initializeAllBridges(BridgeDependencies d) {
     auto& engine = d.audioEngine; // Captura segura del motor
     d.playlistUI.getPlaybackPosition = [&engine]() -> float { return engine.clock.currentPh; };
     d.pianoRollUI.getPlaybackPosition = [&engine]() -> float { return engine.clock.currentPh; };
+
+    // --- NUEVO: Conexión asíncrona hacia el AudioEngine (Lock-Free Seek) ---
+    d.playlistUI.onPlayheadSeekRequested = [&engine](float newPos) {
+        engine.transportState.seekRequestPh.store(newPos, std::memory_order_release);
+        engine.transportState.playheadPos.store(newPos, std::memory_order_release);
+    };
 }
 
 void BridgeManager::cleanupTrack(Track* track, PianoRollComponent& pianoRoll, std::function<void()> closePianoRollCallback) {

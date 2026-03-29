@@ -102,6 +102,13 @@ public:
         SafetyProcessors::applyNaNKiller(*bufferToFill.buffer, bufferToFill.startSample, bufferToFill.numSamples);
         float mv = masterVolume.load(std::memory_order_relaxed);
         bufferToFill.buffer->applyGain(bufferToFill.startSample, bufferToFill.numSamples, mv);
+        
+        // Anti-click (De-zipper) rápido en maestro para evitar transientes infinitos al saltar
+        if (clock.justSeeked) {
+            bufferToFill.buffer->applyGainRamp(bufferToFill.startSample, bufferToFill.numSamples, 0.0f, 1.0f);
+            clock.justSeeked = false;
+        }
+        
         SafetyProcessors::applyHardClipper(*bufferToFill.buffer, bufferToFill.startSample, bufferToFill.numSamples, 1.0f);
     }
 };

@@ -57,8 +57,8 @@ PlaylistComponent::~PlaylistComponent() {
 }
 
 void PlaylistComponent::timerCallback() {
-    // CORRECCIÓN DE RACE CONDITION: Solo lee el motor si está en Play
-    if (isPlaying && getPlaybackPosition) {
+    // CORRECCIÓN DE RACE CONDITION: Solo lee el motor si está en Play y NO se está arrastrando el timeline
+    if (isPlaying && getPlaybackPosition && !isDraggingTimeline) {
         float newPos = getPlaybackPosition();
         if (playheadAbsPos != newPos) {
             playheadAbsPos = newPos;
@@ -331,6 +331,10 @@ void PlaylistComponent::mouseWheelMove(const juce::MouseEvent& e, const juce::Mo
 
             double oldTrackHeight = trackHeight;
             trackHeight = (float)juce::jlimit(30.0, 400.0, trackHeight * zoomFactor);
+            
+            if (trackContainer) {
+                trackContainer->setTrackHeight(trackHeight);
+            }
             
             double heightRatio = trackHeight / oldTrackHeight;
             double newVS = mouseAbsY * heightRatio - (currentMouseY - topOffset);

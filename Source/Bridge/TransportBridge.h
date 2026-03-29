@@ -29,6 +29,7 @@ public:
                 if (!mods.isCtrlDown() && !mods.isCommandDown()) {
                     pianoRoll.setPlayheadPos(0);
                     playlist.setPlayheadPos(0);
+                    if (playlist.onPlayheadSeekRequested) playlist.onPlayheadSeekRequested(0.0f);
                 }
 
                 topMenu.playBtn.setButtonText("P");
@@ -41,6 +42,7 @@ public:
             playlist.isPlaying = false;
             pianoRoll.setPlayheadPos(0);
             playlist.setPlayheadPos(0);
+            if (playlist.onPlayheadSeekRequested) playlist.onPlayheadSeekRequested(0.0f);
 
             topMenu.playBtn.setButtonText("P");
             topMenu.playBtn.setColour(juce::TextButton::buttonColourId, juce::Colours::green);

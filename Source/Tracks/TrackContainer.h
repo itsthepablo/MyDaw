@@ -18,6 +18,13 @@ public:
     std::function<void(Track*)> onActiveTrackChanged;
 
     int vOffset = 0;
+    float trackHeight = 100.0f;
+
+    void setTrackHeight(float newHeight) {
+        trackHeight = newHeight;
+        resized();
+        repaint();
+    }
 
     // --- NUEVO: POOL DE RECICLAJE (Clips no utilizados) ---
     juce::OwnedArray<AudioClipData> unusedAudioPool;
@@ -348,8 +355,8 @@ public:
         int currentY = 120 - vOffset;
         for (auto* p : trackPanels) {
             if (p->isVisible()) {
-                p->setBounds(0, currentY, getWidth(), 100);
-                currentY += 100;
+                p->setBounds(0, currentY, getWidth(), (int)trackHeight);
+                currentY += (int)trackHeight;
             }
         }
     }
