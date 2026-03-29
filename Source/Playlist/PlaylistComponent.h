@@ -31,6 +31,7 @@ public:
 
     // --- NUEVO: Antena receptora del Reloj Maestro ---
     std::function<float()> getPlaybackPosition;
+    std::function<void(float)> onPlayheadSeekRequested;
 
     std::function<void(TrackType)> onNewTrackRequested;
     std::function<void(int)> onVerticalScroll;
@@ -76,7 +77,7 @@ public:
     const int timelineH = 35;
     const int vBarWidth = 32;
 
-    const float trackHeight = 100.0f;
+    float trackHeight = 100.0f;
     double snapPixels = 80.0;
 
     void setTracksReference(const juce::OwnedArray<Track>* tracks) {
@@ -161,6 +162,7 @@ private:
     double bpm = 120.0;
     bool isExternalFileDragging = false;
     bool isInternalDragging = false;
+    bool isDraggingTimeline = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PlaylistComponent)
 };
