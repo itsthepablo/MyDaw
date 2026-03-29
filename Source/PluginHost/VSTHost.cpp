@@ -57,7 +57,7 @@ void VSTHost::loadPluginAsync(double sampleRate, std::function<void(bool)> callb
                                 // 2. Obtenemos la arquitectura completa que el VST3 quiere usar por defecto
                                 juce::AudioProcessor::BusesLayout layout = vstPlugin->getBusesLayout();
 
-                                // 3. Obligamos al Bus 0 (El Principal) a ser Estéreo puro
+                                // 3. Obligamos al Bus 0 (El Principal) a ser Est	reo puro
                                 if (layout.inputBuses.size() > 0)
                                     layout.inputBuses.getReference(0) = juce::AudioChannelSet::stereo();
                                 if (layout.outputBuses.size() > 0)
@@ -74,7 +74,7 @@ void VSTHost::loadPluginAsync(double sampleRate, std::function<void(bool)> callb
                                 // 5. Le inyectamos esta nueva realidad al plugin a la fuerza
                                 vstPlugin->setBusesLayout(layout);
 
-                                // 6. Nos aseguramos de que JUCE respete esta decisión
+                                // 6. Nos aseguramos de que JUCE respete esta decisin
                                 vstPlugin->enableAllBuses();
 
                                 vstWindow = std::make_unique<VSTWindow>(vstPlugin.get());
@@ -123,7 +123,7 @@ void VSTHost::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& m
 {
     if (vstPlugin != nullptr && !bypassed) {
 
-        // Bloqueo final de seguridad: Aislamos solo el estéreo puro para el VST
+        // Bloqueo final de seguridad: Aislamos solo el est	reo puro para el VST
         int safeChans = juce::jmin(2, buffer.getNumChannels());
 
         if (safeChans > 0) {
@@ -131,7 +131,7 @@ void VSTHost::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& m
             vstPlugin->processBlock(stereoBuffer, midiMessages);
         }
 
-        // El inodoro del Sidechain (Matamos cualquier basura residual de los demás canales)
+        // El inodoro del Sidechain (Matamos cualquier basura residual de los dems canales)
         for (int ch = safeChans; ch < buffer.getNumChannels(); ++ch) {
             buffer.clear(ch, 0, buffer.getNumSamples());
         }
