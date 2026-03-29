@@ -2,6 +2,15 @@
 #include <JuceHeader.h>
 #include "Track.h"
 #include "TrackControlPanel.h"
+#include <vector>
+#include <algorithm>
+
+struct TrackHeaderBackground : public juce::Component {
+    TrackHeaderBackground() { setOpaque(true); }
+    void paint(juce::Graphics& g) override {
+        g.fillAll(juce::Colour(25, 27, 30));
+    }
+};
 
 class TrackContainer : public juce::Component,
     public juce::DragAndDropTarget,
@@ -391,7 +400,7 @@ public:
     }
 
 private:
-    juce::Component headerBg;
+    TrackHeaderBackground headerBg;
     juce::TextButton addMidiBtn, addAudioBtn;
     juce::OwnedArray<Track> tracks;
     juce::OwnedArray<TrackControlPanel> trackPanels;
