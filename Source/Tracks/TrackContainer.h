@@ -338,13 +338,14 @@ public:
 
     void resized() override {
         auto area = getLocalBounds();
-        auto top = area.removeFromTop(35);
+        auto top = area.removeFromTop(120);
         headerBg.setBounds(top);
 
-        addMidiBtn.setBounds(top.removeFromLeft(getWidth() / 2).reduced(2));
-        addAudioBtn.setBounds(top.reduced(2));
+        auto buttonArea = top.withTrimmedTop(120 - 35);
+        addMidiBtn.setBounds(buttonArea.removeFromLeft(getWidth() / 2).reduced(2));
+        addAudioBtn.setBounds(buttonArea.reduced(2));
 
-        int currentY = 35 - vOffset;
+        int currentY = 120 - vOffset;
         for (auto* p : trackPanels) {
             if (p->isVisible()) {
                 p->setBounds(0, currentY, getWidth(), 100);

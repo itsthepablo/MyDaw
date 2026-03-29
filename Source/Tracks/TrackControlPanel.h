@@ -182,7 +182,9 @@ public:
         int indent = track.folderDepth * 20;
         auto area = getLocalBounds().reduced(2).withTrimmedLeft(indent);
 
-        g.setColour(juce::Colour(40, 42, 46));
+        juce::ColourGradient grad(juce::Colour(45, 48, 52), area.toFloat().getTopLeft(),
+                                  juce::Colour(20, 22, 25), area.toFloat().getBottomLeft(), false);
+        g.setGradientFill(grad);
         g.fillRoundedRectangle(area.toFloat(), 4.0f);
 
         if (track.folderDepth > 0) {
