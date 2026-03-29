@@ -42,6 +42,26 @@ void MainComponent::setupCallbacks() {
 
     ui.playlistUI.onNewTrackRequested = [this](TrackType type) { ui.trackContainer.addTrack(type); };
 
+    ui.playlistUI.onVerticalScroll = [this](int scrollPos) {
+        ui.trackContainer.setVOffset(scrollPos);
+    };
+
+    ui.trackContainer.onScrollWheel = [this](float deltaY) {
+        double currentStart = ui.playlistUI.vBar.getCurrentRangeStart();
+        double currentSize = ui.playlistUI.vBar.getCurrentRangeSize();
+        double maxLimit = ui.playlistUI.vBar.getMaximumRangeLimit();
+        double newStart = juce::jlimit(0.0, std::max(0.0, maxLimit - currentSize), currentStart - (deltaY * 100.0));
+        ui.playlistUI.vBar.setCurrentRange(newStart, currentSize);
+        ui.playlistUI.updateScrollBars();
+        ui.playlistUI.repaint();
+    };
+
+    ui.playlistUI.onClipSelected = [this](Track* t) {
+        ui.trackContainer.selectTrack(t, juce::ModifierKeys());
+        ui.effectsPanelUI.setTrack(t);
+        ui.instrumentPanelUI.setTrack(t);
+    };
+
     ui.trackContainer.onTrackAdded = [this] {
         auto* newTrack = ui.trackContainer.getTracks().getLast();
         if (newTrack) {

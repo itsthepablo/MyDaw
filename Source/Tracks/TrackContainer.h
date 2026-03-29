@@ -16,6 +16,7 @@ public:
     std::function<void()> onTracksReordered;
     std::function<void()> onTrackAdded;
     std::function<void(Track*)> onActiveTrackChanged;
+    std::function<void(float)> onScrollWheel;
 
     int vOffset = 0;
     float trackHeight = 100.0f;
@@ -32,7 +33,7 @@ public:
 
     TrackContainer() {
         addAndMakeVisible(headerBg);
-        headerBg.setInterceptsMouseClicks(false, false);
+        headerBg.setInterceptsMouseClicks(true, false);
 
         addAndMakeVisible(addMidiBtn);
         addMidiBtn.setButtonText("+ MIDI");
@@ -378,6 +379,15 @@ public:
                 currentY += (int)trackHeight;
             }
         }
+
+        headerBg.toFront(false);
+        addMidiBtn.toFront(false);
+        addAudioBtn.toFront(false);
+    }
+
+    void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override {
+        if (onScrollWheel) onScrollWheel(wheel.deltaY);
+        juce::Component::mouseWheelMove(e, wheel);
     }
 
 private:

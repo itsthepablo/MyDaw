@@ -12,6 +12,8 @@ public:
         int cIdx = p.getClipAt(e.x, e.y);
 
         if (cIdx != -1) {
+            if (p.onClipSelected && p.clips[cIdx].trackPtr != nullptr) p.onClipSelected(p.clips[cIdx].trackPtr);
+            
             if (e.mods.isRightButtonDown()) {
                 auto* linkedMidi = p.clips[cIdx].linkedMidi;
 

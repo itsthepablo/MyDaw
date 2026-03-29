@@ -82,6 +82,8 @@ void PlaylistComponent::updateScrollBars() {
 
     vBar.setRangeLimits(0.0, (double)totalH);
     vBar.setCurrentRange(vBar.getCurrentRangeStart(), visibleH);
+
+    if (onVerticalScroll) onVerticalScroll((int)vBar.getCurrentRangeStart());
 }
 
 void PlaylistComponent::addMidiClipToView(Track* targetTrack, MidiClipData* newClip) {

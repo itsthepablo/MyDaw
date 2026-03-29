@@ -38,6 +38,7 @@ public:
     std::function<void(Track*, MidiClipData*)> onMidiClipDoubleClicked;
     std::function<void(MidiClipData*)> onMidiClipDeleted;
     std::function<void(MidiClipData*)> onPatternEdited;
+    std::function<void(Track*)> onClipSelected;
 
     void notifyPatternEdited(MidiClipData* clip) {
         if (onPatternEdited && clip != nullptr) onPatternEdited(clip);

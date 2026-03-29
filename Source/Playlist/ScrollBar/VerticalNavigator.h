@@ -17,6 +17,8 @@ public:
     void setRangeLimits(double minimum, double maximum);
     void setCurrentRange(double newStart, double newSize);
     double getCurrentRangeStart() const { return currentStart; }
+    double getCurrentRangeSize() const { return visibleSize; }
+    double getMaximumRangeLimit() const { return totalMax; }
 
     std::function<void(double)> onScrollMoved;
 
