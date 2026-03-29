@@ -100,13 +100,16 @@ public:
         p->onPluginClick = [this, t](int i) { if (onOpenFx) onOpenFx(*t, i); };
         p->onPianoRollClick = [this, t] { if (onOpenPianoRoll) onOpenPianoRoll(*t); };
         p->onDeleteClick = [this, t] { 
-            if (t->isSelected) {
-                for (int i = tracks.size() - 1; i >= 0; --i) {
-                    if (tracks[i]->isSelected && onDeleteTrack) onDeleteTrack(i);
+            juce::MessageManager::callAsync([this, t] {
+                if (!tracks.contains(t)) return;
+                if (t->isSelected) {
+                    for (int i = tracks.size() - 1; i >= 0; --i) {
+                        if (tracks[i]->isSelected && onDeleteTrack) onDeleteTrack(i);
+                    }
+                } else {
+                    if (onDeleteTrack) onDeleteTrack(tracks.indexOf(t)); 
                 }
-            } else {
-                if (onDeleteTrack) onDeleteTrack(tracks.indexOf(t)); 
-            }
+            });
         };
         p->onEffectsClick = [this, t] { if (onOpenEffects) onOpenEffects(*t); };
 
