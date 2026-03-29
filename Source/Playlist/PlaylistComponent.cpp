@@ -187,14 +187,50 @@ void PlaylistComponent::paint(juce::Graphics& g) {
     g.saveState();
     g.reduceClipRegion(0, topOffset, getWidth() - (vBar.isVisible() ? vBarWidth : 0), viewAreaH);
 
+    // 1. Dibujar el fondo alternado cada 4 compases (FL Studio Style)
+    double blockLengthPx = 1280.0; // 4 compases * 320px
+    double startTime = (double)hS / hZoom;
+    double endTime = (double)(hS + getWidth()) / hZoom;
+    
+    int startBlock = (int)(startTime / blockLengthPx);
+    int endBlock = (int)(endTime / blockLengthPx);
+
+    for (int b = startBlock; b <= endBlock; ++b) {
+        if (b % 2 != 0) { // Solo pintar el alternado (el par ya es color base)
+            double blockAbsX = b * blockLengthPx;
+            int xPos = (int)(blockAbsX * hZoom) - (int)hS;
+            int wPos = (int)(std::ceil(blockLengthPx * hZoom));
+            
+            g.setColour(juce::Colour(32, 34, 38)); // Gris ligeramente más iluminado
+            g.fillRect(xPos, topOffset, wPos, viewAreaH);
+        }
+    }
+
+    // 2. Líneas verticales dinámicas y Culling
     double visualSnap = (snapPixels < 10.0) ? 80.0 : snapPixels;
+    double currentDrawSnap = visualSnap;
+    
+    // Limitador de congestión
+    while ((currentDrawSnap * hZoom) < 8.0 && currentDrawSnap < 320.0) {
+        currentDrawSnap *= 2.0;
+    }
+    if (currentDrawSnap >= 320.0) {
+        double pxPerMeasure = 320.0 * hZoom;
+        if (pxPerMeasure < 5.0) currentDrawSnap = 320.0 * 16.0;
+        else if (pxPerMeasure < 10.0) currentDrawSnap = 320.0 * 8.0;
+        else if (pxPerMeasure < 20.0) currentDrawSnap = 320.0 * 4.0;
+        else if (pxPerMeasure < 40.0) currentDrawSnap = 320.0 * 2.0;
+    }
 
-    for (double i = 0; i <= getTimelineLength(); i += visualSnap) {
+    double startLineSearch = std::floor(startTime / currentDrawSnap) * currentDrawSnap;
+    double endLineSearch = std::min(getTimelineLength(), endTime);
+
+    for (double i = startLineSearch; i <= endLineSearch; i += currentDrawSnap) {
         int dx = (int)(i * hZoom) - (int)hS;
-        if (dx < 0) continue;
-
-        if (std::fmod(i, 80.0) == 0.0) g.setColour(juce::Colours::white.withAlpha(0.1f));
-        else g.setColour(juce::Colours::white.withAlpha(0.04f));
+        
+        if (std::fmod(i, 320.0) == 0.0) g.setColour(juce::Colours::white.withAlpha(0.12f));
+        else if (std::fmod(i, 80.0) == 0.0) g.setColour(juce::Colours::white.withAlpha(0.06f));
+        else g.setColour(juce::Colours::white.withAlpha(0.03f));
 
         g.drawVerticalLine(dx, (float)topOffset, (float)getHeight());
     }
