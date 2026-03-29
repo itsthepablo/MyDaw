@@ -286,9 +286,10 @@ public:
 
             if (track.getType() == TrackType::Audio) {
                 m.addSeparator();
-                m.addItem(2, "Vista: Combinada (Mono)", true, track.getWaveformViewMode() == WaveformViewMode::Combined);
+                m.addItem(2, "Vista: Combinada (L+R y Polaridad)", true, track.getWaveformViewMode() == WaveformViewMode::Combined);
                 m.addItem(3, "Vista: Separada (L / R)", true, track.getWaveformViewMode() == WaveformViewMode::SeparateLR);
                 m.addItem(4, "Vista: Mid / Side", true, track.getWaveformViewMode() == WaveformViewMode::MidSide);
+                m.addItem(5, "Vista: Espectrograma (Frecuencias)", true, track.getWaveformViewMode() == WaveformViewMode::Spectrogram);
             }
 
             m.showMenuAsync(juce::PopupMenu::Options(), [this](int result) {
@@ -296,6 +297,7 @@ public:
                 else if (result == 2) { track.setWaveformViewMode(WaveformViewMode::Combined); if (onWaveformViewChanged) onWaveformViewChanged(); }
                 else if (result == 3) { track.setWaveformViewMode(WaveformViewMode::SeparateLR); if (onWaveformViewChanged) onWaveformViewChanged(); }
                 else if (result == 4) { track.setWaveformViewMode(WaveformViewMode::MidSide); if (onWaveformViewChanged) onWaveformViewChanged(); }
+                else if (result == 5) { track.setWaveformViewMode(WaveformViewMode::Spectrogram); if (onWaveformViewChanged) onWaveformViewChanged(); }
                 });
         }
     }

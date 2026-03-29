@@ -264,9 +264,9 @@ void PlaylistComponent::paint(juce::Graphics& g) {
         g.setColour(trackColor.darker(0.8f).withAlpha(1.0f));
         g.fillRoundedRectangle(clipRect.toFloat(), 5.0f);
 
-        // 2. Cabecera superior (Header) solo para el texto
+        // 2. Cabecera superior (Header) solo para el texto sin oscurecer base
         juce::Rectangle<int> headerRect = clipRect.withHeight(18); // 18px de altura fija
-        g.setColour(trackColor.darker(0.3f).withAlpha(1.0f));
+        g.setColour(trackColor.darker(0.8f).withAlpha(1.0f));
         g.fillRoundedRectangle(headerRect.toFloat(), 5.0f);
         if (headerRect.getHeight() > 5) g.fillRect(headerRect.withTop(headerRect.getBottom() - 5).toFloat()); // Quitar curvas inferiores
 

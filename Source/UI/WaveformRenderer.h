@@ -35,26 +35,47 @@ public:
 
         bool isStereo = !cacheR.empty();
 
-        // Lambda ultra rápido para calcular el Peak Sub-Pixel preciso y hacer interpolación en Zooms Cercanos
-        auto getPeakRange = [&](const std::vector<float>& cache, int x) -> float {
+        // --- SPECTROGRAM VIEW ---
+        if (viewMode == WaveformViewMode::Spectrogram) {
+            if (!clipData.spectrogramImage.isNull()) {
+                 float imgPointsPerPixel = originalWidthPx > 0 ? ((float)clipData.spectrogramImage.getWidth() / originalWidthPx) : 1.0f;
+                 int srcX = (int)(clipData.offsetX * (float)hZoom * imgPointsPerPixel);
+                 int srcW = (int)(width * imgPointsPerPixel);
+                 
+                 if (srcW > 0 && srcX >= 0) {
+                     g.drawImage(clipData.spectrogramImage, 
+                                 area.getX(), area.getY(), area.getWidth(), area.getHeight(),
+                                 srcX, 0, srcW, clipData.spectrogramImage.getHeight());
+                 }
+            }
+            return;
+        }
+
+        auto getPeakRange = [&](const std::vector<AudioPeak>& cache, int x) -> AudioPeak {
             float startIdxF = cacheOffset + x * pointsPerPixel;
             float endIdxF = startIdxF + pointsPerPixel;
             int startIdx = (int)startIdxF;
             int endIdx = (int)endIdxF;
 
-            float peak = 0.0f;
+            AudioPeak peak;
             if (startIdx == endIdx) {
                 if (startIdx >= 0 && startIdx < (int)cache.size()) {
                     float frac = startIdxF - startIdx;
-                    float p1 = cache[startIdx];
-                    float p2 = (startIdx + 1 < (int)cache.size()) ? cache[startIdx + 1] : p1;
-                    peak = p1 + frac * (p2 - p1);
+                    AudioPeak p1 = cache[startIdx];
+                    AudioPeak p2 = (startIdx + 1 < (int)cache.size()) ? cache[startIdx + 1] : p1;
+                    peak.maxPos = p1.maxPos + frac * (p2.maxPos - p1.maxPos);
+                    peak.minNeg = p1.minNeg + frac * (p2.minNeg - p1.minNeg);
                 }
             } else {
                 int safeStart = std::max(0, startIdx);
                 int safeEnd = std::min((int)cache.size() - 1, endIdx);
-                for (int i = safeStart; i <= safeEnd; ++i) {
-                    peak = std::max(peak, cache[i]);
+                if (safeStart <= safeEnd) {
+                   peak.maxPos = cache[safeStart].maxPos;
+                   peak.minNeg = cache[safeStart].minNeg;
+                   for (int i = safeStart + 1; i <= safeEnd; ++i) {
+                       peak.maxPos = std::max(peak.maxPos, cache[i].maxPos);
+                       peak.minNeg = std::min(peak.minNeg, cache[i].minNeg);
+                   }
                 }
             }
             return peak;
@@ -72,13 +93,12 @@ public:
             g.drawHorizontalLine((int)(area.getY() + halfHeight), (float)area.getX(), (float)(area.getX() + width));
 
             for (int x = 0; x < width; ++x) {
-                float peakL = juce::jmin(1.0f, getPeakRange(cacheL, x) * 1.05f);
-                float peakR = juce::jmin(1.0f, getPeakRange(cacheR, x) * 1.05f);
+                AudioPeak peakL = getPeakRange(cacheL, x);
+                AudioPeak peakR = getPeakRange(cacheR, x);
                 const int currentX = area.getX() + x;
 
-                float yOffsetL = peakL * quarterHeight;
-                float topYL = midYL - yOffsetL;
-                float bottomYL = midYL + yOffsetL;
+                float topYL = midYL - (juce::jmin(1.0f, peakL.maxPos * 1.05f) * quarterHeight);
+                float bottomYL = midYL - (juce::jmax(-1.0f, peakL.minNeg * 1.05f) * quarterHeight);
 
                 g.setColour(fillColor);
                 g.drawVerticalLine(currentX, topYL, bottomYL);
@@ -86,9 +106,8 @@ public:
                 g.fillRect((float)currentX, topYL, 1.0f, 1.0f);
                 g.fillRect((float)currentX, bottomYL, 1.0f, 1.0f);
 
-                float yOffsetR = peakR * quarterHeight;
-                float topYR = midYR - yOffsetR;
-                float bottomYR = midYR + yOffsetR;
+                float topYR = midYR - (juce::jmin(1.0f, peakR.maxPos * 1.05f) * quarterHeight);
+                float bottomYR = midYR - (juce::jmax(-1.0f, peakR.minNeg * 1.05f) * quarterHeight);
 
                 g.setColour(fillColor);
                 g.drawVerticalLine(currentX, topYR, bottomYR);
@@ -109,14 +128,12 @@ public:
             g.drawHorizontalLine((int)(area.getY() + halfHeight), (float)area.getX(), (float)(area.getX() + width));
 
             for (int x = 0; x < width; ++x) {
-                float peakMid = juce::jmin(1.0f, getPeakRange(cacheMid, x) * 1.05f);
-                float peakSide = juce::jmin(1.0f, getPeakRange(cacheSide, x) * 1.05f);
+                AudioPeak peakMid = getPeakRange(cacheMid, x);
+                AudioPeak peakSide = getPeakRange(cacheSide, x);
                 const int currentX = area.getX() + x;
 
-                // Mid
-                float yOffsetMid = peakMid * quarterHeight;
-                float topYMid = midYL - yOffsetMid;
-                float bottomYMid = midYL + yOffsetMid;
+                float topYMid = midYL - (juce::jmin(1.0f, peakMid.maxPos * 1.05f) * quarterHeight);
+                float bottomYMid = midYL - (juce::jmax(-1.0f, peakMid.minNeg * 1.05f) * quarterHeight);
 
                 g.setColour(fillColor);
                 g.drawVerticalLine(currentX, topYMid, bottomYMid);
@@ -124,10 +141,8 @@ public:
                 g.fillRect((float)currentX, topYMid, 1.0f, 1.0f);
                 g.fillRect((float)currentX, bottomYMid, 1.0f, 1.0f);
 
-                // Side
-                float yOffsetSide = peakSide * quarterHeight;
-                float topYSide = midYR - yOffsetSide;
-                float bottomYSide = midYR + yOffsetSide;
+                float topYSide = midYR - (juce::jmin(1.0f, peakSide.maxPos * 1.05f) * quarterHeight);
+                float bottomYSide = midYR - (juce::jmax(-1.0f, peakSide.minNeg * 1.05f) * quarterHeight);
 
                 g.setColour(baseColor.darker(0.2f).withAlpha(1.0f));
                 g.drawVerticalLine(currentX, topYSide, bottomYSide);
@@ -136,31 +151,42 @@ public:
                 g.fillRect((float)currentX, bottomYSide, 1.0f, 1.0f);
             }
         }
-        // --- VISTA CLÁSICA (Combinada) ---
+        // --- VISTA CLÁSICA (Combinada + Side interno) ---
         else {
             const float midY = (float)area.getY() + (float)height / 2.0f;
             const float halfHeight = (float)height / 2.0f;
 
             for (int x = 0; x < width; ++x) {
-                float peakL = getPeakRange(cacheL, x);
-                float peak = peakL;
+                AudioPeak peakL = getPeakRange(cacheL, x);
+                AudioPeak peak = peakL;
                 if (!cacheR.empty()) {
-                    float peakR = getPeakRange(cacheR, x);
-                    peak = std::max(peakL, peakR);
+                    AudioPeak peakR = getPeakRange(cacheR, x);
+                    peak.maxPos = std::max(peakL.maxPos, peakR.maxPos);
+                    peak.minNeg = std::min(peakL.minNeg, peakR.minNeg);
                 }
 
-                peak = juce::jmin(1.0f, peak * 1.05f);
+                peak.maxPos = juce::jmin(1.0f, peak.maxPos * 1.05f);
+                peak.minNeg = juce::jmax(-1.0f, peak.minNeg * 1.05f);
+
                 const int currentX = area.getX() + x;
 
-                float yOffset = peak * halfHeight;
-                float topY = midY - yOffset;
-                float bottomY = midY + yOffset;
+                float topY = midY - (peak.maxPos * halfHeight);
+                float bottomY = midY - (peak.minNeg * halfHeight);
 
                 g.setColour(fillColor);
                 g.drawVerticalLine(currentX, topY, bottomY);
                 g.setColour(outlineColor);
                 g.fillRect((float)currentX, topY, 1.0f, 1.0f);
                 g.fillRect((float)currentX, bottomY, 1.0f, 1.0f);
+
+                // Side superpuesto como marca oscura flotante
+                if (!cacheSide.empty()) {
+                     AudioPeak pSide = getPeakRange(cacheSide, x);
+                     float sideTop = midY - (juce::jmin(1.0f, pSide.maxPos * 1.05f) * halfHeight * 0.9f);
+                     float sideBot = midY - (juce::jmax(-1.0f, pSide.minNeg * 1.05f) * halfHeight * 0.9f);
+                     g.setColour(baseColor.darker(0.4f).withAlpha(0.6f));
+                     g.drawVerticalLine(currentX, sideTop, sideBot);
+                }
             }
         }
     }

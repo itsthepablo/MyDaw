@@ -4,12 +4,18 @@
 #include "../Native_Plugins/BaseEffect.h"
 #include "../PluginHost/VSTHost.h" 
 #include "../Engine/SimpleLoudness.h"
+#include <juce_dsp/juce_dsp.h>
 #include <vector>
 #include <algorithm>
 #include <cmath>
 
 enum class TrackType { MIDI, Audio };
-enum class WaveformViewMode { Combined, SeparateLR, MidSide };
+enum class WaveformViewMode { Combined, SeparateLR, MidSide, Spectrogram }; // Agregado Espectrograma
+
+struct AudioPeak {
+    float maxPos = 0.0f;
+    float minNeg = 0.0f;
+};
 
 struct AudioClipData {
     juce::String name;
@@ -23,10 +29,12 @@ struct AudioClipData {
     juce::AudioBuffer<float> fileBuffer;
     double sourceSampleRate = 44100.0;
 
-    std::vector<float> cachedPeaksL;
-    std::vector<float> cachedPeaksR;
-    std::vector<float> cachedPeaksMid;
-    std::vector<float> cachedPeaksSide;
+    std::vector<AudioPeak> cachedPeaksL;
+    std::vector<AudioPeak> cachedPeaksR;
+    std::vector<AudioPeak> cachedPeaksMid;
+    std::vector<AudioPeak> cachedPeaksSide;
+    
+    juce::Image spectrogramImage; // Cache Matrix FFT
 
     void generateCache() {
         const int samplesPerPoint = 256;
@@ -49,7 +57,7 @@ struct AudioClipData {
             int startSample = i * samplesPerPoint;
             int numSamplesInPoint = std::min(samplesPerPoint, numSamples - startSample);
 
-            float pL = 0.0f, pR = 0.0f, pMid = 0.0f, pSide = 0.0f;
+            AudioPeak pL, pR, pMid, pSide;
 
             if (isStereo) {
                 const float* lData = fileBuffer.getReadPointer(0, startSample);
@@ -58,10 +66,14 @@ struct AudioClipData {
                 for (int s = 0; s < numSamplesInPoint; ++s) {
                     float l = lData[s];
                     float r = rData[s];
-                    pL = std::max(pL, std::abs(l));
-                    pR = std::max(pR, std::abs(r));
-                    pMid = std::max(pMid, std::abs((l + r) * 0.5f));
-                    pSide = std::max(pSide, std::abs((l - r) * 0.5f));
+                    pL.maxPos = std::max(pL.maxPos, l); pL.minNeg = std::min(pL.minNeg, l);
+                    pR.maxPos = std::max(pR.maxPos, r); pR.minNeg = std::min(pR.minNeg, r);
+                    
+                    float mid = (l + r) * 0.5f;
+                    pMid.maxPos = std::max(pMid.maxPos, mid); pMid.minNeg = std::min(pMid.minNeg, mid);
+                    
+                    float side = (l - r) * 0.5f;
+                    pSide.maxPos = std::max(pSide.maxPos, side); pSide.minNeg = std::min(pSide.minNeg, side);
                 }
                 cachedPeaksL.push_back(pL);
                 cachedPeaksR.push_back(pR);
@@ -69,9 +81,58 @@ struct AudioClipData {
                 cachedPeaksSide.push_back(pSide);
             }
             else {
-                auto rangeL = fileBuffer.findMinMax(0, startSample, numSamplesInPoint);
-                pL = std::max(std::abs(rangeL.getStart()), std::abs(rangeL.getEnd()));
+                const float* lData = fileBuffer.getReadPointer(0, startSample);
+                for (int s = 0; s < numSamplesInPoint; ++s) {
+                    float l = lData[s];
+                    pL.maxPos = std::max(pL.maxPos, l); pL.minNeg = std::min(pL.minNeg, l);
+                }
                 cachedPeaksL.push_back(pL);
+            }
+        }
+        
+        // --- FFT SPECTROGRAM GENERATION ---
+        auto getHeatColor = [](float magnitude) -> juce::Colour {
+            magnitude = juce::jlimit(0.0f, 1.0f, magnitude);
+            juce::Colour c = juce::Colour(20, 22, 25);
+            if (magnitude < 0.2f) return c.interpolatedWith(juce::Colours::darkred, magnitude * 5.0f);
+            if (magnitude < 0.6f) return juce::Colours::darkred.interpolatedWith(juce::Colours::orange, (magnitude - 0.2f) / 0.4f);
+            return juce::Colours::orange.interpolatedWith(juce::Colours::yellow, (magnitude - 0.6f) / 0.4f);
+        };
+
+        const int fftOrder = 10; // 1024 samples (512 Freq Bins)
+        const int fftSize = 1 << fftOrder;
+        
+        juce::dsp::FFT fft(fftOrder);
+        juce::dsp::WindowingFunction<float> window((size_t)fftSize, juce::dsp::WindowingFunction<float>::hann);
+        
+        int totalFrames = numSamples / fftSize;
+        if (totalFrames > 0) {
+            int imgHeight = fftSize / 2; 
+            spectrogramImage = juce::Image(juce::Image::ARGB, totalFrames, imgHeight, true);
+            juce::Image::BitmapData bmpData(spectrogramImage, juce::Image::BitmapData::writeOnly);
+            
+            std::vector<float> fftData((size_t)(fftSize * 2), 0.0f);
+            const float* audioData = fileBuffer.getReadPointer(0); 
+            
+            for (int frame = 0; frame < totalFrames; ++frame) {
+                int startSample = frame * fftSize;
+                std::fill(fftData.begin(), fftData.end(), 0.0f);
+                for (int i = 0; i < fftSize; ++i) {
+                    if (startSample + i < numSamples) fftData[i] = audioData[startSample + i];
+                }
+                
+                window.multiplyWithWindowingTable(fftData.data(), (size_t)fftSize);
+                fft.performFrequencyOnlyForwardTransform(fftData.data()); 
+                
+                for (int bin = 0; bin < imgHeight; ++bin) {
+                    float rawMag = fftData[bin];
+                    float intensity = 0.0f;
+                    if (rawMag > 0.0001f) {
+                       intensity = juce::jmin(1.0f, (float)std::log10(1.0f + rawMag * 50.0f) / 3.0f);
+                    }
+                    juce::Colour heat = getHeatColor(intensity);
+                    bmpData.setPixelColour(frame, imgHeight - 1 - bin, heat);
+                }
             }
         }
     }
