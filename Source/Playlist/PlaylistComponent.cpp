@@ -228,9 +228,9 @@ void PlaylistComponent::paint(juce::Graphics& g) {
     for (double i = startLineSearch; i <= endLineSearch; i += currentDrawSnap) {
         int dx = (int)(i * hZoom) - (int)hS;
         
-        if (std::fmod(i, 320.0) == 0.0) g.setColour(juce::Colours::black.withAlpha(0.5f));
-        else if (std::fmod(i, 80.0) == 0.0) g.setColour(juce::Colours::black.withAlpha(0.25f));
-        else g.setColour(juce::Colours::black.withAlpha(0.12f));
+        if (std::fmod(i, 320.0) == 0.0) g.setColour(juce::Colours::black);
+        else if (std::fmod(i, 80.0) == 0.0) g.setColour(juce::Colours::black);
+        else g.setColour(juce::Colours::black);
 
         g.drawVerticalLine(dx, (float)topOffset, (float)getHeight());
     }
@@ -239,8 +239,8 @@ void PlaylistComponent::paint(juce::Graphics& g) {
     if (tracksRef) {
         for (auto* t : *tracksRef) {
             if (!t->isShowingInChildren) continue;
-            g.setColour(juce::Colours::black.withAlpha(0.4f));
-            g.drawHorizontalLine(currentY + (int)trackHeight - 1, 0.0f, (float)getWidth());
+            g.setColour(juce::Colours::black.withAlpha(0.8f)); // Separador mucho más oscuro
+            g.fillRect(0.0f, (float)(currentY + (int)trackHeight - 2), (float)getWidth(), 2.0f); // 2 píxeles de grosor puro
             currentY += (int)trackHeight;
         }
     }
@@ -254,30 +254,43 @@ void PlaylistComponent::paint(juce::Graphics& g) {
         int wPos = (int)(clip.width * hZoom);
         juce::Rectangle<int> clipRect(xPos, yPos + 2, wPos - 1, (int)trackHeight - 4);
 
-        g.setColour(clip.trackPtr->getColor().withAlpha(0.2f));
-        g.fillRoundedRectangle(clipRect.toFloat(), 4.0f);
-
+        juce::Colour trackColor = clip.trackPtr->getColor();
+        
         bool isMutedLocally = (clip.linkedAudio && clip.linkedAudio->isMuted) || (clip.linkedMidi && clip.linkedMidi->isMuted);
         float alphaMult = isMutedLocally ? 0.3f : 1.0f;
-
         g.setOpacity(alphaMult);
 
-        if (clip.linkedAudio != nullptr) {
-            WaveformRenderer::drawWaveform(g, *clip.linkedAudio, clipRect, clip.trackPtr->getColor(), clip.trackPtr->getWaveformViewMode(), hZoom);
-        }
+        // 1. Fondo completo del clip (muy oscuro)
+        g.setColour(trackColor.darker(0.8f).withAlpha(1.0f));
+        g.fillRoundedRectangle(clipRect.toFloat(), 5.0f);
 
-        if (clip.linkedMidi != nullptr) {
-            MidiClipRenderer::drawMidiClip(g, *clip.linkedMidi, clipRect, clip.trackPtr->getColor(), clip.trackPtr->isInlineEditingActive, hZoom, hS);
-        }
+        // 2. Cabecera superior (Header) solo para el texto
+        juce::Rectangle<int> headerRect = clipRect.withHeight(18); // 18px de altura fija
+        g.setColour(trackColor.darker(0.3f).withAlpha(1.0f));
+        g.fillRoundedRectangle(headerRect.toFloat(), 5.0f);
+        if (headerRect.getHeight() > 5) g.fillRect(headerRect.withTop(headerRect.getBottom() - 5).toFloat()); // Quitar curvas inferiores
 
-        g.setColour(juce::Colours::white.withAlpha(0.9f * alphaMult));
-        g.drawText(clip.name, clipRect.reduced(5, 2), juce::Justification::topLeft, true);
+        // 3. Renderizar Onda o MIDI debajo del header
+        juce::Rectangle<int> innerArea = clipRect;
+        innerArea.removeFromTop(18); // Se corre la zona de renderizado
         
+        if (clip.linkedAudio != nullptr) {
+            WaveformRenderer::drawWaveform(g, *clip.linkedAudio, innerArea, trackColor, clip.trackPtr->getWaveformViewMode(), hZoom);
+        }
+        if (clip.linkedMidi != nullptr) {
+            MidiClipRenderer::drawMidiClip(g, *clip.linkedMidi, innerArea, trackColor, clip.trackPtr->isInlineEditingActive, hZoom, hS);
+        }
+
+        // 4. Escribir texto en su cabecera exclusiva
+        g.setColour(juce::Colours::white);
+        g.drawText(" " + clip.name, headerRect.reduced(3, 0), juce::Justification::centredLeft, true);
+
         g.setOpacity(1.0f);
 
+        // Contorno de selección
         if (i == selectedClipIndex) {
             g.setColour(juce::Colours::white);
-            g.drawRoundedRectangle(clipRect.toFloat(), 4.0f, 1.5f);
+            g.drawRoundedRectangle(clipRect.toFloat(), 5.0f, 1.5f);
         }
     }
     g.restoreState();
@@ -333,16 +346,16 @@ void PlaylistComponent::paint(juce::Graphics& g) {
         g.setColour(juce::Colours::white.withAlpha(0.85f));
         g.drawVerticalLine(phX, phTop, phBottom);
 
-        // 3. Triángulo invertido en el timeline
+        // 3. Triángulo invertido en el timeline (simétrico)
         juce::Path triangle;
         float triTopY = phTop;
-        float triBottomY = phTop + timelineH;
-        float triHalfWidth = 6.0f; // 12 píxeles de ancho en el tope
+        float triHeight = 8.0f; 
+        float triHalfWidth = 6.0f; 
         
         triangle.addTriangle(
             phX - triHalfWidth, triTopY,
             phX + triHalfWidth, triTopY,
-            phX, triBottomY
+            phX, triTopY + triHeight
         );
         
         g.setColour(juce::Colours::white.withAlpha(0.9f));

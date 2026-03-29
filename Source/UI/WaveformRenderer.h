@@ -25,8 +25,8 @@ public:
         if (cacheL.empty() || width <= 0 || height <= 0)
             return;
 
-        const juce::Colour outlineColor = baseColor.brighter(0.2f).withAlpha(0.9f);
-        const juce::Colour fillColor = baseColor.withAlpha(0.9f);
+        const juce::Colour outlineColor = baseColor.darker(0.4f).withAlpha(1.0f);
+        const juce::Colour fillColor = baseColor.brighter(0.1f).withAlpha(1.0f);
         
         float baseW = clipData.originalWidth <= 0 ? clipData.width : clipData.originalWidth;
         const float originalWidthPx = baseW * (float)hZoom;
@@ -34,6 +34,31 @@ public:
         const int cacheOffset = (int)(clipData.offsetX * (float)hZoom * pointsPerPixel);
 
         bool isStereo = !cacheR.empty();
+
+        // Lambda ultra rápido para calcular el Peak Sub-Pixel preciso y hacer interpolación en Zooms Cercanos
+        auto getPeakRange = [&](const std::vector<float>& cache, int x) -> float {
+            float startIdxF = cacheOffset + x * pointsPerPixel;
+            float endIdxF = startIdxF + pointsPerPixel;
+            int startIdx = (int)startIdxF;
+            int endIdx = (int)endIdxF;
+
+            float peak = 0.0f;
+            if (startIdx == endIdx) {
+                if (startIdx >= 0 && startIdx < (int)cache.size()) {
+                    float frac = startIdxF - startIdx;
+                    float p1 = cache[startIdx];
+                    float p2 = (startIdx + 1 < (int)cache.size()) ? cache[startIdx + 1] : p1;
+                    peak = p1 + frac * (p2 - p1);
+                }
+            } else {
+                int safeStart = std::max(0, startIdx);
+                int safeEnd = std::min((int)cache.size() - 1, endIdx);
+                for (int i = safeStart; i <= safeEnd; ++i) {
+                    peak = std::max(peak, cache[i]);
+                }
+            }
+            return peak;
+        };
 
         // --- VISTA ESTÉREO (L/R) ---
         if (viewMode == WaveformViewMode::SeparateLR && isStereo) {
@@ -47,12 +72,8 @@ public:
             g.drawHorizontalLine((int)(area.getY() + halfHeight), (float)area.getX(), (float)(area.getX() + width));
 
             for (int x = 0; x < width; ++x) {
-                int cacheIdx = cacheOffset + (int)(x * pointsPerPixel);
-                if (cacheIdx < 0) continue;
-                if (cacheIdx >= (int)cacheL.size()) break;
-
-                float peakL = juce::jmin(1.0f, cacheL[cacheIdx] * 1.05f);
-                float peakR = juce::jmin(1.0f, cacheR[cacheIdx] * 1.05f);
+                float peakL = juce::jmin(1.0f, getPeakRange(cacheL, x) * 1.05f);
+                float peakR = juce::jmin(1.0f, getPeakRange(cacheR, x) * 1.05f);
                 const int currentX = area.getX() + x;
 
                 float yOffsetL = peakL * quarterHeight;
@@ -84,20 +105,15 @@ public:
             const float midYL = (float)area.getY() + quarterHeight;
             const float midYR = (float)area.getY() + halfHeight + quarterHeight;
 
-            // Línea separadora tenue
             g.setColour(juce::Colours::black.withAlpha(0.2f));
             g.drawHorizontalLine((int)(area.getY() + halfHeight), (float)area.getX(), (float)(area.getX() + width));
 
             for (int x = 0; x < width; ++x) {
-                int cacheIdx = cacheOffset + (int)(x * pointsPerPixel);
-                if (cacheIdx < 0) continue;
-                if (cacheIdx >= (int)cacheMid.size()) break;
-
-                float peakMid = juce::jmin(1.0f, cacheMid[cacheIdx] * 1.05f);
-                float peakSide = juce::jmin(1.0f, cacheSide[cacheIdx] * 1.05f);
+                float peakMid = juce::jmin(1.0f, getPeakRange(cacheMid, x) * 1.05f);
+                float peakSide = juce::jmin(1.0f, getPeakRange(cacheSide, x) * 1.05f);
                 const int currentX = area.getX() + x;
 
-                // Mid (Mitad Superior)
+                // Mid
                 float yOffsetMid = peakMid * quarterHeight;
                 float topYMid = midYL - yOffsetMid;
                 float bottomYMid = midYL + yOffsetMid;
@@ -108,13 +124,12 @@ public:
                 g.fillRect((float)currentX, topYMid, 1.0f, 1.0f);
                 g.fillRect((float)currentX, bottomYMid, 1.0f, 1.0f);
 
-                // Side (Mitad Inferior)
+                // Side
                 float yOffsetSide = peakSide * quarterHeight;
                 float topYSide = midYR - yOffsetSide;
                 float bottomYSide = midYR + yOffsetSide;
 
-                // Aplicamos un color ligeramente más oscuro a la señal Side para diferenciar visualmente
-                g.setColour(baseColor.withAlpha(0.7f));
+                g.setColour(baseColor.darker(0.2f).withAlpha(1.0f));
                 g.drawVerticalLine(currentX, topYSide, bottomYSide);
                 g.setColour(outlineColor);
                 g.fillRect((float)currentX, topYSide, 1.0f, 1.0f);
@@ -127,13 +142,11 @@ public:
             const float halfHeight = (float)height / 2.0f;
 
             for (int x = 0; x < width; ++x) {
-                int cacheIdx = cacheOffset + (int)(x * pointsPerPixel);
-                if (cacheIdx < 0) continue;
-                if (cacheIdx >= (int)cacheL.size()) break;
-
-                float peak = cacheL[cacheIdx];
+                float peakL = getPeakRange(cacheL, x);
+                float peak = peakL;
                 if (!cacheR.empty()) {
-                    peak = std::max(peak, cacheR[cacheIdx]);
+                    float peakR = getPeakRange(cacheR, x);
+                    peak = std::max(peakL, peakR);
                 }
 
                 peak = juce::jmin(1.0f, peak * 1.05f);
