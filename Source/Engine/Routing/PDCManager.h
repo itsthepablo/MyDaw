@@ -1,19 +1,20 @@
 #pragma once
 #include <JuceHeader.h>
-#include "../Tracks/TrackContainer.h"
+#include "RoutingMatrix.h"
+#include "../Core/TransportState.h"
 
 class PDCManager {
 public:
-    // Exponemos la latencia global para que el medidor visual la lea
-    static inline int currentGlobalLatency = 0;
+    static inline std::atomic<int> currentGlobalLatency { 0 };
 
-    static void calculateLatencies(TrackContainer& trackContainer) {
+    static void calculateLatencies(const RoutingMatrix::TopoState* state, TransportState& ts) noexcept {
+        if (!state) return;
         int maxLatency = 0;
 
-        for (auto* track : trackContainer.getTracks()) {
+        for (auto* track : state->activeTracks) {
             int trackLatency = 0;
             for (auto* p : track->plugins) {
-                if (p->isLoaded()) {
+                if (p != nullptr && p->isLoaded()) {
                     trackLatency += p->getLatencySamples();
                 }
             }
@@ -24,14 +25,15 @@ public:
             }
         }
 
-        currentGlobalLatency = maxLatency; // Actualizamos el panel visual
+        ts.currentGlobalLatency.store(maxLatency, std::memory_order_relaxed);
+        currentGlobalLatency.store(maxLatency, std::memory_order_relaxed);
 
-        for (auto* track : trackContainer.getTracks()) {
+        for (auto* track : state->activeTracks) {
             track->requiredDelay = maxLatency - track->currentLatency;
         }
     }
 
-    static void applyDelay(Track* track, int numSamples) {
+    static void applyDelay(Track* track, int numSamples) noexcept {
         int delay = track->requiredDelay;
         int bufferSize = track->pdcBuffer.getNumSamples();
 
@@ -49,11 +51,9 @@ public:
             for (int i = 0; i < numSamples; ++i) {
                 int writePos = (currentWritePtr + i) % bufferSize;
 
-                // Siempre grabamos la realidad en el historial
                 float currentSample = audioData[i];
                 delayData[writePos] = currentSample;
 
-                // Sobrescribimos la salida leyendo el pasado
                 if (delay > 0) {
                     int readPtr = (currentWritePtr + i - delay + bufferSize) % bufferSize;
                     audioData[i] = delayData[readPtr];

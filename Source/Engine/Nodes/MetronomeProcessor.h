@@ -1,11 +1,12 @@
 #pragma once
 #include <JuceHeader.h>
-#include "AudioClock.h"
+#include "../Core/AudioClock.h"
+#include "../Core/TransportState.h"
 #include <cmath>
 
-class Metronome {
+class MetronomeProcessor {
 public:
-    Metronome() = default;
+    MetronomeProcessor() = default;
 
     void prepare(double newSampleRate) {
         sampleRate = newSampleRate;
@@ -18,21 +19,19 @@ public:
         isEnabled = shouldBeEnabled;
     }
 
-    void process(juce::AudioBuffer<float>& buffer, int numSamples, const AudioClock& clock, double bpm) {
-        if (!isEnabled) {
-            wasStopped = !clock.isPlayingInternal;
+    void process(juce::AudioBuffer<float>& buffer, int numSamples, const AudioClock& clock, TransportState& ts) noexcept {
+        bool isPlayingNow = ts.isPlaying.load(std::memory_order_relaxed);
+        double bpm = ts.bpm.load(std::memory_order_relaxed);
+
+        if (!isEnabled || !isPlayingNow) {
+            wasStopped = !isPlayingNow;
             return;
         }
 
-        if (!clock.isPlayingInternal) {
-            wasStopped = true;
-            return;
-        }
-
-        // Matemática de tu DAW: 80 píxeles = 1 beat
+        // Matemática heredada de MyPianoRoll: 80 px = 1 beat
         double pixelsPerSec = (bpm / 60.0) * 80.0;
         double pixelsPerSample = pixelsPerSec / sampleRate;
-        double decayRate = 1.0 / (sampleRate * 0.05); // Decaimiento de 50ms para un "click" corto
+        double decayRate = 1.0 / (sampleRate * 0.05); // Decaimiento rápido de 50ms
 
         float* left = buffer.getWritePointer(0);
         float* right = buffer.getNumChannels() > 1 ? buffer.getWritePointer(1) : nullptr;
@@ -44,10 +43,8 @@ public:
             double nextPh = ph + pixelsPerSample;
             double nextBeat = nextPh / 80.0;
 
-            // Detectamos si cruzamos un número entero (cayó el beat)
             bool crossed = (std::floor(currentBeat) != std::floor(nextBeat));
             
-            // Disparar click inmediatamente si acabamos de darle a Play desde 0
             if (wasStopped && i == 0) {
                 crossed = true;
             }
@@ -55,7 +52,7 @@ public:
             if (crossed) {
                 envelope = 1.0;
                 int beatIndex = (int)std::floor(nextBeat);
-                isDownbeat = (beatIndex % 4 == 0); // Frecuencia alta cada 4 tiempos
+                isDownbeat = (beatIndex % 4 == 0);
                 phase = 0.0;
             }
 
@@ -65,7 +62,6 @@ public:
                 phase += inc;
                 if (phase > juce::MathConstants<double>::twoPi) phase -= juce::MathConstants<double>::twoPi;
 
-                // Generar sonido a la mitad de volumen (0.5)
                 float sample = (float)(std::sin(phase) * envelope * 0.5);
 
                 left[i] += sample;

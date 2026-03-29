@@ -11,7 +11,7 @@
 #include "../UI/Buttons/ToolbarButtons.h"
 #include "../UI/BottomDock.h"
 #include "../UI/LeftSidebar.h"
-#include "../Engine/AudioEngine.h"
+#include "../Engine/Core/AudioEngine.h"
 
 struct BridgeDependencies {
     TrackContainer& trackContainer;

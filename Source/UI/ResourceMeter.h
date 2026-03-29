@@ -1,6 +1,6 @@
 #pragma once
 #include <JuceHeader.h>
-#include "../Engine/PDCManager.h" // Importamos el cerebro PDC
+#include "../Engine/Routing/PDCManager.h" // Importamos el cerebro PDC
 
 #if JUCE_WINDOWS
 #define NOMINMAX  
@@ -27,38 +27,35 @@ public:
         if (dspLoad > 70.0) meterColor = juce::Colours::orange;
         if (dspLoad > 85.0) meterColor = juce::Colours::red;
 
-        g.setFont(11.0f);
+        g.setFont(12.0f);
 
-        auto area = getLocalBounds();
-        int colWidth = getWidth() / 3; // Dividimos en 3 paneles técnicos
+        auto area = getLocalBounds().reduced(4, 0); // Un pequeño margen a los lados
+        int colWidth = area.getWidth() / 5; // Reorganizamos de forma 100% horizontal en 5 columnas
 
-        // --- COLUMNA 1: Sistema ---
-        auto col1 = area.removeFromLeft(colWidth);
+        // --- CPU ---
+        auto c1 = area.removeFromLeft(colWidth);
         g.setColour(meterColor);
-        g.drawText("DSP: " + juce::String(dspLoad, 1) + "%",
-            col1.removeFromTop(getHeight() / 2), juce::Justification::centred, false);
+        g.drawText("CPU: " + juce::String(dspLoad, 1) + "%", c1, juce::Justification::centred, false);
+
+        // --- RAM ---
+        auto c2 = area.removeFromLeft(colWidth);
         g.setColour(juce::Colours::cyan.darker(0.1f));
-        g.drawText("RAM: " + juce::String(ramLoadMB) + "MB",
-            col1, juce::Justification::centred, false);
+        g.drawText("RAM: " + juce::String(ramLoadMB) + "M", c2, juce::Justification::centred, false);
 
-        // --- COLUMNA 2: Hardware ---
-        auto col2 = area.removeFromLeft(colWidth);
+        // --- Buffer Size ---
+        auto c3 = area.removeFromLeft(colWidth);
         g.setColour(juce::Colours::lightgrey);
-        g.drawText("BUF: " + juce::String(bufferSize),
-            col2.removeFromTop(getHeight() / 2), juce::Justification::centred, false);
-        g.setColour(juce::Colours::yellow);
-        g.drawText("LAT: " + juce::String(latencyMs, 1) + "ms",
-            col2, juce::Justification::centred, false);
+        g.drawText("BUF: " + juce::String(bufferSize), c3, juce::Justification::centred, false);
 
-        // --- COLUMNA 3: PDC (NUEVO) ---
-        auto col3 = area;
+        // --- Latencia ---
+        auto c4 = area.removeFromLeft(colWidth);
+        g.setColour(juce::Colours::yellow);
+        g.drawText("LAT: " + juce::String(latencyMs, 1) + "ms", c4, juce::Justification::centred, false);
+
+        // --- PDC Global ---
+        auto c5 = area;
         g.setColour(juce::Colours::orange);
-        g.drawText("PDC SMP",
-            col3.removeFromTop(getHeight() / 2), juce::Justification::centred, false);
-        g.setColour(juce::Colours::white);
-        // Leemos la latencia global matemáticamente
-        g.drawText(juce::String(PDCManager::currentGlobalLatency),
-            col3, juce::Justification::centred, false);
+        g.drawText("PDC: " + juce::String(PDCManager::currentGlobalLatency), c5, juce::Justification::centred, false);
     }
 
     void timerCallback() override {

@@ -5,7 +5,7 @@
 #include "../Effects/EffectsPanel.h"
 #include "../UI/BottomDock.h"
 #include "../PluginHost/VSTHost.h"
-#include "../Engine/AudioEngine.h" // <-- Para conocer los valores en tiempo real
+#include "../Engine/Core/AudioEngine.h" // <-- Para conocer los valores en tiempo real
 
 class TrackInstrumentBridge {
 public:
@@ -30,7 +30,7 @@ public:
 
             // Leemos el sample rate y block size REALES justo en el momento de cargar
             double currentSampleRate = audioEngine.clock.sampleRate > 0.0 ? audioEngine.clock.sampleRate : 44100.0;
-            int currentBlockSize = audioEngine.clock.blockSize > 0 ? audioEngine.clock.blockSize : 512;
+            int currentBlockSize = audioEngine.clock.maxBlockSize > 0 ? audioEngine.clock.maxBlockSize : 512;
 
             newPlugin->loadPluginAsync(currentSampleRate, [&t, newPlugin, &audioMutex, currentSampleRate, currentBlockSize, &trackContainer, &effectsPanel, &instrumentPanel, &bottomDock](bool success) {
                 if (success) {

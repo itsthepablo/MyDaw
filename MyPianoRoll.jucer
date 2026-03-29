@@ -90,19 +90,29 @@
               file="Source/UI/WaveformRenderer.h"/>
       </GROUP>
       <GROUP id="{DE716C5C-395E-36B2-27F4-94E8BA4A1B7D}" name="Engine">
-        <FILE id="mEx8qf" name="AudioClock.h" compile="0" resource="0" file="Source/Engine/AudioClock.h"/>
-        <FILE id="jWdwyO" name="AudioEngine.h" compile="0" resource="0" file="Source/Engine/AudioEngine.h"/>
-        <FILE id="kbAMkm" name="MasterMixer.h" compile="0" resource="0" file="Source/Engine/MasterMixer.h"/>
-        <FILE id="uwXG7u" name="Metronome.h" compile="0" resource="0" file="Source/Engine/Metronome.h"/>
-        <FILE id="MX6xQr" name="PDCManager.h" compile="0" resource="0" file="Source/Engine/PDCManager.h"/>
-        <FILE id="YPFnVd" name="SafetyProcessors.h" compile="0" resource="0"
-              file="Source/Engine/SafetyProcessors.h"/>
+        <GROUP id="{C5ABA81C-AA5B-F434-FDEC-1F29839225C6}" name="Core">
+          <FILE id="QMKHtl" name="AudioClock.h" compile="0" resource="0" file="Source/Engine/Core/AudioClock.h"/>
+          <FILE id="VuLA2o" name="AudioEngine.h" compile="0" resource="0" file="Source/Engine/Core/AudioEngine.h"/>
+          <FILE id="zvP8Ax" name="SafetyProcessors.h" compile="0" resource="0"
+                file="Source/Engine/Core/SafetyProcessors.h"/>
+          <FILE id="xN9gVY" name="TransportState.h" compile="0" resource="0"
+                file="Source/Engine/Core/TransportState.h"/>
+        </GROUP>
+        <GROUP id="{40222405-9D28-4BAE-EA86-5F09BF1D9754}" name="Nodes">
+          <FILE id="y7s4xb" name="MetronomeProcessor.h" compile="0" resource="0"
+                file="Source/Engine/Nodes/MetronomeProcessor.h"/>
+          <FILE id="pAxzFs" name="TrackProcessor.h" compile="0" resource="0"
+                file="Source/Engine/Nodes/TrackProcessor.h"/>
+        </GROUP>
+        <GROUP id="{A8655592-496E-E61C-29AE-468877FA16C5}" name="Routing">
+          <FILE id="XV7lcF" name="MasterMixer.h" compile="0" resource="0" file="Source/Engine/Routing/MasterMixer.h"/>
+          <FILE id="T8F8kn" name="PDCManager.h" compile="0" resource="0" file="Source/Engine/Routing/PDCManager.h"/>
+          <FILE id="C7PO0H" name="RoutingMatrix.h" compile="0" resource="0" file="Source/Engine/Routing/RoutingMatrix.h"/>
+        </GROUP>
         <FILE id="f8Nvgg" name="SimpleLoudness.h" compile="0" resource="0"
               file="Source/Engine/SimpleLoudness.h"/>
         <FILE id="RaIB7b" name="StereoAnalyzer.h" compile="0" resource="0"
               file="Source/Engine/StereoAnalyzer.h"/>
-        <FILE id="EvutIs" name="TrackProcessor.h" compile="0" resource="0"
-              file="Source/Engine/TrackProcessor.h"/>
       </GROUP>
       <GROUP id="{E133DAA7-A9EF-385F-B76E-9BD38D9F0AC7}" name="Bridge">
         <FILE id="t1H2xp" name="BridgeManager.cpp" compile="1" resource="0"

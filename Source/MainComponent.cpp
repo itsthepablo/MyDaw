@@ -42,6 +42,24 @@ void MainComponent::setupCallbacks() {
 
     ui.playlistUI.onNewTrackRequested = [this](TrackType type) { ui.trackContainer.addTrack(type); };
 
+    ui.trackContainer.onTrackAdded = [this] {
+        auto* newTrack = ui.trackContainer.getTracks().getLast();
+        if (newTrack) {
+            int maxSamples = audioEngine.clock.maxBlockSize > 0 ? audioEngine.clock.maxBlockSize : 512;
+            newTrack->audioBuffer.setSize(2, maxSamples, false, true, false);
+            newTrack->instrumentMixBuffer.setSize(2, maxSamples, false, true, false);
+            newTrack->tempSynthBuffer.setSize(2, maxSamples, false, true, false);
+            newTrack->midSideBuffer.setSize(1, maxSamples, false, true, false);
+            newTrack->pdcBuffer.setSize(2, 524288, false, true, false);
+        }
+        audioEngine.routingMatrix.commitNewTopology(ui.trackContainer.getTracks());
+    };
+
+    ui.trackContainer.onTracksReordered = [this] {
+        audioEngine.routingMatrix.commitNewTopology(ui.trackContainer.getTracks());
+    };
+
+
     ui.pickerPanelUI.onDeleteRequested = [this](juce::String name, bool isMidi) {
         ui.playlistUI.deleteClipsByName(name, isMidi);
         ui.trackContainer.deleteUnusedClipsByName(name, isMidi);
@@ -76,6 +94,10 @@ void MainComponent::setupCallbacks() {
 
             ui.playlistUI.purgeClipsOfTrack(trackToDelete);
             ui.trackContainer.removeTrack(index);
+
+            // Reflejar la eliminación atómica al motor de audio
+            audioEngine.routingMatrix.commitNewTopology(ui.trackContainer.getTracks());
+
             ui.playlistUI.updateScrollBars();
             ui.playlistUI.repaint();
             ui.pickerPanelUI.refreshList();
@@ -110,11 +132,33 @@ void MainComponent::setupBridges() {
 }
 
 void MainComponent::prepareToPlay(int samples, double s) {
-    audioEngine.prepareToPlay(samples, s, ui.trackContainer, audioMutex);
+    audioEngine.prepareToPlay(samples, s);
+    
+    // Alocar recursos estables para pistas cargadas previamente vía Proyecto
+    for (auto* t : ui.trackContainer.getTracks()) {
+        t->audioBuffer.setSize(2, samples, false, true, false);
+        t->instrumentMixBuffer.setSize(2, samples, false, true, false);
+        t->tempSynthBuffer.setSize(2, samples, false, true, false);
+        t->midSideBuffer.setSize(1, samples, false, true, false);
+        t->pdcBuffer.setSize(2, 524288, false, true, false);
+        t->audioBuffer.clear();
+        t->pdcBuffer.clear();
+    }
+    
+    // Primera carga topológica
+    audioEngine.routingMatrix.commitNewTopology(ui.trackContainer.getTracks());
 }
 
 void MainComponent::getNextAudioBlock(const juce::AudioSourceChannelInfo& buffer) {
-    audioEngine.processBlock(buffer, ui.trackContainer, ui.pianoRollUI, ui.playlistUI, ui.mixerUI, audioMutex);
+    // Sincronización State UI -> Audio (Lock-Free)
+    audioEngine.transportState.isPlaying.store(ui.pianoRollUI.getIsPlaying(), std::memory_order_relaxed);
+    audioEngine.transportState.isPreviewing.store(ui.pianoRollUI.getIsPreviewing(), std::memory_order_relaxed);
+    audioEngine.transportState.previewPitch.store(ui.pianoRollUI.getPreviewPitch(), std::memory_order_relaxed);
+    audioEngine.transportState.bpm.store(ui.pianoRollUI.getBpm(), std::memory_order_relaxed);
+    audioEngine.transportState.loopEndPos.store(juce::jmax(ui.pianoRollUI.getLoopEndPos(), ui.playlistUI.getLoopEndPos()), std::memory_order_relaxed);
+    audioEngine.masterVolume.store(ui.mixerUI.getMasterVolume(), std::memory_order_relaxed);
+
+    audioEngine.processBlock(buffer);
 }
 
 void MainComponent::releaseResources() { audioEngine.releaseResources(); }
