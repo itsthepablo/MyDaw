@@ -45,7 +45,8 @@ void MainComponent::setupCallbacks() {
     ui.trackContainer.onTrackAdded = [this] {
         auto* newTrack = ui.trackContainer.getTracks().getLast();
         if (newTrack) {
-            int maxSamples = audioEngine.clock.maxBlockSize > 0 ? audioEngine.clock.maxBlockSize : 512;
+            // MAX SIZE estricto para evitar bounds overwrite failures
+            int maxSamples = 8192;
             newTrack->audioBuffer.setSize(2, maxSamples, false, true, false);
             newTrack->instrumentMixBuffer.setSize(2, maxSamples, false, true, false);
             newTrack->tempSynthBuffer.setSize(2, maxSamples, false, true, false);
@@ -136,10 +137,11 @@ void MainComponent::prepareToPlay(int samples, double s) {
     
     // Alocar recursos estables para pistas cargadas previamente vía Proyecto
     for (auto* t : ui.trackContainer.getTracks()) {
-        t->audioBuffer.setSize(2, samples, false, true, false);
-        t->instrumentMixBuffer.setSize(2, samples, false, true, false);
-        t->tempSynthBuffer.setSize(2, samples, false, true, false);
-        t->midSideBuffer.setSize(1, samples, false, true, false);
+        int maxSamples = 8192;
+        t->audioBuffer.setSize(2, maxSamples, false, true, false);
+        t->instrumentMixBuffer.setSize(2, maxSamples, false, true, false);
+        t->tempSynthBuffer.setSize(2, maxSamples, false, true, false);
+        t->midSideBuffer.setSize(1, maxSamples, false, true, false);
         t->pdcBuffer.setSize(2, 524288, false, true, false);
         t->audioBuffer.clear();
         t->pdcBuffer.clear();

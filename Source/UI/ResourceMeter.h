@@ -23,13 +23,15 @@ public:
         g.setColour(juce::Colours::grey.withAlpha(0.3f));
         g.drawRoundedRectangle(getLocalBounds().toFloat(), 4.0f, 1.0f);
 
+        auto debugArea = getLocalBounds().removeFromBottom(14);
+        auto area = getLocalBounds().withBottom(debugArea.getY()).reduced(4, 0);
+
         juce::Colour meterColor = juce::Colours::limegreen;
         if (dspLoad > 70.0) meterColor = juce::Colours::orange;
         if (dspLoad > 85.0) meterColor = juce::Colours::red;
 
         g.setFont(12.0f);
 
-        auto area = getLocalBounds().reduced(4, 0); // Un pequeño margen a los lados
         int colWidth = area.getWidth() / 5; // Reorganizamos de forma 100% horizontal en 5 columnas
 
         // --- CPU ---
@@ -56,6 +58,16 @@ public:
         auto c5 = area;
         g.setColour(juce::Colours::orange);
         g.drawText("PDC: " + juce::String(PDCManager::currentGlobalLatency), c5, juce::Justification::centred, false);
+
+        // --- DEBUG PANEL ---
+        g.setColour(juce::Colours::white);
+        g.setFont(10.0f);
+        juce::String debugInfo = "Trks: " + juce::String(PDCManager::dbgTracks.load()) +
+                                 " | Play: " + juce::String(PDCManager::dbgPlaying.load()) +
+                                 " | Clips: " + juce::String(PDCManager::dbgClips.load()) +
+                                 " | Wrtn: " + juce::String(PDCManager::dbgSamplesWritten.load()) +
+                                 " | Adds: " + juce::String(PDCManager::dbgAddCount.load());
+        g.drawText(debugInfo, debugArea, juce::Justification::centred, false);
     }
 
     void timerCallback() override {

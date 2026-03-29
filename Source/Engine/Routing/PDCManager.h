@@ -7,6 +7,15 @@ class PDCManager {
 public:
     static inline std::atomic<int> currentGlobalLatency { 0 };
 
+    // ------ DIAGNÓSTICO DEL AUDIO THREAD (SOLO DEBUGGING EN VIVO) ------
+    static inline std::atomic<int> dbgTracks { 0 };
+    static inline std::atomic<int> dbgPlaying { 0 };
+    static inline std::atomic<int> dbgClips { 0 };
+    static inline std::atomic<int> dbgSamplesWritten { 0 };
+    static inline std::atomic<int> dbgAddCount { 0 };
+    static inline std::atomic<int> dbgMagCheck { 0 };
+    // -------------------------------------------------------------------
+
     static void calculateLatencies(const RoutingMatrix::TopoState* state, TransportState& ts) noexcept {
         if (!state) return;
         int maxLatency = 0;

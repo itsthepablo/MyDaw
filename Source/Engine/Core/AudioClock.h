@@ -20,7 +20,7 @@ struct AudioClock {
     void prepare(double s, int bufSize) {
         sampleRate = s;
         maxBlockSize = bufSize;
-        samplesPerPixel = s / 50.0;
+        samplesPerPixel = s / ((120.0 / 60.0) * 320.0); // Valor estricto 120bpm para inicializar
         currentSamplePos = 0;
         currentPh = 0.0f;
     }
@@ -31,12 +31,15 @@ struct AudioClock {
         float loopEndPos = ts.loopEndPos.load(std::memory_order_relaxed);
         float currentBpm = ts.bpm.load(std::memory_order_relaxed);
         
+        // El reloj asegura que los cálculos de física (samples) coincidan simétricamente con el dibujo (px)
+        samplesPerPixel = sampleRate / ((currentBpm / 60.0) * 320.0);
+
         // Si no estamos tocando, sincronizamos visualmente con la UI (Playhead)
         if (!isPlayingNow) {
             currentPh = ts.playheadPos.load(std::memory_order_relaxed);
             nextPh = currentPh;
-            currentSamplePos = (int)(currentPh * samplesPerPixel);
-            blockEndSamplePos = currentSamplePos;
+            currentSamplePos = (long long)(currentPh * samplesPerPixel);
+            blockEndSamplePos = currentSamplePos + numSamples;
             ts.currentAudioPlayhead.store(currentPh, std::memory_order_relaxed);
             return;
         }
@@ -56,7 +59,9 @@ struct AudioClock {
             looped = true;
         }
 
-        currentSamplePos += numSamples;
+        // Lógica estricta de posición de muestra basada puramente en el mapeo espacial del proyecto
+        // Al calcular currentSamplePos mediante una simple multiplicación, nunca hay "drift" ni desface
+        currentSamplePos = (long long)(currentPh * samplesPerPixel);
         blockEndSamplePos = currentSamplePos + numSamples;
 
         // Actualizamos la variable atómica para que la UI la lea

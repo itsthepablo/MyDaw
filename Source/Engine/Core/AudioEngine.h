@@ -42,6 +42,9 @@ public:
         bool isPreviewing = transportState.isPreviewing.load(std::memory_order_relaxed);
         int currentPreview = transportState.previewPitch.load(std::memory_order_relaxed);
 
+        PDCManager::dbgTracks.store((int)topo->activeTracks.size(), std::memory_order_relaxed);
+        PDCManager::dbgPlaying.store(isPlayingNow ? 1 : 0, std::memory_order_relaxed);
+
         if (isPlayingNow && !clock.wasPlayingLastBlock) {
             for (auto* track : topo->activeTracks) {
                 track->pdcBuffer.clear();

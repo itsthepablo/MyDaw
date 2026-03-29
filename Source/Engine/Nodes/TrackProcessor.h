@@ -16,6 +16,8 @@ public:
     {
         bool hasClipsOrNotes = !(track->audioClips.isEmpty() && track->midiClips.isEmpty() && track->notes.empty());
 
+        PDCManager::dbgClips.store(track->audioClips.size(), std::memory_order_relaxed);
+
         float magL = track->audioBuffer.getMagnitude(0, 0, numSamples);
         float magR = track->audioBuffer.getNumChannels() > 1 ? track->audioBuffer.getMagnitude(1, 0, numSamples) : 0.0f;
         bool isSilent = (magL < 0.00001f && magR < 0.00001f);
@@ -99,11 +101,18 @@ public:
                     if (readStart + samplesToWrite > clip->fileBuffer.getNumSamples())
                         samplesToWrite = clip->fileBuffer.getNumSamples() - readStart;
 
+                    if (writeStart + samplesToWrite > track->audioBuffer.getNumSamples())
+                        samplesToWrite = track->audioBuffer.getNumSamples() - writeStart;
+
                     if (samplesToWrite > 0) {
+                        PDCManager::dbgSamplesWritten.store(samplesToWrite, std::memory_order_relaxed);
+                        PDCManager::dbgAddCount.fetch_add(1, std::memory_order_relaxed);
                         int destChannels = juce::jmin(2, track->audioBuffer.getNumChannels());
                         for (int ch = 0; ch < destChannels; ++ch) {
                             int sourceCh = juce::jmin(ch, clip->fileBuffer.getNumChannels() - 1);
-                            track->audioBuffer.addFrom(ch, writeStart, clip->fileBuffer, sourceCh, readStart, samplesToWrite);
+                            if (sourceCh >= 0) {
+                                track->audioBuffer.addFrom(ch, writeStart, clip->fileBuffer, sourceCh, readStart, samplesToWrite);
+                            }
                         }
                     }
                 }

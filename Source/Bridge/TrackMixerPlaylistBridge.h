@@ -19,15 +19,19 @@ public:
             container.setVOffset(scrollY);
             };
 
-        // --- SOLUCIÓN AL BUG DEL SCROLL ---
-        // Cuando se añade un track, forzamos a la playlist a recalcular el scroll
-        container.onTrackAdded = [&playlist] {
+        // --- SOLUCIÓN AL BUG DEL SCROLL y OVERWRITE DEL AUDIO ENGINE ---
+        // Concatenamos las funciones para no borrar las conexiones hechas en MainComponent
+        auto prevOnTrack = container.onTrackAdded;
+        container.onTrackAdded = [&playlist, prevOnTrack] {
+            if (prevOnTrack) prevOnTrack();
             playlist.updateScrollBars();
             playlist.repaint();
             };
 
         // Cuando se reordenan (Drag & Drop)
-        container.onTracksReordered = [&container, &mixer, &playlist] {
+        auto prevOnReorder = container.onTracksReordered;
+        container.onTracksReordered = [&container, &mixer, &playlist, prevOnReorder] {
+            if (prevOnReorder) prevOnReorder();
             mixer.setTracksReference(&(container.getTracks()));
             playlist.updateScrollBars();
             playlist.repaint();
