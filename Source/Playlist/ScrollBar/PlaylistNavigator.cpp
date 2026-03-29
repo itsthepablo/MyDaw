@@ -129,7 +129,7 @@ void PlaylistNavigator::mouseDrag(const juce::MouseEvent& e) {
         int newThumbWidth = newThumbRight - dragStartThumbLeft;
 
         double newZoom = (getTrackBounds().getWidth() * visibleSize) / (newThumbWidth * baseTotalWidth);
-        newZoom = juce::jlimit(0.1, 5.0, newZoom);
+        newZoom = juce::jlimit(0.01, 5.0, newZoom);
 
         double leftTime = dragStartThumbX / dragStartZoom;
         double newStart = leftTime * newZoom;
@@ -144,7 +144,7 @@ void PlaylistNavigator::mouseDrag(const juce::MouseEvent& e) {
         int newThumbWidth = dragStartThumbRight - newThumbLeft;
 
         double newZoom = (getTrackBounds().getWidth() * visibleSize) / (newThumbWidth * baseTotalWidth);
-        newZoom = juce::jlimit(0.1, 5.0, newZoom);
+        newZoom = juce::jlimit(0.01, 5.0, newZoom);
 
         double rightTime = (dragStartThumbX + visibleSize) / dragStartZoom;
         double newStart = (rightTime * newZoom) - visibleSize;

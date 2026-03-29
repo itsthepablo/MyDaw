@@ -22,7 +22,7 @@ PlaylistComponent::PlaylistComponent() {
     hNavigator.onScrollMoved = [this](double) { repaint(); };
     hNavigator.onZoomChanged = [this](double newZoom, double newStart) {
         hZoom = newZoom;
-        hNavigator.setRangeLimits(0.0, 1000 * 320 * hZoom);
+        hNavigator.setRangeLimits(0.0, getTimelineLength() * hZoom);
         hNavigator.setCurrentRange(newStart, (double)(getWidth() - vBarWidth));
         updateScrollBars();
         repaint();
@@ -58,8 +58,8 @@ void PlaylistComponent::timerCallback() {
 }
 
 void PlaylistComponent::updateScrollBars() {
-    hNavigator.setZoomContext(hZoom, 1000 * 320);
-    hNavigator.setRangeLimits(0.0, 1000 * 320 * hZoom);
+    hNavigator.setZoomContext(hZoom, getTimelineLength());
+    hNavigator.setRangeLimits(0.0, getTimelineLength() * hZoom);
     hNavigator.setCurrentRange(hNavigator.getCurrentRangeStart(), (double)(getWidth() - vBarWidth));
 
     int totalH = 0;
@@ -84,7 +84,7 @@ void PlaylistComponent::addMidiClipToView(Track* targetTrack, MidiClipData* newC
 void PlaylistComponent::drawMinimap(juce::Graphics& g, juce::Rectangle<int> bounds) {
     if (!tracksRef || tracksRef->isEmpty()) return;
 
-    double maxTime = 1000.0 * 320.0;
+    double maxTime = getTimelineLength();
     double scaleX = bounds.getWidth() / maxTime;
 
     int visibleTracks = 0;
@@ -178,7 +178,7 @@ void PlaylistComponent::paint(juce::Graphics& g) {
 
     double visualSnap = (snapPixels < 10.0) ? 80.0 : snapPixels;
 
-    for (double i = 0; i <= 1000 * 320; i += visualSnap) {
+    for (double i = 0; i <= getTimelineLength(); i += visualSnap) {
         int dx = (int)(i * hZoom) - (int)hS;
         if (dx < 0) continue;
 
@@ -254,10 +254,10 @@ void PlaylistComponent::mouseWheelMove(const juce::MouseEvent& e, const juce::Mo
     if (e.mods.isCtrlDown()) {
         double mouseAbsX = getAbsoluteXFromMouse(e.x);
 
-        hZoom = juce::jlimit(0.1, 5.0, hZoom + (double)w.deltaY * 0.1);
+        hZoom = juce::jlimit(0.01, 5.0, hZoom + (double)w.deltaY * 0.1);
         double newStart = (mouseAbsX * hZoom) - e.x;
 
-        hNavigator.setRangeLimits(0.0, 1000 * 320 * hZoom);
+        hNavigator.setRangeLimits(0.0, getTimelineLength() * hZoom);
         hNavigator.setCurrentRange(newStart, (double)(getWidth() - vBarWidth));
         updateScrollBars();
     }

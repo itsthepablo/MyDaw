@@ -102,6 +102,17 @@ public:
         return (float)(std::ceil((dynamicLoopEnd - 0.001) / 320.0) * 320.0);
     }
 
+    double getTimelineLength() const {
+        double defaultLength = 20.0 * 320.0; // 20 compases base (Estilo FL Studio)
+        double maxTime = defaultLength;
+        for (const auto& clip : clips) {
+            double clipEnd = (double)clip.startX + (double)clip.width;
+            if (clipEnd > maxTime) maxTime = clipEnd;
+        }
+        if (maxTime > defaultLength) maxTime += (2.0 * 320.0); // 2 compases de padding al final
+        return maxTime;
+    }
+
     void setBpm(double newBpm) { bpm = newBpm; repaint(); }
     double getBpm() const { return bpm; }
 
