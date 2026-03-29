@@ -6,10 +6,10 @@ void LayoutHandler::performLayout(LayoutDependencies d) {
     auto topMenuArea = area.removeFromTop(46);
     d.topMenuBar.setBounds(topMenuArea);
 
-    // --- CORRECCI�N: MEDIDOR DESPU�S DE LOS EFECTOS ---
+    // --- CORRECCIN: MEDIDOR DESPUS DE LOS EFECTOS ---
     if (d.resourceMeter != nullptr) {
-        // El bot�n de FX termina en X = 1237. Lo colocamos en X = 1250 con un poco de margen superior.
-        d.resourceMeter->setBounds(1250, topMenuArea.getY() + 7, 120, 32);
+        // El botón de FX termina en X = 1237. Lo colocamos en X = 1250 con un margen de 240px de ancho.
+        d.resourceMeter->setBounds(1250, topMenuArea.getY() + 7, 240, 32);
         d.resourceMeter->toFront(false); // Evita que la barra lo tape
     }
 

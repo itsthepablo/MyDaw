@@ -60,6 +60,8 @@ public:
             setUsingNativeTitleBar(false);
             setTitleBarHeight(0);
 
+            setResizable(true, false);
+            setResizeLimits(1024, 768, 10000, 10000);
             auto* mc = new MainComponent();
             setContentOwned(mc, true);
 

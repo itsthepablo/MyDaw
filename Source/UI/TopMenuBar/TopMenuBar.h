@@ -142,8 +142,18 @@ public:
         }
     }
 
-    void mouseDown(const juce::MouseEvent& e) override { dragger.startDraggingComponent(getTopLevelComponent(), e); }
-    void mouseDrag(const juce::MouseEvent& e) override { dragger.dragComponent(getTopLevelComponent(), e, nullptr); }
+    void mouseDown(const juce::MouseEvent& e) override {
+        if (auto* w = dynamic_cast<juce::ResizableWindow*>(getTopLevelComponent())) {
+            if (w->isFullScreen()) return; // No mover si está maximizado
+        }
+        dragger.startDraggingComponent(getTopLevelComponent(), e); 
+    }
+    void mouseDrag(const juce::MouseEvent& e) override {
+        if (auto* w = dynamic_cast<juce::ResizableWindow*>(getTopLevelComponent())) {
+            if (w->isFullScreen()) return; 
+        }
+        dragger.dragComponent(getTopLevelComponent(), e, nullptr); 
+    }
 
     void showDropdownMenu(const juce::String& menuName, juce::Button& targetButton) {
         juce::PopupMenu menu;

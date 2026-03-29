@@ -39,7 +39,7 @@ public:
 
         auto cCPU = topRow.removeFromLeft(wTop);
         g.setColour(meterColor);
-        g.drawText("CPU: " + juce::String(dspLoad, 0) + "%", cCPU, juce::Justification::centred, false);
+        g.drawText("CPU: " + juce::String((int)std::round(dspLoad)) + "%", cCPU, juce::Justification::centred, false);
 
         auto cRAM = topRow.removeFromLeft(wTop);
         g.setColour(juce::Colours::cyan.darker(0.1f));
