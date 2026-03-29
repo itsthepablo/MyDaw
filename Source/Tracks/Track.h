@@ -101,11 +101,12 @@ struct AudioClipData {
 
         const int fftOrder = 10; // 1024 samples (512 Freq Bins)
         const int fftSize = 1 << fftOrder;
+        const int hopSize = 256; // 4x Resolution (Overlap)
         
         juce::dsp::FFT fft(fftOrder);
         juce::dsp::WindowingFunction<float> window((size_t)fftSize, juce::dsp::WindowingFunction<float>::hann);
         
-        int totalFrames = numSamples / fftSize;
+        int totalFrames = numSamples / hopSize;
         if (totalFrames > 0) {
             int imgHeight = fftSize / 2; 
             spectrogramImage = juce::Image(juce::Image::ARGB, totalFrames, imgHeight, true);
@@ -115,7 +116,7 @@ struct AudioClipData {
             const float* audioData = fileBuffer.getReadPointer(0); 
             
             for (int frame = 0; frame < totalFrames; ++frame) {
-                int startSample = frame * fftSize;
+                int startSample = frame * hopSize;
                 std::fill(fftData.begin(), fftData.end(), 0.0f);
                 for (int i = 0; i < fftSize; ++i) {
                     if (startSample + i < numSamples) fftData[i] = audioData[startSample + i];

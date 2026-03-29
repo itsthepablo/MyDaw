@@ -144,7 +144,7 @@ public:
                 float topYSide = midYR - (juce::jmin(1.0f, peakSide.maxPos * 1.05f) * quarterHeight);
                 float bottomYSide = midYR - (juce::jmax(-1.0f, peakSide.minNeg * 1.05f) * quarterHeight);
 
-                g.setColour(baseColor.darker(0.2f).withAlpha(1.0f));
+                g.setColour(fillColor);
                 g.drawVerticalLine(currentX, topYSide, bottomYSide);
                 g.setColour(outlineColor);
                 g.fillRect((float)currentX, topYSide, 1.0f, 1.0f);
@@ -179,13 +179,16 @@ public:
                 g.fillRect((float)currentX, topY, 1.0f, 1.0f);
                 g.fillRect((float)currentX, bottomY, 1.0f, 1.0f);
 
-                // Side superpuesto como marca oscura flotante
+                // Side superpuesto como marca outline flotante
                 if (!cacheSide.empty()) {
                      AudioPeak pSide = getPeakRange(cacheSide, x);
                      float sideTop = midY - (juce::jmin(1.0f, pSide.maxPos * 1.05f) * halfHeight * 0.9f);
                      float sideBot = midY - (juce::jmax(-1.0f, pSide.minNeg * 1.05f) * halfHeight * 0.9f);
-                     g.setColour(baseColor.darker(0.4f).withAlpha(0.6f));
+                     g.setColour(fillColor);
                      g.drawVerticalLine(currentX, sideTop, sideBot);
+                     g.setColour(outlineColor);
+                     g.fillRect((float)currentX, sideTop, 1.0f, 1.0f);
+                     g.fillRect((float)currentX, sideBot, 1.0f, 1.0f);
                 }
             }
         }

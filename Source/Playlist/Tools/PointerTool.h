@@ -179,7 +179,7 @@ public:
         if (p.isResizingClip) {
             float newW = juce::jmax(10.0f, p.dragStartWidth + diff);
             p.clips[p.draggingClipIndex].width = newW;
-            if (p.clips[p.draggingClipIndex].linkedAudio != nullptr) p.clips[p.draggingClipIndex].linkedAudio->width = newW;
+            // No actualizar linkedAudio en tiempo real para evitar glitcheo de lectura
             if (p.clips[p.draggingClipIndex].linkedMidi != nullptr) p.clips[p.draggingClipIndex].linkedMidi->width = newW;
         }
         else {
@@ -194,7 +194,7 @@ public:
             }
 
             p.clips[p.draggingClipIndex].startX = snappedX;
-            if (p.clips[p.draggingClipIndex].linkedAudio != nullptr) p.clips[p.draggingClipIndex].linkedAudio->startX = snappedX;
+            // Retenemos el linkedAudio->startX original hasta soltar el clic.
             if (p.clips[p.draggingClipIndex].linkedMidi != nullptr) p.clips[p.draggingClipIndex].linkedMidi->startX = snappedX;
         }
         p.repaint();
@@ -202,6 +202,17 @@ public:
     }
 
     void mouseUp(const juce::MouseEvent& e, PlaylistComponent& p) override {
+        if (p.draggingClipIndex != -1 && p.draggingNoteIndex == -1) {
+            auto& clip = p.clips[p.draggingClipIndex];
+
+            if (p.isResizingClip) {
+                if (clip.linkedAudio != nullptr) clip.linkedAudio->width = clip.width;
+            }
+            else {
+                if (clip.linkedAudio != nullptr) clip.linkedAudio->startX = clip.startX;
+            }
+        }
+        
         p.draggingClipIndex = -1;
         p.draggingNoteIndex = -1;
     }

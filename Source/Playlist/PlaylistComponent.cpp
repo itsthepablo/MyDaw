@@ -248,7 +248,12 @@ void PlaylistComponent::paint(juce::Graphics& g) {
     for (int i = 0; i < (int)clips.size(); ++i) {
         const auto& clip = clips[i];
         int yPos = getTrackY(clip.trackPtr);
-        if (yPos < topOffset - 100 || yPos > getHeight()) continue;
+        
+        int clipTop = yPos;
+        int clipBottom = yPos + (int)trackHeight;
+        
+        // Culling vertical correcto: omitimos si el clip completo está por encima o por debajo de la ventana
+        if (clipBottom < topOffset || clipTop > getHeight()) continue;
 
         int xPos = (int)(clip.startX * hZoom) - (int)hS;
         int wPos = (int)(clip.width * hZoom);
