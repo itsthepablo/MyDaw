@@ -62,7 +62,7 @@ public:
     VerticalNavigator vBar;
 
     int draggingClipIndex = -1;
-    int selectedClipIndex = -1;
+    std::vector<int> selectedClipIndices;
     bool isResizingClip = false;
     float dragStartAbsX = 0.0f;
     float dragStartXOriginal = 0.0f;
@@ -148,7 +148,7 @@ public:
     int getClipAt(int x, int y) const;
     int getTrackY(Track* targetTrack) const;
 
-    void deleteClip(int index);
+    void deleteSelectedClips();
     void deleteClipsByName(const juce::String& name, bool isMidi);
     void purgeClipsOfTrack(Track* track);
 

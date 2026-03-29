@@ -10,7 +10,6 @@ public:
         p.grabKeyboardFocus();
 
         int cIdx = p.getClipAt(e.x, e.y);
-        p.selectedClipIndex = cIdx;
 
         if (cIdx != -1) {
             if (e.mods.isRightButtonDown()) {
@@ -26,7 +25,14 @@ public:
 
                 m.showMenuAsync(juce::PopupMenu::Options(), [&p, cIdx](int result) {
                     if (result == 0) return;
-                    if (result == 3) { p.deleteClip(cIdx); return; }
+                    if (result == 3) { 
+                        if (std::find(p.selectedClipIndices.begin(), p.selectedClipIndices.end(), cIdx) == p.selectedClipIndices.end()) {
+                            p.selectedClipIndices.clear();
+                            p.selectedClipIndices.push_back(cIdx);
+                        }
+                        p.deleteSelectedClips(); 
+                        return; 
+                    }
                     if (cIdx >= p.clips.size()) return;
 
                     MidiClipData* sourceMidi = p.clips[cIdx].linkedMidi;
@@ -120,10 +126,25 @@ public:
             float clipScreenX = (p.clips[cIdx].startX * p.hZoom) - hS;
             float clipScreenW = p.clips[cIdx].width * p.hZoom;
             p.isResizingClip = e.x > (clipScreenX + clipScreenW - 10);
+            
+            // Multiselection Logic:
+            if (e.mods.isCommandDown() || e.mods.isShiftDown()) {
+                auto it = std::find(p.selectedClipIndices.begin(), p.selectedClipIndices.end(), cIdx);
+                if (it == p.selectedClipIndices.end()) p.selectedClipIndices.push_back(cIdx);
+                else p.selectedClipIndices.erase(it);
+            } else {
+                if (std::find(p.selectedClipIndices.begin(), p.selectedClipIndices.end(), cIdx) == p.selectedClipIndices.end()) {
+                    p.selectedClipIndices.clear();
+                    p.selectedClipIndices.push_back(cIdx);
+                }
+            }
         }
         else {
             p.draggingClipIndex = -1;
             p.draggingNoteIndex = -1;
+            if (!e.mods.isCommandDown() && !e.mods.isShiftDown()) {
+               p.selectedClipIndices.clear();
+            }
         }
         p.repaint();
     }

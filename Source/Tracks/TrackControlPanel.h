@@ -5,10 +5,10 @@
 #include "../UI/Knobs/FloatingValueSlider.h" 
 #include "../UI/LevelMeter.h"
 
-class TrackControlPanel : public juce::Component, private juce::Timer {
+class TrackControlPanel : public juce::Component, private juce::Timer, public juce::ChangeListener {
 public:
     std::function<void()> onFxClick, onInstrumentClick, onPianoRollClick, onDeleteClick, onEffectsClick, onFolderStateChange;
-    std::function<void()> onWaveformViewChanged;
+    std::function<void()> onWaveformViewChanged, onTrackColorChanged;
     std::function<void(int)> onPluginClick;
     std::function<void(const juce::ModifierKeys&)> onTrackSelected;
 
@@ -127,6 +127,8 @@ public:
         addAndMakeVisible(levelMeter);
         levelMeter.setTooltip("Medidor de Nivel: Muestra la salida de audio. Clic para reiniciar pico.");
         startTimerHz(30);
+        
+        setWantsKeyboardFocus(true);
 
         updateFolderBtnVisuals();
     }
@@ -276,6 +278,7 @@ public:
     }
 
     void mouseDown(const juce::MouseEvent& e) override {
+        grabKeyboardFocus();
         if (e.mods.isLeftButtonDown()) {
             if (onTrackSelected) onTrackSelected(e.mods);
         }
@@ -283,6 +286,8 @@ public:
         if (e.mods.isRightButtonDown()) {
             juce::PopupMenu m;
             m.addItem(1, "Eliminar Pista");
+            m.addSeparator();
+            m.addItem(6, "Cambiar Color...");
 
             if (track.getType() == TrackType::Audio) {
                 m.addSeparator();
@@ -294,11 +299,31 @@ public:
 
             m.showMenuAsync(juce::PopupMenu::Options(), [this](int result) {
                 if (result == 1 && onDeleteClick) onDeleteClick();
+                else if (result == 6) {
+                    auto* colourSelector = new juce::ColourSelector(
+                        juce::ColourSelector::showColourAtTop |
+                        juce::ColourSelector::showSliders |
+                        juce::ColourSelector::showColourspace);
+                    colourSelector->setName("Color Selector");
+                    colourSelector->setCurrentColour(track.getColor());
+                    colourSelector->addChangeListener(this);
+                    colourSelector->setSize(300, 400);
+
+                    juce::CallOutBox::launchAsynchronously(std::unique_ptr<juce::Component>(colourSelector), getScreenBounds(), nullptr);
+                }
                 else if (result == 2) { track.setWaveformViewMode(WaveformViewMode::Combined); if (onWaveformViewChanged) onWaveformViewChanged(); }
                 else if (result == 3) { track.setWaveformViewMode(WaveformViewMode::SeparateLR); if (onWaveformViewChanged) onWaveformViewChanged(); }
                 else if (result == 4) { track.setWaveformViewMode(WaveformViewMode::MidSide); if (onWaveformViewChanged) onWaveformViewChanged(); }
                 else if (result == 5) { track.setWaveformViewMode(WaveformViewMode::Spectrogram); if (onWaveformViewChanged) onWaveformViewChanged(); }
                 });
+        }
+    }
+
+    void changeListenerCallback(juce::ChangeBroadcaster* source) override {
+        if (auto* cs = dynamic_cast<juce::ColourSelector*>(source)) {
+            track.setColor(cs->getCurrentColour());
+            repaint();
+            if (onTrackColorChanged) onTrackColorChanged();
         }
     }
 
@@ -308,6 +333,14 @@ public:
             invisibleGhost.clear(juce::Rectangle<int>(0, 0, 1, 1), juce::Colours::transparentBlack);
             dragC->startDragging("TRACK", this, invisibleGhost, true);
         }
+    }
+
+    bool keyPressed(const juce::KeyPress& key) override {
+        if (key.getKeyCode() == juce::KeyPress::deleteKey || key.getKeyCode() == juce::KeyPress::backspaceKey) {
+            if (onDeleteClick) onDeleteClick();
+            return true;
+        }
+        return false;
     }
 
     Track& track;

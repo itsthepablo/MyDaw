@@ -89,7 +89,15 @@ public:
         p->onInstrumentClick = [this, t] { if (onOpenInstrument) onOpenInstrument(*t); }; // NUEVO
         p->onPluginClick = [this, t](int i) { if (onOpenFx) onOpenFx(*t, i); };
         p->onPianoRollClick = [this, t] { if (onOpenPianoRoll) onOpenPianoRoll(*t); };
-        p->onDeleteClick = [this, t] { if (onDeleteTrack) onDeleteTrack(tracks.indexOf(t)); };
+        p->onDeleteClick = [this, t] { 
+            if (t->isSelected) {
+                for (int i = tracks.size() - 1; i >= 0; --i) {
+                    if (tracks[i]->isSelected && onDeleteTrack) onDeleteTrack(i);
+                }
+            } else {
+                if (onDeleteTrack) onDeleteTrack(tracks.indexOf(t)); 
+            }
+        };
         p->onEffectsClick = [this, t] { if (onOpenEffects) onOpenEffects(*t); };
 
         p->onTrackSelected = [this, t](const juce::ModifierKeys& mods) { selectTrack(t, mods); };
@@ -100,6 +108,17 @@ public:
             };
 
         p->onWaveformViewChanged = [this] {
+            repaint();
+            if (getParentComponent()) getParentComponent()->repaint();
+            };
+
+        p->onTrackColorChanged = [this, t] {
+            if (t->isSelected) {
+                juce::Colour nc = t->getColor();
+                for (auto* trk : tracks) {
+                    if (trk->isSelected) trk->setColor(nc);
+                }
+            }
             repaint();
             if (getParentComponent()) getParentComponent()->repaint();
             };

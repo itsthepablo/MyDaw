@@ -157,7 +157,7 @@ int PlaylistComponent::getTrackAtY(int y) const {
     return -1;
 }
 
-void PlaylistComponent::deleteClip(int index) { PlaylistActionHandler::deleteClip(*this, index); }
+void PlaylistComponent::deleteSelectedClips() { PlaylistActionHandler::deleteSelectedClips(*this); }
 void PlaylistComponent::deleteClipsByName(const juce::String& name, bool isMidi) { PlaylistActionHandler::deleteClipsByName(*this, name, isMidi); }
 void PlaylistComponent::purgeClipsOfTrack(Track* track) { PlaylistActionHandler::purgeClipsOfTrack(*this, track); }
 void PlaylistComponent::mouseDoubleClick(const juce::MouseEvent& e) { PlaylistActionHandler::handleDoubleClick(*this, e); }
@@ -169,9 +169,9 @@ void PlaylistComponent::setTool(int toolId) {
     else if (toolId == 5) activeTool = std::make_unique<MuteTool>();
 }
 
-bool PlaylistComponent::keyPressed(const juce::KeyPress& key, juce::Component*) {
+bool PlaylistComponent::keyPressed(const juce::KeyPress& key, juce::Component* originatingComponent) {
     if (key.getKeyCode() == juce::KeyPress::deleteKey || key.getKeyCode() == juce::KeyPress::backspaceKey) {
-        if (selectedClipIndex != -1) { deleteClip(selectedClipIndex); return true; }
+        if (!selectedClipIndices.empty()) { deleteSelectedClips(); return true; }
     }
     return false;
 }
@@ -292,9 +292,9 @@ void PlaylistComponent::paint(juce::Graphics& g) {
 
         g.setOpacity(1.0f);
 
-        // Contorno de selección
-        if (i == selectedClipIndex) {
-            g.setColour(juce::Colours::white);
+        // Contorno de selección multi
+        if (std::find(selectedClipIndices.begin(), selectedClipIndices.end(), i) != selectedClipIndices.end()) {
+            g.setColour(juce::Colours::yellow);
             g.drawRoundedRectangle(clipRect.toFloat(), 5.0f, 1.5f);
         }
     }

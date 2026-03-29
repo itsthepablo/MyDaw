@@ -3,35 +3,40 @@
 #include <cmath>
 #include <algorithm>
 
-void PlaylistActionHandler::deleteClip(PlaylistComponent& p, int index) {
-    if (index < 0 || index >= (int)p.clips.size()) return;
-
-    auto& tc = p.clips[index];
-
-    if (tc.linkedMidi && p.onMidiClipDeleted) p.onMidiClipDeleted(tc.linkedMidi);
+void PlaylistActionHandler::deleteSelectedClips(PlaylistComponent& p) {
+    if (p.selectedClipIndices.empty()) return;
 
     std::unique_ptr<juce::ScopedLock> lock;
     if (p.audioMutex != nullptr) lock = std::make_unique<juce::ScopedLock>(*p.audioMutex);
 
-    if (p.trackContainer) {
-        if (tc.linkedAudio) {
-            tc.trackPtr->audioClips.removeObject(tc.linkedAudio, false);
-            p.trackContainer->unusedAudioPool.add(tc.linkedAudio);
+    std::sort(p.selectedClipIndices.begin(), p.selectedClipIndices.end(), std::greater<int>());
+
+    for (int index : p.selectedClipIndices) {
+        if (index < 0 || index >= (int)p.clips.size()) continue;
+        auto& tc = p.clips[index];
+
+        if (tc.linkedMidi && p.onMidiClipDeleted) p.onMidiClipDeleted(tc.linkedMidi);
+
+        if (p.trackContainer) {
+            if (tc.linkedAudio) {
+                tc.trackPtr->audioClips.removeObject(tc.linkedAudio, false);
+                p.trackContainer->unusedAudioPool.add(tc.linkedAudio);
+            }
+            if (tc.linkedMidi) {
+                tc.trackPtr->midiClips.removeObject(tc.linkedMidi, false);
+                p.trackContainer->unusedMidiPool.add(tc.linkedMidi);
+            }
         }
-        if (tc.linkedMidi) {
-            tc.trackPtr->midiClips.removeObject(tc.linkedMidi, false);
-            p.trackContainer->unusedMidiPool.add(tc.linkedMidi);
+        else {
+            if (tc.linkedAudio) tc.trackPtr->audioClips.removeObject(tc.linkedAudio, true);
+            if (tc.linkedMidi) tc.trackPtr->midiClips.removeObject(tc.linkedMidi, true);
         }
-    }
-    else {
-        if (tc.linkedAudio) tc.trackPtr->audioClips.removeObject(tc.linkedAudio, true);
-        if (tc.linkedMidi) tc.trackPtr->midiClips.removeObject(tc.linkedMidi, true);
+
+        p.clips.erase(p.clips.begin() + index);
     }
 
-    p.clips.erase(p.clips.begin() + index);
-
-    if (p.selectedClipIndex == index) p.selectedClipIndex = -1;
-    else if (p.selectedClipIndex > index) p.selectedClipIndex--;
+    p.selectedClipIndices.clear();
+    p.draggingClipIndex = -1;
 
     p.repaint();
     p.hNavigator.repaint(); // SINCRONIZA EL MINIMAPA
@@ -53,7 +58,7 @@ void PlaylistActionHandler::deleteClipsByName(PlaylistComponent& p, const juce::
             p.clips.erase(p.clips.begin() + i);
         }
     }
-    p.selectedClipIndex = -1;
+    p.selectedClipIndices.clear();
     p.updateScrollBars();
     p.repaint();
     p.hNavigator.repaint(); // SINCRONIZA EL MINIMAPA

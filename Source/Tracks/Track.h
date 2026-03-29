@@ -166,6 +166,7 @@ public:
     void setName(juce::String n) { name = n; }
     TrackType getType() const { return type; }
     juce::Colour getColor() const { return color; }
+    void setColor(juce::Colour c) { color = c; }
 
     float getVolume() const { return volume; }
     void setVolume(float v) { volume = v; }
