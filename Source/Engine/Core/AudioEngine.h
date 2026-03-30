@@ -39,9 +39,13 @@ public:
     RoutingMatrix routingMatrix;
     AudioThreadPool threadPool;
 
-    std::atomic<float> masterVolume { 1.0f };
+    std::atomic<float> masterVolume{ 1.0f };
+
+    // --- INYECCIÓN 1: Captura de Sample Rate para exportación ---
+    double currentSampleRate = 44100.0;
 
     void prepareToPlay(int samples, double s) {
+        currentSampleRate = s; // --- INYECCIÓN 2 ---
         clock.prepare(s, samples);
         metronome.prepare(s);
         threadPool.prepare(); // Auto-detect hardware_concurrency() - 1 workers
@@ -50,6 +54,42 @@ public:
     void releaseResources() {
         threadPool.shutdown();
     }
+
+    // --- INYECCIÓN 3: Método puro para limpiar el motor antes de exportar ---
+    void resetForRender() {
+        clock.currentSamplePos = 0; // CORREGIDO
+        clock.justSeeked = true;
+
+        auto* topo = routingMatrix.getAudioThreadState();
+        if (topo) {
+            for (auto* track : topo->activeTracks) {
+                track->audioBuffer.clear();
+                track->pdcBuffer.clear();
+                track->pdcWritePtr = 0;
+                for (auto* p : track->plugins) {
+                    if (p != nullptr && p->isLoaded())
+                        p->reset();
+                }
+            }
+        }
+    }
+
+    void setNonRealtime(bool isNonRealtime) {
+        auto* topo = routingMatrix.getAudioThreadState();
+        if (topo) {
+            for (auto* track : topo->activeTracks) {
+                for (auto* p : track->plugins) {
+                    if (p != nullptr && p->isLoaded())
+                        p->setNonRealtime(isNonRealtime);
+                }
+            }
+        }
+    }
+    // -------------------------------------------------------------------------
+
+    Track* masterTrack = nullptr;
+
+    void setMasterTrack(Track* t) { masterTrack = t; }
 
     void processBlock(const juce::AudioSourceChannelInfo& bufferToFill) noexcept
     {
@@ -65,9 +105,9 @@ public:
         auto* topo = routingMatrix.getAudioThreadState();
         if (!topo) return;
 
-        bool isPlayingNow   = transportState.isPlaying.load(std::memory_order_relaxed);
-        bool isPreviewing   = transportState.isPreviewing.load(std::memory_order_relaxed);
-        int currentPreview  = transportState.previewPitch.load(std::memory_order_relaxed);
+        bool isPlayingNow = transportState.isPlaying.load(std::memory_order_relaxed);
+        bool isPreviewing = transportState.isPreviewing.load(std::memory_order_relaxed);
+        int currentPreview = transportState.previewPitch.load(std::memory_order_relaxed);
 
         PDCManager::dbgTracks.store((int)topo->activeTracks.size(), std::memory_order_relaxed);
         PDCManager::dbgPlaying.store(isPlayingNow ? 1 : 0, std::memory_order_relaxed);
@@ -79,6 +119,14 @@ public:
                 track->pdcBuffer.clear();
                 track->pdcWritePtr = 0;
                 for (auto* p : track->plugins) {
+                    if (p != nullptr && p->isLoaded())
+                        p->reset();
+                }
+            }
+            if (masterTrack != nullptr) {
+                masterTrack->pdcBuffer.clear();
+                masterTrack->pdcWritePtr = 0;
+                for (auto* p : masterTrack->plugins) {
                     if (p != nullptr && p->isLoaded())
                         p->reset();
                 }
@@ -99,7 +147,8 @@ public:
                 previewMidi.addEvent(juce::MidiMessage::noteOn(1, currentPreview, 0.8f), 0);
                 clock.lastPreviewPitch = currentPreview;
             }
-        } else if (clock.lastPreviewPitch != -1) {
+        }
+        else if (clock.lastPreviewPitch != -1) {
             previewMidi.addEvent(juce::MidiMessage::noteOff(1, clock.lastPreviewPitch), 0);
             clock.lastPreviewPitch = -1;
         }
@@ -111,6 +160,12 @@ public:
             track->audioBuffer.clear();
             track->currentPeakLevelL = 0.0f;
             track->currentPeakLevelR = 0.0f;
+        }
+
+        if (masterTrack != nullptr) {
+            masterTrack->audioBuffer.clear();
+            masterTrack->currentPeakLevelL = 0.0f;
+            masterTrack->currentPeakLevelR = 0.0f;
         }
 
         clock.update(bufferToFill.numSamples, transportState);
@@ -135,14 +190,28 @@ public:
         for (int i = 0; i < (int)topo->activeTracks.size(); ++i) {
             int parentIdx = (i < (int)topo->parentIndices.size()) ? topo->parentIndices[i] : -1;
             if (parentIdx == -1) {
-                // Track raiz: va directamente al bus de hardware
-                MasterMixer::routeToMaster(topo->activeTracks[i],
-                                           bufferToFill.numSamples,
-                                           hardwareOutChannels,
-                                           bufferToFill);
+                if (masterTrack != nullptr) {
+                    // Sumar al Master Track
+                    MasterMixer::routeToTrack(topo->activeTracks[i], masterTrack, bufferToFill.numSamples);
+                } else {
+                    // Fallback: Ir directamente al hardware
+                    MasterMixer::routeToMaster(topo->activeTracks[i],
+                        bufferToFill.numSamples,
+                        hardwareOutChannels,
+                        bufferToFill);
+                }
             }
-            // Los hijos ya sumaron su audio al padre en la Fase 1.
-            // No se necesita hacer nada mas aqui.
+        }
+
+        // =======================================================
+        // FASE 2.5: PROCESAR EL MASTER TRACK (Global FX & Gain)
+        // =======================================================
+        if (masterTrack != nullptr) {
+            TrackProcessor::process(masterTrack, clock, bufferToFill.numSamples, isPlayingNow, isStoppingNow, previewMidi);
+            MasterMixer::applyGainAndPan(masterTrack, bufferToFill.numSamples, hardwareOutChannels);
+            
+            // Volcar Master Track al buffer de hardware final
+            MasterMixer::routeToMaster(masterTrack, bufferToFill.numSamples, hardwareOutChannels, bufferToFill);
         }
 
         // =======================================================
@@ -151,7 +220,7 @@ public:
         metronome.process(*bufferToFill.buffer, bufferToFill.numSamples, clock, transportState);
 
         SafetyProcessors::applyNaNKiller(*bufferToFill.buffer,
-                                          bufferToFill.startSample, bufferToFill.numSamples);
+            bufferToFill.startSample, bufferToFill.numSamples);
 
         float mv = masterVolume.load(std::memory_order_relaxed);
         bufferToFill.buffer->applyGain(bufferToFill.startSample, bufferToFill.numSamples, mv);
@@ -159,12 +228,12 @@ public:
         // Anti-click (De-zipper) en seek
         if (clock.justSeeked) {
             bufferToFill.buffer->applyGainRamp(bufferToFill.startSample,
-                                                bufferToFill.numSamples, 0.0f, 1.0f);
+                bufferToFill.numSamples, 0.0f, 1.0f);
             clock.justSeeked = false;
         }
 
         SafetyProcessors::applyHardClipper(*bufferToFill.buffer,
-                                            bufferToFill.startSample,
-                                            bufferToFill.numSamples, 1.0f);
+            bufferToFill.startSample,
+            bufferToFill.numSamples, 1.0f);
     }
 };

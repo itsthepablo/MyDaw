@@ -19,10 +19,16 @@ void UIManager::setupUI(DAWUIComponents& ui, juce::Component& parent, std::funct
     parent.addAndMakeVisible(ui.pianoRollUI);
     parent.addAndMakeVisible(ui.closePianoRollBtn);
 
+    // --- MASTER TRACK ---
+    ui.masterTrackObj = std::make_unique<Track>(0, "Master", TrackType::Audio);
+    ui.masterStrip.setMasterTrack(ui.masterTrackObj.get());
+    parent.addAndMakeVisible(ui.masterStrip);
+
     ui.pianoRollUI.setVisible(false);
     ui.closePianoRollBtn.setVisible(false);
     ui.mixerUI.setVisible(false);
     ui.masterChannelUI.setVisible(false);
+    ui.masterStrip.setVisible(true);
 
     ui.closePianoRollBtn.setButtonText("Cerrar Piano Roll");
     ui.closePianoRollBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(200, 70, 70));

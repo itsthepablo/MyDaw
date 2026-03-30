@@ -2,19 +2,20 @@
 #include <JuceHeader.h>
 #include "../Tracks/Track.h"
 #include "../UI/LevelMeter.h"
+#include "../UI/Knobs/FloatingValueSlider.h"
 
 // ==============================================================================
-// MasterTrackStrip — Barra de Master fija (como Ableton/Bitwig)
+// MasterTrackStrip — Sidebar vertical de Master
 //
-// Siempre visible en la parte inferior de la vista Arrangement.
-// Permite insertar plugins en el bus maestro y ver el nivel de salida.
+// Rediseñado para ser un sidebar vertical a la derecha.
+// Incluye Paneo (top), Mute/Solo/FX y un Slider de Volumen sobre el Medidor.
 // ==============================================================================
 class MasterTrackStrip : public juce::Component,
     public juce::Timer
 {
 public:
     // Callbacks hacia MainComponent
-    std::function<void()> onOpenMasterFx; // Mantenido para evitar errores de compilación en TrackContainer
+    std::function<void(Track*)> onTrackSelected;
 
     MasterTrackStrip();
     ~MasterTrackStrip() override;
@@ -22,15 +23,22 @@ public:
     void setMasterTrack(Track* t);
     Track* getMasterTrack() const;
 
+    void setSelected(bool selected) { isSelected = selected; repaint(); }
+    bool getSelected() const { return isSelected; }
+
     void timerCallback() override;
     void paint(juce::Graphics& g) override;
     void resized() override;
+    void mouseDown(const juce::MouseEvent& e) override;
 
 private:
     Track* masterTrack = nullptr;
+    bool isSelected = false;
 
     juce::Label      masterLabel;
-    juce::Slider     volumeSlider;
+    juce::TextButton muteBtn, soloBtn, effectsBtn;
+    FloatingValueSlider panKnob;
+    juce::Slider        volSlider; 
     LevelMeter       levelMeter;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MasterTrackStrip)

@@ -112,6 +112,7 @@ public:
 
             if (currentBlockSamples >= blockSize) {
                 double blockMean = currentBlockAccumulator / (double)currentBlockSamples;
+                lufsMomentary = energyToLufs(blockMean);
                 integratedEnergyBlocks.push_back(blockMean);
 
                 double stMean = runningSumShort / (double)shortTermSize;
@@ -126,6 +127,7 @@ public:
         lufsShort = energyToLufs(stMean);
     }
 
+    float getMomentary() { return lufsMomentary; }
     float getShortTerm() { return lufsShort; }
     float getIntegrated() { return lufsIntegrated; }
     float getTruePeak() { return lufsTruePeak; }
@@ -141,7 +143,7 @@ private:
     std::vector<float> shortTermLufsHistory;
     int blockSize = 0, currentBlockSamples = 0;
     double currentBlockAccumulator = 0.0;
-    float lufsShort = -70.0f, lufsIntegrated = -70.0f, lufsTruePeak = 0.0f, lufsRange = 0.0f;
+    float lufsMomentary = -70.0f, lufsShort = -70.0f, lufsIntegrated = -70.0f, lufsTruePeak = 0.0f, lufsRange = 0.0f;
 
     float energyToLufs(double energy) {
         if (energy <= 1.0e-20) return -70.0f;

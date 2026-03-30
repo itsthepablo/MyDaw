@@ -41,9 +41,6 @@ public:
     juce::OwnedArray<AudioClipData> unusedAudioPool;
     juce::OwnedArray<MidiClipData> unusedMidiPool;
 
-    std::unique_ptr<Track> masterTrackObj;
-    MasterTrackStrip masterStrip;
-
     TrackContainer() {
         addAndMakeVisible(headerBg);
         headerBg.setInterceptsMouseClicks(true, false);
@@ -55,19 +52,17 @@ public:
         addAndMakeVisible(addAudioBtn);
         addAudioBtn.setButtonText("+ AUDIO");
         addAudioBtn.onClick = [this] { addTrack(TrackType::Audio); };
-
-        // --- INICIALIZACIÓN DEL MASTER TRACK ---
-        masterTrackObj = std::make_unique<Track>(0, "Master", TrackType::Audio);
-        masterStrip.setMasterTrack(masterTrackObj.get());
-        masterStrip.onOpenMasterFx = [this] {
-            if (onOpenEffects) onOpenEffects(*masterTrackObj);
-            };
-        addAndMakeVisible(masterStrip);
     }
 
     void setExternalMutex(juce::CriticalSection* mutex) { audioMutex = mutex; }
 
     const juce::OwnedArray<Track>& getTracks() const { return tracks; }
+
+    void deselectAllTracks() {
+        for (auto* t : tracks) t->isSelected = false;
+        for (auto* p : trackPanels) p->repaint();
+        if (onActiveTrackChanged) onActiveTrackChanged(nullptr);
+    }
 
     void selectTrack(Track* selectedTrack, const juce::ModifierKeys& mods) {
         int clickedIndex = tracks.indexOf(selectedTrack);
@@ -400,9 +395,6 @@ public:
     void resized() override {
         auto area = getLocalBounds();
 
-        // MasterStrip toma la parte inferior (60px reservados)
-        auto masterArea = area.removeFromBottom(60);
-
         auto top = area.removeFromTop(120);
         headerBg.setBounds(top);
 
@@ -418,13 +410,9 @@ public:
             }
         }
 
-        // Setbounds de Master por encima de los bounds re-pintados.
-        masterStrip.setBounds(masterArea);
-
         headerBg.toFront(false);
         addMidiBtn.toFront(false);
         addAudioBtn.toFront(false);
-        masterStrip.toFront(false); // Siempre al frente de las demás pistas.
     }
 
     void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override {

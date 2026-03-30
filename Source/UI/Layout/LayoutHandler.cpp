@@ -2,6 +2,7 @@
 
 void LayoutHandler::performLayout(LayoutDependencies d) {
     auto area = d.area;
+    d.masterStrip.setVisible(false);
 
     auto topMenuArea = area.removeFromTop(46);
     d.topMenuBar.setBounds(topMenuArea);
@@ -84,6 +85,10 @@ void LayoutHandler::performLayout(LayoutDependencies d) {
                 d.leftSidebar.setVisible(false);
                 d.sidebarResizer.setVisible(false);
             }
+
+            // --- MASTER TRACK (SIDEBAR VERTICAL DERECHO) ---
+            d.masterStrip.setVisible(true);
+            d.masterStrip.setBounds(area.removeFromRight(80));
 
             d.trackContainer.setBounds(area.removeFromLeft(250));
             d.playlistUI.setBounds(area);

@@ -18,6 +18,7 @@ public:
     virtual void prepareToPlay(double sampleRate, int maximumExpectedSamplesPerBlock) = 0;
     virtual void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) = 0;
     virtual void reset() = 0; // NUEVO: resetear ecos/colas sin reasignar RAM
+    virtual void setNonRealtime(bool isNonRealtime) {} // NUEVO: para plugins VST3 que soportan HQ mode en export
 
     // --- NUEVO: ANTENA DE RELOJ PARA QUE EL VST3 DIBUJE EL FFT CORRECTAMENTE ---
     virtual void updatePlayHead(bool isPlaying, int64_t samplePos) {}

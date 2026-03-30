@@ -2,32 +2,71 @@
 
 MasterTrackStrip::MasterTrackStrip()
 {
+    // --- Paneo (Knob arriba del todo) ---
+    addAndMakeVisible(panKnob);
+    panKnob.setName("TrackKnob");
+    panKnob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+    panKnob.setRange(-1.0, 1.0);
+    panKnob.setValue(0.0);
+    panKnob.setDoubleClickReturnValue(true, 0.0);
+    panKnob.onValueChange = [this] { if (masterTrack) masterTrack->setBalance((float)panKnob.getValue()); };
+
     // --- Label MASTER ---
-    masterLabel.setText("MASTER", juce::dontSendNotification);
-    masterLabel.setFont(juce::Font("Inter", 11.0f, juce::Font::bold));
-    masterLabel.setColour(juce::Label::textColourId, juce::Colour(255, 200, 80));
-    masterLabel.setJustificationType(juce::Justification::centredLeft);
     addAndMakeVisible(masterLabel);
+    masterLabel.setText("MASTER", juce::dontSendNotification);
+    masterLabel.setFont(juce::Font("Inter", 12.0f, juce::Font::bold));
+    masterLabel.setColour(juce::Label::textColourId, juce::Colour(255, 200, 80));
+    masterLabel.setJustificationType(juce::Justification::centred);
 
-    // --- Knob de volumen (Reemplaza al Slider Horizontal y al Botón FX) ---
-    volumeSlider.setName("TrackKnob"); // Para que herede el look & feel global de los otros knobs si lo tienes configurado
-    volumeSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    volumeSlider.setTextBoxStyle(juce::Slider::NoTextBox, true, 0, 0);
-    volumeSlider.setRange(0.0, 1.5);
-    volumeSlider.setValue(1.0);
-    volumeSlider.setDoubleClickReturnValue(true, 1.0);
-    volumeSlider.setTooltip("Volumen del bus maestro");
-    volumeSlider.setColour(juce::Slider::thumbColourId, juce::Colour(255, 200, 80));
-    volumeSlider.setColour(juce::Slider::trackColourId, juce::Colour(70, 75, 82));
-    volumeSlider.setColour(juce::Slider::backgroundColourId, juce::Colour(30, 32, 36));
-    volumeSlider.onValueChange = [this] {
-        if (masterTrack != nullptr)
-            masterTrack->setVolume((float)volumeSlider.getValue());
-        };
-    addAndMakeVisible(volumeSlider);
+    // --- Mute ("M") ---
+    addAndMakeVisible(muteBtn);
+    muteBtn.setButtonText("M");
+    muteBtn.setClickingTogglesState(true);
+    muteBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(45, 48, 52));
+    muteBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colours::red.darker(0.2f));
+    muteBtn.onClick = [this] { if (masterTrack) masterTrack->isMuted = muteBtn.getToggleState(); };
 
-    // --- Medidor de pico (horizontal) ---
+    // --- Solo ("S") ---
+    addAndMakeVisible(soloBtn);
+    soloBtn.setButtonText("S");
+    soloBtn.setClickingTogglesState(true);
+    soloBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(45, 48, 52));
+    soloBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colours::yellow.darker(0.2f));
+    soloBtn.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
+    soloBtn.onClick = [this] { if (masterTrack) masterTrack->isSoloed = soloBtn.getToggleState(); };
+
+    // --- Effects Button ("FX") ---
+    addAndMakeVisible(effectsBtn);
+    effectsBtn.setButtonText("FX");
+    effectsBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(60, 65, 70));
+    effectsBtn.onClick = [this] { if (onTrackSelected) onTrackSelected(masterTrack); };
+
+    // --- Medidor de pico (vertical) ---
     addAndMakeVisible(levelMeter);
+    levelMeter.setHorizontal(false);
+
+    // --- Volume Slider (OVERLAY sobre medidor) ---
+    addAndMakeVisible(volSlider);
+    volSlider.setSliderStyle(juce::Slider::LinearVertical);
+    volSlider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+    volSlider.setRange(0.0, 1.5);
+    volSlider.setValue(1.0);
+    volSlider.setDoubleClickReturnValue(true, 1.0);
+    // Hacer el slider "invisible" pero interactivo para que se vea el medidor debajo
+    volSlider.setAlpha(0.7f); // Un poco de alpha para ver el handle pero no tapar todo
+    volSlider.onValueChange = [this] { if (masterTrack) masterTrack->setVolume((float)volSlider.getValue()); };
+
+    // --- Mouse Interception ---
+    setInterceptsMouseClicks(true, true);
+    masterLabel.setInterceptsMouseClicks(false, false);
+    
+    // Listeners for selection
+    panKnob.addMouseListener(this, false);
+    muteBtn.addMouseListener(this, false);
+    soloBtn.addMouseListener(this, false);
+    effectsBtn.addMouseListener(this, false);
+    volSlider.addMouseListener(this, false);
+    levelMeter.addMouseListener(this, false);
 
     startTimerHz(30);
 }
@@ -35,14 +74,17 @@ MasterTrackStrip::MasterTrackStrip()
 MasterTrackStrip::~MasterTrackStrip()
 {
     stopTimer();
-    setLookAndFeel(nullptr);
 }
 
 void MasterTrackStrip::setMasterTrack(Track* t)
 {
     masterTrack = t;
-    if (masterTrack != nullptr)
-        volumeSlider.setValue(masterTrack->getVolume(), juce::dontSendNotification);
+    if (masterTrack != nullptr) {
+        volSlider.setValue(masterTrack->getVolume(), juce::dontSendNotification);
+        panKnob.setValue(masterTrack->getBalance(), juce::dontSendNotification);
+        muteBtn.setToggleState(masterTrack->isMuted, juce::dontSendNotification);
+        soloBtn.setToggleState(masterTrack->isSoloed, juce::dontSendNotification);
+    }
 }
 
 Track* MasterTrackStrip::getMasterTrack() const
@@ -58,37 +100,63 @@ void MasterTrackStrip::timerCallback()
 
 void MasterTrackStrip::paint(juce::Graphics& g)
 {
-    // Fondo degradado dorado oscuro — estilo premium
     auto bounds = getLocalBounds().toFloat();
+    
+    // Background premium vertical
     juce::ColourGradient bg(
-        juce::Colour(35, 30, 20), bounds.getTopLeft(),
-        juce::Colour(22, 20, 15), bounds.getBottomLeft(), false);
+        juce::Colour(30, 28, 22), bounds.getTopLeft(),
+        juce::Colour(20, 18, 15), bounds.getTopRight(), false);
     g.setGradientFill(bg);
-    g.fillRect(bounds);
+    g.fillAll();
 
-    // Línea superior de separación dorada
-    g.setColour(juce::Colour(255, 200, 80).withAlpha(0.6f));
-    g.fillRect(0, 0, getWidth(), 2);
-
-    // Línea dorada de acento izquierda
+    // Accent line (top)
     g.setColour(juce::Colour(255, 200, 80));
-    g.fillRect(0, 2, 4, getHeight() - 2);
+    g.fillRect(0.0f, 0.0f, bounds.getWidth(), 3.0f);
+
+    if (isSelected) {
+        g.setColour(juce::Colour(255, 200, 80).withAlpha(0.05f));
+        g.fillAll();
+        g.setColour(juce::Colour(255, 200, 80).withAlpha(0.3f));
+        g.drawRect(bounds.reduced(1.0f), 1.0f);
+    }
 }
 
 void MasterTrackStrip::resized()
 {
-    auto area = getLocalBounds().reduced(4, 6).withTrimmedLeft(6);
+    auto area = getLocalBounds().reduced(5, 5);
 
-    // Label MASTER (izquierda)
-    masterLabel.setBounds(area.removeFromLeft(60));
-    area.removeFromLeft(4);
+    // 1. Pan en el tope
+    panKnob.setBounds(area.removeFromTop(40).reduced(5, 0));
 
-    // Knob de volumen (Ocupa el lugar del antiguo botón FX)
-    volumeSlider.setBounds(area.removeFromLeft(45).reduced(0, 2));
-    area.removeFromLeft(8);
+    // 2. Label MASTER
+    masterLabel.setBounds(area.removeFromTop(20));
 
-    // Medidor de pico (derecha)
-    levelMeter.setBounds(area.removeFromRight(120).reduced(0, 6));
+    area.removeFromTop(5);
 
-    // El espacio restante en 'area' (centro) queda vacío hasta que definas el diseño final.
+    // 3. Botones M / S (en fila)
+    auto btnRow = area.removeFromTop(30);
+    muteBtn.setBounds(btnRow.removeFromLeft(btnRow.getWidth() / 2).reduced(2));
+    soloBtn.setBounds(btnRow.reduced(2));
+
+    area.removeFromTop(5);
+
+    // 4. Botón FX
+    effectsBtn.setBounds(area.removeFromTop(30).reduced(2, 0));
+
+    area.removeFromTop(10);
+
+    // 5. Volume & Meter (OVERLAY)
+    // El Slider se pone exactamente encima del Meter
+    auto meterArea = area; 
+    levelMeter.setBounds(meterArea);
+    volSlider.setBounds(meterArea);
+}
+
+void MasterTrackStrip::mouseDown(const juce::MouseEvent& e)
+{
+    if (onTrackSelected)
+        onTrackSelected(masterTrack);
+    
+    isSelected = true;
+    repaint();
 }

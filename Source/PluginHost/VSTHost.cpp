@@ -122,6 +122,12 @@ void VSTHost::reset()
         vstPlugin->reset();
 }
 
+void VSTHost::setNonRealtime(bool isNonRealtime)
+{
+    if (vstPlugin != nullptr)
+        vstPlugin->setNonRealtime(isNonRealtime);
+}
+
 void VSTHost::updatePlayHead(bool isPlaying, int64_t samplePos)
 {
     playHead.isPlaying = isPlaying;

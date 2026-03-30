@@ -43,6 +43,7 @@ struct LayoutDependencies {
     BottomDockResizer& bottomDockResizer;
     LeftSidebar& leftSidebar;
     SidebarResizer& sidebarResizer;
+    MasterTrackStrip& masterStrip;
 
     // Estados
     ViewMode currentView;

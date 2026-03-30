@@ -23,6 +23,7 @@ public:
     juce::TextButton fxBtn{ "Effects" };
 
     std::function<void()> onSaveRequested;
+    std::function<void()> onExportRequested; // --- INYECCIÓN 1: Callback de exportación ---
     std::function<double()> requestPlaybackTimeInSeconds;
 
     std::function<void()> onTogglePicker, onToggleFiles, onToggleMixer, onToggleRack, onToggleFx;
@@ -146,13 +147,13 @@ public:
         if (auto* w = dynamic_cast<juce::ResizableWindow*>(getTopLevelComponent())) {
             if (w->isFullScreen()) return; // No mover si está maximizado
         }
-        dragger.startDraggingComponent(getTopLevelComponent(), e); 
+        dragger.startDraggingComponent(getTopLevelComponent(), e);
     }
     void mouseDrag(const juce::MouseEvent& e) override {
         if (auto* w = dynamic_cast<juce::ResizableWindow*>(getTopLevelComponent())) {
-            if (w->isFullScreen()) return; 
+            if (w->isFullScreen()) return;
         }
-        dragger.dragComponent(getTopLevelComponent(), e, nullptr); 
+        dragger.dragComponent(getTopLevelComponent(), e, nullptr);
     }
 
     void showDropdownMenu(const juce::String& menuName, juce::Button& targetButton) {
@@ -165,6 +166,10 @@ public:
             menu.addSeparator();
             menu.addItem(3, "Guardar Proyecto (.perritogordo)", true, false);
             menu.addItem(4, "Guardar como...", true, false);
+            // --- INYECCIÓN 2: Opción en el Menú ---
+            menu.addSeparator();
+            menu.addItem(5, "Exportar Audio (WAV)...", true, false);
+            // --------------------------------------
         }
         else {
             menu.addItem(1, "Vacio por ahora...", false, false);
@@ -175,6 +180,11 @@ public:
                 if (result == 3 && onSaveRequested) {
                     onSaveRequested();
                 }
+                // --- INYECCIÓN 3: Disparador ---
+                if (result == 5 && onExportRequested) {
+                    onExportRequested();
+                }
+                // -------------------------------
             });
     }
 

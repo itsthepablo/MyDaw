@@ -45,6 +45,16 @@ public:
     }
 
     // ============================================================
+    // Enruta el audio resumido de un track a otro track (ej. al MASTER).
+    // ============================================================
+    static void routeToTrack(Track* track, Track* destination, int numSamples) noexcept
+    {
+        int channelsToMix = juce::jmin(destination->audioBuffer.getNumChannels(), track->audioBuffer.getNumChannels());
+        for (int c = 0; c < channelsToMix; ++c)
+            destination->audioBuffer.addFrom(c, 0, track->audioBuffer, c, 0, numSamples);
+    }
+
+    // ============================================================
     // API LEGACY — mantiene compatibilidad con codigo existente.
     // Equivalente a applyGainAndPan + routeToParent/routeToMaster
     // en una sola llamada, para uso secuencial (no paralelo).

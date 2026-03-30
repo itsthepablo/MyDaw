@@ -25,6 +25,12 @@
         <FILE id="ghMFvY" name="UtilityPlugin.h" compile="0" resource="0" file="Source/Native_Plugins/UtilityPlugin.h"/>
       </GROUP>
       <GROUP id="{721FC522-4CF1-05D4-BC36-D97CDC4B59FC}" name="UI">
+        <GROUP id="{370703D0-1732-1E2E-EE22-515A559A3353}" name="OfflineRenderer">
+          <FILE id="HQ3qTp" name="OfflineRenderer.cpp" compile="1" resource="0"
+                file="Source/UI/OfflineRenderer/OfflineRenderer.cpp"/>
+          <FILE id="obkThX" name="OfflineRenderer.h" compile="0" resource="0"
+                file="Source/UI/OfflineRenderer/OfflineRenderer.h"/>
+        </GROUP>
         <GROUP id="{FC2AFCB8-7B6C-E19E-B615-A10781D21F88}" name="TopMenuBar">
           <FILE id="SrXLf0" name="BpmDragControl.h" compile="0" resource="0"
                 file="Source/UI/TopMenuBar/BpmDragControl.h"/>

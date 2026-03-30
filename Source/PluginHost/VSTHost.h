@@ -105,6 +105,7 @@ public:
     void prepareToPlay(double sampleRate, int maximumExpectedSamplesPerBlock) override;
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override;
     void reset() override;
+    void setNonRealtime(bool isNonRealtime) override;
     juce::String getLoadedPluginName() const override;
 
     // Conexión del reloj

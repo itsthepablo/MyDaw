@@ -4,6 +4,7 @@
 // 1. INCLUDES DE UI PRIMERO (CRÍTICO PARA QUE AUDIOENGINE COMPILE)
 #include "UI/UIManager.h" 
 #include "UI/Layout/LayoutHandler.h"
+#include "UI/OfflineRenderer/OfflineRenderer.h" // --- INYECCIÓN 1: Ventana de render ---
 
 // 2. INCLUDES RESTANTES DESPUÉS DE LA UI
 #include "Project/ProjectManager.h"
@@ -41,6 +42,7 @@ private:
     void openPianoRoll();
     void closePianoRoll();
     void saveProject();
+    void startExport(); // --- INYECCIÓN 2: Función ejecutora ---
 
     juce::ApplicationCommandManager commandManager;
     std::unique_ptr<DAWCommandHandler> commandHandler;
@@ -50,6 +52,11 @@ private:
 
     juce::CriticalSection audioMutex;
     AudioEngine audioEngine;
+
+    // --- INYECCIÓN 3: Variables del Render ---
+    std::unique_ptr<OfflineRenderer> offlineRenderer;
+    std::atomic<bool> isOfflineRendering{ false };
+    // ----------------------------------------
 
     bool isBottomDockVisible = true;
     int bottomDockHeight = 250;
