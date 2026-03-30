@@ -78,6 +78,10 @@ public:
         // Inicialización de DSP interno si fuera necesario
     }
 
+    void reset() override {
+        // No hay colas de memoria que resetear
+    }
+
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&) override {
         if (bypassed) return;
 

@@ -109,6 +109,10 @@
           <FILE id="T8F8kn" name="PDCManager.h" compile="0" resource="0" file="Source/Engine/Routing/PDCManager.h"/>
           <FILE id="C7PO0H" name="RoutingMatrix.h" compile="0" resource="0" file="Source/Engine/Routing/RoutingMatrix.h"/>
         </GROUP>
+        <GROUP id="{BFCF1667-0ADC-F1AA-CB69-BEDAA7F30CDE}" name="Threading">
+          <FILE id="skfGlU" name="AudioThreadPool.h" compile="0" resource="0"
+                file="Source/Engine/Threading/AudioThreadPool.h"/>
+        </GROUP>
         <FILE id="f8Nvgg" name="SimpleLoudness.h" compile="0" resource="0"
               file="Source/Engine/SimpleLoudness.h"/>
         <FILE id="RaIB7b" name="StereoAnalyzer.h" compile="0" resource="0"

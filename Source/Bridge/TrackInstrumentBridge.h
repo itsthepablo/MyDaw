@@ -39,7 +39,7 @@ public:
                         t.plugins.add(newPlugin);
                         t.allocatePdcBuffer(); // RAM: alocar PDC buffer ahora que hay un instrumento
                         t.addPluginName(newPlugin->getLoadedPluginName());
-                        EffectsPanel::pluginIsInstrumentMap[(void*)newPlugin] = true;
+                        newPlugin->setIsInstrument(true);
 
                         // DESPERTAR AL PLUGIN CON LOS DATOS REALES DE LA TARJETA DE SONIDO
                         newPlugin->prepareToPlay(currentSampleRate, currentBlockSize);

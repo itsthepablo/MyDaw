@@ -37,15 +37,39 @@ void PlaylistDropHandler::processExternalFiles(const juce::StringArray& files, i
                 auto* data = new AudioClipData();
                 data->name = f.getFileNameWithoutExtension();
                 data->startX = absX;
-                data->fileBuffer.setSize((int)reader->numChannels, (int)reader->lengthInSamples);
-                reader->read(&data->fileBuffer, 0, (int)reader->lengthInSamples, 0, true, true);
+
+                // Configurar tamaño inicial vacío y calcular el ancho en píxeles.
                 data->width = (float)(reader->lengthInSamples / reader->sampleRate) * (120.0f / 60.0f) * 80.0f;
                 data->originalWidth = data->width;
-                data->generateCache();
+                data->isLoaded.store(false); // Bandera para que el motor y UI sepan que está cargando
+
                 (*playlist.tracksRef)[tIdx]->audioClips.add(data);
                 playlist.clips.push_back({ (*playlist.tracksRef)[tIdx], absX, data->width, data->name, data, nullptr });
-                (*playlist.tracksRef)[tIdx]->commitSnapshot(); // DOUBLE BUFFER: clip de audio añadido
+                (*playlist.tracksRef)[tIdx]->commitSnapshot(); // Compartir la caja vacía al audio thread
                 absX += data->width;
+
+                auto safePath = f.getFullPathName();
+                auto trackPtr = (*playlist.tracksRef)[tIdx];
+
+                juce::Thread::launch([data, safePath, &playlist, trackPtr]() {
+                    juce::AudioFormatManager localFmt;
+                    localFmt.registerBasicFormats();
+                    localFmt.registerFormat(new juce::MP3AudioFormat(), false);
+                    std::unique_ptr<juce::AudioFormatReader> localReader(localFmt.createReaderFor(juce::File(safePath)));
+                    
+                    if (localReader) {
+                        data->fileBuffer.setSize((int)localReader->numChannels, (int)localReader->lengthInSamples);
+                        localReader->read(&data->fileBuffer, 0, (int)localReader->lengthInSamples, 0, true, true);
+                        data->generateCache();
+                        data->isLoaded.store(true);
+
+                        // Notificar a la UI en su propio hilo
+                        juce::MessageManager::callAsync([trackPtr, &playlist]() {
+                            trackPtr->commitSnapshot(); // Compartir el audio real ahora que está cargado
+                            playlist.repaint();
+                        });
+                    }
+                });
             }
         }
     }

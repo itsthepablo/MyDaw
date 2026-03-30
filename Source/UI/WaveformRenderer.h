@@ -22,6 +22,13 @@ public:
         const int width = area.getWidth();
         const int height = area.getHeight();
 
+        if (!clipData.isLoaded.load(std::memory_order_relaxed)) {
+            g.setColour(baseColor.brighter(0.5f));
+            g.setFont(14.0f);
+            g.drawText("Cargando...", area, juce::Justification::centred, true);
+            return;
+        }
+
         if (cacheL.empty() || width <= 0 || height <= 0)
             return;
 

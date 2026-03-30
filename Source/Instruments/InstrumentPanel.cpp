@@ -29,7 +29,7 @@ void InstrumentPanel::updateInstrumentView() {
 
     if (activeTrack != nullptr) {
         for (auto* p : activeTrack->plugins) {
-            if (EffectsPanel::pluginIsInstrumentMap[(void*)p]) {
+            if (p->getIsInstrument()) {
                 // Creamos una caja para cada instrumento
                 auto* btn = new juce::TextButton(p->getLoadedPluginName());
 

@@ -26,6 +26,7 @@ struct AudioClipData {
     float originalWidth = 0.0f;
     bool isMuted = false;
     bool isSelected = false;
+    std::atomic<bool> isLoaded { true }; // Empieza en true, el drag async lo pone false
     juce::String sourceFilePath; 
     juce::AudioBuffer<float> fileBuffer;
     double sourceSampleRate = 44100.0;
@@ -170,6 +171,7 @@ struct AudioClipSnapshot {
     float width      = 0.0f;
     float offsetX    = 0.0f;
     bool  isMuted    = false;
+    bool  isLoaded   = true; // Para carga asincrona
     const juce::AudioBuffer<float>* fileBufferPtr = nullptr; // solo lectura
     int   numChannels = 0;
     int   numSamples  = 0;
@@ -308,6 +310,7 @@ public:
             acs.width         = ac->width;
             acs.offsetX       = ac->offsetX;
             acs.isMuted       = ac->isMuted;
+            acs.isLoaded      = ac->isLoaded.load(std::memory_order_relaxed);
             acs.fileBufferPtr = &ac->fileBuffer;   // puntero de solo lectura, seguro
             acs.numChannels   = ac->fileBuffer.getNumChannels();
             acs.numSamples    = ac->fileBuffer.getNumSamples();

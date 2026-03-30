@@ -32,10 +32,9 @@ public:
                         juce::ScopedLock sl(audioMutex);
                         int currentBlockSize = blockSize > 0 ? blockSize : 512;
                         host->prepareToPlay(sampleRate, currentBlockSize);
-                        
                         t.plugins.add(host);
                         t.allocatePdcBuffer(); // RAM: alocar PDC buffer ahora que hay un plugin
-                        EffectsPanel::pluginIsInstrumentMap[(void*)host] = (t.getType() == TrackType::MIDI && t.plugins.size() == 1);
+                        host->setIsInstrument(t.getType() == TrackType::MIDI && t.plugins.size() == 1);
                         ui.updateSlots();
                     });
                 } else {
@@ -56,7 +55,7 @@ public:
                 
                 t.plugins.add(utility);
                 t.allocatePdcBuffer(); // RAM: alocar PDC buffer ahora que hay un plugin
-                // No actualizamos pluginIsInstrumentMap porque Utility siempre es un Efecto
+                utility->setIsInstrument(false); // Utility siempre es un efecto
                 ui.updateSlots();
             });
         };

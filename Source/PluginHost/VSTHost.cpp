@@ -113,6 +113,12 @@ void VSTHost::prepareToPlay(double sampleRate, int maximumExpectedSamplesPerBloc
         vstPlugin->prepareToPlay(sampleRate, maximumExpectedSamplesPerBlock);
 }
 
+void VSTHost::reset()
+{
+    if (vstPlugin != nullptr)
+        vstPlugin->reset();
+}
+
 void VSTHost::updatePlayHead(bool isPlaying, int64_t samplePos)
 {
     playHead.isPlaying = isPlaying;

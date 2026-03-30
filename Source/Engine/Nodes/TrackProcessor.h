@@ -105,7 +105,7 @@ public:
         if (isPlayingNow && snap) {
             // --- Audio clips ---
             for (const auto& clipSnap : snap->audioClips) {
-                if (clipSnap.isMuted || !clipSnap.fileBufferPtr) continue;
+                if (clipSnap.isMuted || !clipSnap.fileBufferPtr || !clipSnap.isLoaded) continue;
 
                 const juce::AudioBuffer<float>& fileBuf = *clipSnap.fileBufferPtr;
 
@@ -164,7 +164,7 @@ public:
         bool hasInstruments = false;
 
         for (auto* p : track->plugins) {
-            if (p != nullptr && p->isLoaded() && EffectsPanel::pluginIsInstrumentMap[(void*)p]) {
+            if (p != nullptr && p->isLoaded() && p->getIsInstrument()) {
                 hasInstruments = true;
                 track->tempSynthBuffer.clear();
 
@@ -191,7 +191,7 @@ public:
         }
 
         for (auto* p : track->plugins) {
-            if (p != nullptr && p->isLoaded() && !EffectsPanel::pluginIsInstrumentMap[(void*)p]) {
+            if (p != nullptr && p->isLoaded() && !p->getIsInstrument()) {
                 PluginRouting r = p->getRouting();
 
                 p->updatePlayHead(isPlayingNow, clock.currentSamplePos);

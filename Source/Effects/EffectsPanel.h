@@ -21,8 +21,6 @@ public:
 
     Track* getActiveTrack() const { return activeTrack; }
 
-    static std::map<void*, bool> pluginIsInstrumentMap;
-
     std::function<void(Track&)> onAddVST3;           // <-- Para cargar VST3 normal
     std::function<void(Track&)> onAddNativeUtility;  // <-- NUEVO: Carga el Utility nativo
     std::function<void(Track&, int)> onOpenEffect;

@@ -8,10 +8,28 @@
 #include "../Routing/RoutingMatrix.h"
 #include "../Nodes/TrackProcessor.h"
 #include "../Nodes/MetronomeProcessor.h"
+#include "../Threading/AudioThreadPool.h"
 
-// OBSERVACIÓN: El Motor de Audio ha sido completamente purgado del juce::ScopedLock 
-// y ya no invoca directamente funciones de PianoRollComponent ni PlaylistComponent.
-// Toda la comunicación UI -> Audio se realiza vía Atómicos o la RoutingMatrix lock-free.
+// ==============================================================================
+// AudioEngine — Motor central de procesamiento de audio multihilo.
+//
+// ARQUITECTURA DE DOS FASES POR BLOQUE:
+//
+//  FASE 1 — PARALELA (AudioThreadPool, todos los nucleos):
+//    Para cada track (en orden de dependencias, hijos antes que padres):
+//      - Acumular hijos completados en buffer del padre
+//      - TrackProcessor::process  (DSP, clips, plugins, sintetizadores)
+//      - PDCManager::applyDelay   (compensacion de latencia)
+//      - MasterMixer::applyGainAndPan  (volumen + balance)
+//    El resultado de cada track queda en track->audioBuffer.
+//
+//  FASE 2 — SECUENCIAL (audio thread principal, microsegundos):
+//    Para cada track raiz (sin carpeta padre):
+//      - MasterMixer::routeToMaster  (suma al buffer de hardware)
+//
+//  FASE 3 — POST-PROCESO (audio thread principal):
+//    - Metronomo, NaN killer, ganancia maestra, hard clipper
+// ==============================================================================
 
 class AudioEngine {
 public:
@@ -19,53 +37,65 @@ public:
     MetronomeProcessor metronome;
     TransportState transportState;
     RoutingMatrix routingMatrix;
+    AudioThreadPool threadPool;
 
     std::atomic<float> masterVolume { 1.0f };
 
     void prepareToPlay(int samples, double s) {
         clock.prepare(s, samples);
         metronome.prepare(s);
+        threadPool.prepare(); // Auto-detect hardware_concurrency() - 1 workers
     }
 
     void releaseResources() {
+        threadPool.shutdown();
     }
 
     void processBlock(const juce::AudioSourceChannelInfo& bufferToFill) noexcept
     {
+        // =========================================================================
+        // PROTECCION DSP CRITICA: Evita que plugins pesados colapsen la CPU y el 
+        // audio generen subnormales/denormals. Actua sobre el thread principal.
+        // =========================================================================
+        juce::ScopedNoDenormals noDenormals;
+
         bufferToFill.clearActiveBufferRegion();
-        
-        // 1. Snapshot Atómico / Wait-Free del Grafo de Audio Actual
+
+        // 1. Snapshot atomico / Wait-Free del grafo de audio actual
         auto* topo = routingMatrix.getAudioThreadState();
         if (!topo) return;
 
-        bool isPlayingNow = transportState.isPlaying.load(std::memory_order_relaxed);
-        bool isPreviewing = transportState.isPreviewing.load(std::memory_order_relaxed);
-        int currentPreview = transportState.previewPitch.load(std::memory_order_relaxed);
+        bool isPlayingNow   = transportState.isPlaying.load(std::memory_order_relaxed);
+        bool isPreviewing   = transportState.isPreviewing.load(std::memory_order_relaxed);
+        int currentPreview  = transportState.previewPitch.load(std::memory_order_relaxed);
 
         PDCManager::dbgTracks.store((int)topo->activeTracks.size(), std::memory_order_relaxed);
         PDCManager::dbgPlaying.store(isPlayingNow ? 1 : 0, std::memory_order_relaxed);
 
+        // Resetear colas de plugins (Reverbs, Delays) al iniciar la reproduccion
+        // NUNCA llamar a prepareToPlay aquí porque destruye el loop real-time y cuelga VSTs pesados.
         if (isPlayingNow && !clock.wasPlayingLastBlock) {
             for (auto* track : topo->activeTracks) {
                 track->pdcBuffer.clear();
                 track->pdcWritePtr = 0;
                 for (auto* p : track->plugins) {
-                    if (p != nullptr && p->isLoaded()) p->prepareToPlay(clock.sampleRate, bufferToFill.numSamples);
+                    if (p != nullptr && p->isLoaded())
+                        p->reset();
                 }
             }
         }
 
         bool isStoppingNow = transportState.isStoppingNow.load(std::memory_order_relaxed);
-        if (isStoppingNow) {
+        if (isStoppingNow)
             transportState.isStoppingNow.store(false, std::memory_order_relaxed);
-        }
         clock.wasPlayingLastBlock = isPlayingNow;
 
+        // Construir MIDI de preview (teclado virtual on-screen)
         juce::MidiBuffer previewMidi;
-        
         if (isPreviewing) {
             if (currentPreview != clock.lastPreviewPitch) {
-                if (clock.lastPreviewPitch != -1) previewMidi.addEvent(juce::MidiMessage::noteOff(1, clock.lastPreviewPitch), 0);
+                if (clock.lastPreviewPitch != -1)
+                    previewMidi.addEvent(juce::MidiMessage::noteOff(1, clock.lastPreviewPitch), 0);
                 previewMidi.addEvent(juce::MidiMessage::noteOn(1, currentPreview, 0.8f), 0);
                 clock.lastPreviewPitch = currentPreview;
             }
@@ -76,39 +106,65 @@ public:
 
         int hardwareOutChannels = bufferToFill.buffer->getNumChannels();
 
-        // Limpiar los tracks y alistar vúmetros
+        // Limpiar buffers y vumétros de todos los tracks (sequentially — rapido)
         for (auto* track : topo->activeTracks) {
             track->audioBuffer.clear();
-            track->currentPeakLevelL = 0.0f; 
+            track->currentPeakLevelL = 0.0f;
             track->currentPeakLevelR = 0.0f;
         }
 
         clock.update(bufferToFill.numSamples, transportState);
         PDCManager::calculateLatencies(topo, transportState);
 
-        // Procesar en reversa (Carpeta hijas antes que padre)
-        for (int i = (int)topo->activeTracks.size() - 1; i >= 0; --i) {
-            auto* track = topo->activeTracks[i];
-            
-            // TrackProcessor purgado de setSize
-            TrackProcessor::process(track, clock, bufferToFill.numSamples, isPlayingNow, isStoppingNow, previewMidi);
-            
-            PDCManager::applyDelay(track, bufferToFill.numSamples);
-            MasterMixer::processTrackVolumeAndRouting(track, bufferToFill.numSamples, hardwareOutChannels, topo->parentIndices[i], topo->activeTracks, bufferToFill);
+        // =======================================================
+        // FASE 1: PROCESAMIENTO PARALELO (todos los nucleos)
+        // El AudioThreadPool resuelve el grafo de dependencias
+        // y procesa tracks en paralelo respetando padre-hijo.
+        // =======================================================
+        threadPool.processTracksParallel(
+            topo, clock, bufferToFill.numSamples,
+            isPlayingNow, isStoppingNow, previewMidi,
+            hardwareOutChannels);
+
+        // =======================================================
+        // FASE 2: ROUTING AL MASTER (secuencial, instantaneo)
+        // Solo los tracks raiz (sin carpeta padre) van al master.
+        // Los tracks hija ya acumularon su audio en el padre
+        // durante la Fase 1 (ver AudioThreadPool::processOneTask).
+        // =======================================================
+        for (int i = 0; i < (int)topo->activeTracks.size(); ++i) {
+            int parentIdx = (i < (int)topo->parentIndices.size()) ? topo->parentIndices[i] : -1;
+            if (parentIdx == -1) {
+                // Track raiz: va directamente al bus de hardware
+                MasterMixer::routeToMaster(topo->activeTracks[i],
+                                           bufferToFill.numSamples,
+                                           hardwareOutChannels,
+                                           bufferToFill);
+            }
+            // Los hijos ya sumaron su audio al padre en la Fase 1.
+            // No se necesita hacer nada mas aqui.
         }
 
+        // =======================================================
+        // FASE 3: POST-PROCESO MAESTRO
+        // =======================================================
         metronome.process(*bufferToFill.buffer, bufferToFill.numSamples, clock, transportState);
 
-        SafetyProcessors::applyNaNKiller(*bufferToFill.buffer, bufferToFill.startSample, bufferToFill.numSamples);
+        SafetyProcessors::applyNaNKiller(*bufferToFill.buffer,
+                                          bufferToFill.startSample, bufferToFill.numSamples);
+
         float mv = masterVolume.load(std::memory_order_relaxed);
         bufferToFill.buffer->applyGain(bufferToFill.startSample, bufferToFill.numSamples, mv);
-        
-        // Anti-click (De-zipper) rápido en maestro para evitar transientes infinitos al saltar
+
+        // Anti-click (De-zipper) en seek
         if (clock.justSeeked) {
-            bufferToFill.buffer->applyGainRamp(bufferToFill.startSample, bufferToFill.numSamples, 0.0f, 1.0f);
+            bufferToFill.buffer->applyGainRamp(bufferToFill.startSample,
+                                                bufferToFill.numSamples, 0.0f, 1.0f);
             clock.justSeeked = false;
         }
-        
-        SafetyProcessors::applyHardClipper(*bufferToFill.buffer, bufferToFill.startSample, bufferToFill.numSamples, 1.0f);
+
+        SafetyProcessors::applyHardClipper(*bufferToFill.buffer,
+                                            bufferToFill.startSample,
+                                            bufferToFill.numSamples, 1.0f);
     }
 };

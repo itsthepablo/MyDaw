@@ -1,8 +1,6 @@
 #include "EffectsPanel.h"
 #include "EffectDevice.h"
 
-std::map<void*, bool> EffectsPanel::pluginIsInstrumentMap;
-
 EffectsPanel::EffectsPanel() {
 
     addAndMakeVisible(bypassAllBtn);
@@ -17,7 +15,7 @@ EffectsPanel::EffectsPanel() {
             for (auto* p : activeTrack->plugins) {
                 if (p) {
                     // Evitamos bypassear el instrumento principal cuando se apagan los efectos
-                    if (!pluginIsInstrumentMap[(void*)p]) {
+                    if (!p->getIsInstrument()) {
                         p->setBypassed(isBypassed);
                     }
                 }
@@ -96,7 +94,7 @@ void EffectsPanel::updateSlots() {
 
             // --- NUEVO: FILTRO VISUAL PARA INSTRUMENTOS ---
             // Revisamos si este plugin específico está marcado como instrumento
-            bool isInst = pluginIsInstrumentMap[(void*)effectRef];
+            bool isInst = effectRef->getIsInstrument();
 
             // Si es un instrumento, lo ignoramos por completo en la interfaz de efectos
             if (isInst) {

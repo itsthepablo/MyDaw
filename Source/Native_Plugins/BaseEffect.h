@@ -17,6 +17,7 @@ public:
 
     virtual void prepareToPlay(double sampleRate, int maximumExpectedSamplesPerBlock) = 0;
     virtual void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) = 0;
+    virtual void reset() = 0; // NUEVO: resetear ecos/colas sin reasignar RAM
 
     // --- NUEVO: ANTENA DE RELOJ PARA QUE EL VST3 DIBUJE EL FFT CORRECTAMENTE ---
     virtual void updatePlayHead(bool isPlaying, int64_t samplePos) {}
@@ -31,7 +32,11 @@ public:
     virtual bool isNative() const { return false; }
     virtual juce::Component* getCustomEditor() { return nullptr; }
 
+    bool getIsInstrument() const { return isInstrument; }
+    void setIsInstrument(bool isInst) { isInstrument = isInst; }
+
 protected:
     PluginRouting routing = PluginRouting::Stereo;
     int lastKnownLatency = 0;
+    bool isInstrument = false;
 };
