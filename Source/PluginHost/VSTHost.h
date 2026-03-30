@@ -123,4 +123,5 @@ private:
     bool bypassed = false;
 
     DawPlayHead playHead; // El reloj interno del host
+    juce::AudioBuffer<float> fallbackBuffer; // Buffer pre-asignado para evitar locks de memoria
 };

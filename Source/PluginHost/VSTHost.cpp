@@ -109,8 +109,11 @@ void VSTHost::showWindow()
 
 void VSTHost::prepareToPlay(double sampleRate, int maximumExpectedSamplesPerBlock)
 {
-    if (vstPlugin != nullptr)
+    if (vstPlugin != nullptr) {
+        int maxChans = juce::jmax(vstPlugin->getTotalNumInputChannels(), vstPlugin->getTotalNumOutputChannels());
+        fallbackBuffer.setSize(juce::jmax(2, maxChans), juce::jmax(8192, maximumExpectedSamplesPerBlock));
         vstPlugin->prepareToPlay(sampleRate, maximumExpectedSamplesPerBlock);
+    }
 }
 
 void VSTHost::reset()
@@ -134,22 +137,23 @@ void VSTHost::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& m
         int totalChans = juce::jmax(inCh, outCh);
 
         if (totalChans > buffer.getNumChannels()) {
-            // --- FALLBACK DE SEGURIDAD (ANTI OUT-OF-BOUNDS CRASH) ---
-            // Plugins (The God Particle, FabFilter, etc.) exigen buses extra o mueren.
-            juce::AudioBuffer<float> bigBuffer(totalChans, buffer.getNumSamples());
-            bigBuffer.clear();
-            
-            // Inyectamos nuestro audio
-            int chansToCopy = juce::jmin(buffer.getNumChannels(), totalChans);
-            for (int i = 0; i < chansToCopy; ++i)
-                bigBuffer.copyFrom(i, 0, buffer, i, 0, buffer.getNumSamples());
-            
-            vstPlugin->processBlock(bigBuffer, midiMessages);
+            // --- FALLBACK PRE-ASIGNADO (LOCK-FREE, NO MALLOC) ---
+            if (buffer.getNumSamples() <= fallbackBuffer.getNumSamples() && totalChans <= fallbackBuffer.getNumChannels()) {
+                // Borramos solo la longitud que vamos a usar
+                for (int i = 0; i < totalChans; ++i) fallbackBuffer.clear(i, 0, buffer.getNumSamples());
+                
+                int chansToCopy = juce::jmin(buffer.getNumChannels(), totalChans);
+                for (int i = 0; i < chansToCopy; ++i)
+                    fallbackBuffer.copyFrom(i, 0, buffer, i, 0, buffer.getNumSamples());
+                
+                // Wrapper liviano (0 allocations)
+                juce::AudioBuffer<float> bigBuffer(fallbackBuffer.getArrayOfWritePointers(), totalChans, buffer.getNumSamples());
+                vstPlugin->processBlock(bigBuffer, midiMessages);
 
-            // Recuperamos su respuesta
-            for (int i = 0; i < chansToCopy; ++i)
-                buffer.copyFrom(i, 0, bigBuffer, i, 0, buffer.getNumSamples());
-        } 
+                for (int i = 0; i < chansToCopy; ++i)
+                    buffer.copyFrom(i, 0, bigBuffer, i, 0, buffer.getNumSamples());
+            }
+        }  
         else {
             // --- FAST-PATH: El plugin exige igual o menos canales ---
             int safeChans = juce::jmax(1, juce::jmin(totalChans, buffer.getNumChannels()));

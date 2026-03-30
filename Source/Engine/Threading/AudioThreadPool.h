@@ -185,9 +185,13 @@ private:
                     for (int i = 0; i < 40; ++i) std::atomic_thread_fence(std::memory_order_acquire);
                 }
             } else {
-                if (++spinIter < 2000)
-                    std::atomic_thread_fence(std::memory_order_acquire);
-                else { spinIter = 0; std::this_thread::yield(); } // Solo cede cuando está 100% IDLE
+                // Hybrid Spin-Sleep: Evita consumir 100% de CPU en Task Manager
+                if (++spinIter < 15000) {
+                    for (int i = 0; i < 10; ++i) std::atomic_thread_fence(std::memory_order_acquire);
+                } else { 
+                    spinIter = 15000; // Mantiene el límite una vez que empieza a dormir
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1)); // Dormir OS-level, 0% CPU
+                }
             }
         }
     }
