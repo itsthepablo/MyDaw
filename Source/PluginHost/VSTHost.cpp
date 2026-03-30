@@ -128,17 +128,40 @@ void VSTHost::updatePlayHead(bool isPlaying, int64_t samplePos)
 void VSTHost::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     if (vstPlugin != nullptr && !bypassed) {
+        // Evaluamos cuántos canales reales (matemáticos) exige el VST3
+        int inCh = vstPlugin->getTotalNumInputChannels();
+        int outCh = vstPlugin->getTotalNumOutputChannels();
+        int totalChans = juce::jmax(inCh, outCh);
 
-        // Bloqueo final de seguridad: Aislamos solo el est	reo puro para el VST
-        int safeChans = juce::jmin(2, buffer.getNumChannels());
+        if (totalChans > buffer.getNumChannels()) {
+            // --- FALLBACK DE SEGURIDAD (ANTI OUT-OF-BOUNDS CRASH) ---
+            // Plugins (The God Particle, FabFilter, etc.) exigen buses extra o mueren.
+            juce::AudioBuffer<float> bigBuffer(totalChans, buffer.getNumSamples());
+            bigBuffer.clear();
+            
+            // Inyectamos nuestro audio
+            int chansToCopy = juce::jmin(buffer.getNumChannels(), totalChans);
+            for (int i = 0; i < chansToCopy; ++i)
+                bigBuffer.copyFrom(i, 0, buffer, i, 0, buffer.getNumSamples());
+            
+            vstPlugin->processBlock(bigBuffer, midiMessages);
 
-        if (safeChans > 0) {
-            juce::AudioBuffer<float> stereoBuffer(buffer.getArrayOfWritePointers(), safeChans, buffer.getNumSamples());
-            vstPlugin->processBlock(stereoBuffer, midiMessages);
+            // Recuperamos su respuesta
+            for (int i = 0; i < chansToCopy; ++i)
+                buffer.copyFrom(i, 0, bigBuffer, i, 0, buffer.getNumSamples());
+        } 
+        else {
+            // --- FAST-PATH: El plugin exige igual o menos canales ---
+            int safeChans = juce::jmax(1, juce::jmin(totalChans, buffer.getNumChannels()));
+            if (safeChans > 0) {
+                juce::AudioBuffer<float> safeBuffer(buffer.getArrayOfWritePointers(), safeChans, buffer.getNumSamples());
+                vstPlugin->processBlock(safeBuffer, midiMessages);
+            }
         }
 
-        // El inodoro del Sidechain (Matamos cualquier basura residual de los dems canales)
-        for (int ch = safeChans; ch < buffer.getNumChannels(); ++ch) {
+        // El inodoro del Sidechain (Matamos basura residual de buses que el VST3 no reescribió)
+        int activeChans = juce::jmax(2, totalChans);
+        for (int ch = activeChans; ch < buffer.getNumChannels(); ++ch) {
             buffer.clear(ch, 0, buffer.getNumSamples());
         }
     }

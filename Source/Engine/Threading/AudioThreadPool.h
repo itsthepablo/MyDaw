@@ -57,9 +57,10 @@ public:
         ctx.isStoppingNow = isStoppingNow;
 
         for (int i = 0; i < n; ++i) {
-            // Tracks con plugins: SOLO el audio thread puede llamar processBlock
-            // (requerimiento del spec VST3 — thread identity matters)
-            mainThreadTask[i] = !topo->activeTracks[i]->plugins.isEmpty();
+            // En los DAWs comerciales modernos (Reaper, FL, Ableton), diferentes instancias 
+            // de VST3 corren en diferentes hilos libremente. El grafo garantiza que nunca 
+            // se procese la misma pista 2 veces simultáneamente.
+            mainThreadTask[i] = false;
 
             int pending = (i < (int)topo->initialPendingCounts.size())
                           ? topo->initialPendingCounts[i] : 0;
@@ -74,7 +75,8 @@ public:
         // Workers: solo procesa tasks sin plugins (mainThreadTask == false)
         while (doneCount.load(std::memory_order_acquire) < n) {
             stealOneTask(/*isAudioThread=*/true);
-            std::this_thread::yield();
+            // Spin-Wait robusto: No le damos el control al OS para evitar dropouts de 15ms.
+            for (int i = 0; i < 40; ++i) std::atomic_thread_fence(std::memory_order_acquire);
         }
     }
 
@@ -128,6 +130,8 @@ private:
 
     void processOneTask(int idx) noexcept
     {
+        juce::ScopedNoDenormals noDenormals; // [PROTECCIÓN OBLIGATORIA] CPU sin picos por flotación
+
         const TopoState* topo = ctx.topo;
         if (idx < 0 || idx >= ctx.numTasks) return;
         auto* track = topo->activeTracks[idx];
@@ -178,12 +182,12 @@ private:
                 // Workers procesan solo tasks sin plugins
                 while (doneCount.load(std::memory_order_acquire) < ctx.numTasks) {
                     stealOneTask(/*isAudioThread=*/false);
-                    std::this_thread::yield();
+                    for (int i = 0; i < 40; ++i) std::atomic_thread_fence(std::memory_order_acquire);
                 }
             } else {
                 if (++spinIter < 2000)
                     std::atomic_thread_fence(std::memory_order_acquire);
-                else { spinIter = 0; std::this_thread::yield(); }
+                else { spinIter = 0; std::this_thread::yield(); } // Solo cede cuando está 100% IDLE
             }
         }
     }
