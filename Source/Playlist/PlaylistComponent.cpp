@@ -24,10 +24,10 @@ PlaylistComponent::PlaylistComponent() {
     menuBar.onSnapChanged = [this](double snap) { snapPixels = snap; repaint(); };
     menuBar.onUndo = [this] {
         // TODO: Llamar al motor de Undo local 
-    };
+        };
     menuBar.onRedo = [this] {
         // TODO: Llamar al motor de Redo local
-    };
+        };
 
     hNavigator.onScrollMoved = [this](double) { repaint(); };
     hNavigator.onZoomChanged = [this](double newZoom, double newStart) {
@@ -78,7 +78,9 @@ void PlaylistComponent::updateScrollBars() {
     }
 
     int topOffset = menuBarH + navigatorH + timelineH;
-    double visibleH = (double)getHeight() - topOffset;
+
+    // RESTAMOS 60px DE ALTURA PARA QUE LA ÚLTIMA PISTA NO QUEDE DETRÁS DEL MASTER STRIP
+    double visibleH = (double)getHeight() - topOffset - 60.0;
 
     vBar.setRangeLimits(0.0, (double)totalH);
     vBar.setCurrentRange(vBar.getCurrentRangeStart(), visibleH);
@@ -194,7 +196,7 @@ void PlaylistComponent::paint(juce::Graphics& g) {
     double blockLengthPx = 1280.0; // 4 compases * 320px
     double startTime = (double)hS / hZoom;
     double endTime = (double)(hS + getWidth()) / hZoom;
-    
+
     int startBlock = (int)(startTime / blockLengthPx);
     int endBlock = (int)(endTime / blockLengthPx);
 
@@ -203,7 +205,7 @@ void PlaylistComponent::paint(juce::Graphics& g) {
             double blockAbsX = b * blockLengthPx;
             int xPos = (int)(blockAbsX * hZoom) - (int)hS;
             int wPos = (int)(std::ceil(blockLengthPx * hZoom));
-            
+
             g.setColour(juce::Colour(32, 34, 38)); // Gris ligeramente más iluminado
             g.fillRect(xPos, topOffset, wPos, viewAreaH);
         }
@@ -212,7 +214,7 @@ void PlaylistComponent::paint(juce::Graphics& g) {
     // 2. Líneas verticales dinámicas y Culling
     double visualSnap = (snapPixels < 10.0) ? 80.0 : snapPixels;
     double currentDrawSnap = visualSnap;
-    
+
     // Limitador de congestión
     while ((currentDrawSnap * hZoom) < 8.0 && currentDrawSnap < 320.0) {
         currentDrawSnap *= 2.0;
@@ -230,7 +232,7 @@ void PlaylistComponent::paint(juce::Graphics& g) {
 
     for (double i = startLineSearch; i <= endLineSearch; i += currentDrawSnap) {
         int dx = (int)(i * hZoom) - (int)hS;
-        
+
         if (std::fmod(i, 320.0) == 0.0) g.setColour(juce::Colours::black);
         else if (std::fmod(i, 80.0) == 0.0) g.setColour(juce::Colours::black);
         else g.setColour(juce::Colours::black);
@@ -251,10 +253,10 @@ void PlaylistComponent::paint(juce::Graphics& g) {
     for (int i = 0; i < (int)clips.size(); ++i) {
         const auto& clip = clips[i];
         int yPos = getTrackY(clip.trackPtr);
-        
+
         int clipTop = yPos;
         int clipBottom = yPos + (int)trackHeight;
-        
+
         // Culling vertical correcto: omitimos si el clip completo está por encima o por debajo de la ventana
         if (clipBottom < topOffset || clipTop > getHeight()) continue;
 
@@ -263,7 +265,7 @@ void PlaylistComponent::paint(juce::Graphics& g) {
         juce::Rectangle<int> clipRect(xPos, yPos + 2, wPos - 1, (int)trackHeight - 4);
 
         juce::Colour trackColor = clip.trackPtr->getColor();
-        
+
         bool isMutedLocally = (clip.linkedAudio && clip.linkedAudio->isMuted) || (clip.linkedMidi && clip.linkedMidi->isMuted);
         float alphaMult = isMutedLocally ? 0.3f : 1.0f;
         g.setOpacity(alphaMult);
@@ -281,7 +283,7 @@ void PlaylistComponent::paint(juce::Graphics& g) {
         // 3. Renderizar Onda o MIDI debajo del header
         juce::Rectangle<int> innerArea = clipRect;
         innerArea.removeFromTop(18); // Se corre la zona de renderizado
-        
+
         if (clip.linkedAudio != nullptr) {
             WaveformRenderer::drawWaveform(g, *clip.linkedAudio, innerArea, trackColor, clip.trackPtr->getWaveformViewMode(), hZoom);
         }
@@ -308,7 +310,7 @@ void PlaylistComponent::paint(juce::Graphics& g) {
 
     g.setColour(juce::Colours::white.withAlpha(0.6f));
     g.setFont(12.0f);
-    
+
     double pixelsPerMeasure = 320.0 * hZoom;
     int measureMod = 1;
     if (pixelsPerMeasure < 15.0) measureMod = 16;
@@ -323,11 +325,12 @@ void PlaylistComponent::paint(juce::Graphics& g) {
         if (std::fmod(i, 320.0) == 0.0) {
             int measureNumber = (int)(i / 320.0) + 1;
             g.drawVerticalLine(dx, (float)(menuBarH + navigatorH + timelineH - 12), (float)(menuBarH + navigatorH + timelineH));
-            
+
             if (measureMod == 1 || (measureNumber - 1) % measureMod == 0) {
                 g.drawText(juce::String(measureNumber), dx + 4, menuBarH + navigatorH, 40, timelineH, juce::Justification::centredLeft, false);
             }
-        } else {
+        }
+        else {
             if (pixelsPerMeasure >= 30.0) {
                 g.drawVerticalLine(dx, (float)(menuBarH + navigatorH + timelineH - 6), (float)(menuBarH + navigatorH + timelineH));
             }
@@ -338,7 +341,7 @@ void PlaylistComponent::paint(juce::Graphics& g) {
     if (phX >= 0 && phX <= getWidth()) {
         float phTop = (float)(menuBarH + navigatorH);
         float phBottom = (float)getHeight();
-        
+
         // 1. Cola difuminada (Fade estela)
         int tailWidth = 40; // Pixels
         juce::Rectangle<float> tailRect(phX - tailWidth, phTop, tailWidth, phBottom - phTop);
@@ -357,15 +360,15 @@ void PlaylistComponent::paint(juce::Graphics& g) {
         // 3. Triángulo invertido en el timeline (simétrico)
         juce::Path triangle;
         float triTopY = phTop;
-        float triHeight = 8.0f; 
-        float triHalfWidth = 6.0f; 
-        
+        float triHeight = 8.0f;
+        float triHalfWidth = 6.0f;
+
         triangle.addTriangle(
             phX - triHalfWidth, triTopY,
             phX + triHalfWidth, triTopY,
             phX, triTopY + triHeight
         );
-        
+
         g.setColour(juce::Colours::white.withAlpha(0.9f));
         g.fillPath(triangle);
     }
@@ -389,12 +392,12 @@ void PlaylistComponent::mouseWheelMove(const juce::MouseEvent& e, const juce::Mo
     if (e.mods.isCtrlDown()) {
         // Zoom Horizontal Detallado - Centrado en el mouse
         double mouseAbsX = getAbsoluteXFromMouse(e.x);
-        
+
         double zoomFactor = (w.deltaY > 0) ? 1.15 : (1.0 / 1.15);
         if (w.isReversed) zoomFactor = 1.0 / zoomFactor;
-        
+
         hZoom = juce::jlimit(0.05, 10.0, hZoom * zoomFactor);
-        
+
         double newStart = (mouseAbsX * hZoom) - e.x;
         hNavigator.setRangeLimits(0.0, getTimelineLength() * hZoom);
         hNavigator.setCurrentRange(newStart, (double)(getWidth() - vBarWidth));
@@ -410,24 +413,24 @@ void PlaylistComponent::mouseWheelMove(const juce::MouseEvent& e, const juce::Mo
         // Zoom Vertical Detallado - Centrado en el mouse (Reaper style)
         double currentMouseY = e.y;
         int topOffset = menuBarH + navigatorH + timelineH;
-        
+
         if (currentMouseY > topOffset) {
             double vS = vBar.getCurrentRangeStart();
             double mouseAbsY = vS + (currentMouseY - topOffset);
-            
+
             double zoomFactor = (w.deltaY > 0) ? 1.15 : (1.0 / 1.15);
             if (w.isReversed) zoomFactor = 1.0 / zoomFactor;
 
             double oldTrackHeight = trackHeight;
             trackHeight = (float)juce::jlimit(30.0, 400.0, trackHeight * zoomFactor);
-            
+
             if (trackContainer) {
                 trackContainer->setTrackHeight(trackHeight);
             }
-            
+
             double heightRatio = trackHeight / oldTrackHeight;
             double newVS = mouseAbsY * heightRatio - (currentMouseY - topOffset);
-            
+
             vBar.setCurrentRange(newVS, (double)(getHeight() - topOffset));
             updateScrollBars();
         }
@@ -439,8 +442,10 @@ void PlaylistComponent::mouseWheelMove(const juce::MouseEvent& e, const juce::Mo
             for (auto* t : *tracksRef) if (t->isShowingInChildren) totalH += (int)trackHeight;
         }
         int topOffset = menuBarH + navigatorH + timelineH;
-        double newStart = juce::jlimit(0.0, juce::jmax(0.0, (double)totalH - (getHeight() - topOffset)), vBar.getCurrentRangeStart() - (w.deltaY * 100.0));
-        vBar.setCurrentRange(newStart, (double)(getHeight() - topOffset));
+
+        // CORRECCIÓN LÍMITE INFERIOR (- 60px)
+        double newStart = juce::jlimit(0.0, juce::jmax(0.0, (double)totalH - ((double)getHeight() - topOffset - 60.0)), vBar.getCurrentRangeStart() - (w.deltaY * 100.0));
+        vBar.setCurrentRange(newStart, (double)(getHeight() - topOffset - 60.0));
         updateScrollBars();
     }
     repaint();
@@ -463,25 +468,25 @@ void PlaylistComponent::mouseDown(const juce::MouseEvent& e) {
         if (onPlayheadSeekRequested) onPlayheadSeekRequested(newPos);
         return;
     }
-    if (activeTool) activeTool->mouseDown(e, *this); 
+    if (activeTool) activeTool->mouseDown(e, *this);
 }
 
-void PlaylistComponent::mouseDrag(const juce::MouseEvent& e) { 
+void PlaylistComponent::mouseDrag(const juce::MouseEvent& e) {
     if (isDraggingTimeline) {
         float newPos = juce::jmax(0.0f, getAbsoluteXFromMouse(e.x));
         setPlayheadPos(newPos);
         if (onPlayheadSeekRequested) onPlayheadSeekRequested(newPos);
         return;
     }
-    if (activeTool) activeTool->mouseDrag(e, *this); 
+    if (activeTool) activeTool->mouseDrag(e, *this);
 }
 
-void PlaylistComponent::mouseUp(const juce::MouseEvent& e) { 
+void PlaylistComponent::mouseUp(const juce::MouseEvent& e) {
     if (isDraggingTimeline) {
         isDraggingTimeline = false;
         return;
     }
-    if (activeTool) activeTool->mouseUp(e, *this); 
+    if (activeTool) activeTool->mouseUp(e, *this);
 }
 
 void PlaylistComponent::mouseMove(const juce::MouseEvent& e) { if (activeTool) activeTool->mouseMove(e, *this); }

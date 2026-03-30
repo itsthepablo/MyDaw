@@ -10,11 +10,11 @@
 // Permite insertar plugins en el bus maestro y ver el nivel de salida.
 // ==============================================================================
 class MasterTrackStrip : public juce::Component,
-                         public juce::Timer
+    public juce::Timer
 {
 public:
     // Callbacks hacia MainComponent
-    std::function<void()> onOpenMasterFx;
+    std::function<void()> onOpenMasterFx; // Mantenido para evitar errores de compilación en TrackContainer
 
     MasterTrackStrip();
     ~MasterTrackStrip() override;
@@ -30,7 +30,6 @@ private:
     Track* masterTrack = nullptr;
 
     juce::Label      masterLabel;
-    juce::TextButton fxButton;
     juce::Slider     volumeSlider;
     LevelMeter       levelMeter;
 
