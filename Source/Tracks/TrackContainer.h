@@ -102,9 +102,18 @@ public:
         p->onDeleteClick = [this, t] { 
             juce::MessageManager::callAsync([this, t] {
                 if (!tracks.contains(t)) return;
+
                 if (t->isSelected) {
-                    for (int i = tracks.size() - 1; i >= 0; --i) {
-                        if (tracks[i]->isSelected && onDeleteTrack) onDeleteTrack(i);
+                    // Recolectar índices a eliminar en orden DESCENDENTE primero
+                    // para que removeTrack(i) no desplace los índices siguientes
+                    std::vector<int> toDelete;
+                    toDelete.reserve((size_t)tracks.size());
+                    for (int i = 0; i < tracks.size(); ++i) {
+                        if (tracks[i]->isSelected) toDelete.push_back(i);
+                    }
+                    // Eliminar de mayor a menor: el índice de los anteriores no cambia
+                    for (int i = (int)toDelete.size() - 1; i >= 0; --i) {
+                        if (onDeleteTrack) onDeleteTrack(toDelete[i]);
                     }
                 } else {
                     if (onDeleteTrack) onDeleteTrack(tracks.indexOf(t)); 

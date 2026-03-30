@@ -188,7 +188,20 @@ void MainComponent::getNextAudioBlock(const juce::AudioSourceChannelInfo& buffer
     audioEngine.transportState.loopEndPos.store(juce::jmax(ui.pianoRollUI.getLoopEndPos(), ui.playlistUI.getLoopEndPos()), std::memory_order_relaxed);
     audioEngine.masterVolume.store(ui.mixerUI.getMasterVolume(), std::memory_order_relaxed);
 
-    audioEngine.processBlock(buffer);
+    // PROTECCIÓN ANTI-CRASH: El audioMutex se toma brevemente para garantizar que
+    // el audio thread no acceda a Track* que el UI thread acaba de destruir.
+    // El ScopedTryLock evita bloquear: si no puede adquirirlo, produce silencio
+    // en vez de crashear. El UI thread solo lo toma durante addTrack/removeTrack.
+    {
+        const juce::ScopedTryLock stl(audioMutex);
+        if (stl.isLocked()) {
+            audioEngine.processBlock(buffer);
+        } else {
+            // La UI está en medio de una operacion estructural (añadir/eliminar pistas).
+            // Producir silencio este bloque es preferible a un crash por use-after-free.
+            buffer.clearActiveBufferRegion();
+        }
+    }
 }
 
 void MainComponent::releaseResources() { audioEngine.releaseResources(); }
