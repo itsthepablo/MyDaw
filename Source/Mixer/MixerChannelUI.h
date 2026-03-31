@@ -23,7 +23,7 @@ public:
 
         g.setColour(juce::Colour(25, 25, 25));
         g.fillEllipse(toX - radius, toY - radius, radius * 2.0f, radius * 2.0f);
-        
+
         g.setColour(outline);
         g.drawEllipse(toX - radius, toY - radius, radius * 2.0f, radius * 2.0f, 1.5f);
 
@@ -40,7 +40,7 @@ public:
     void drawLinearSlider(juce::Graphics& g, int x, int y, int width, int height,
         float sliderPos, float minSliderPos, float maxSliderPos,
         const juce::Slider::SliderStyle style, juce::Slider& slider) override {
-        
+
         auto trackWidth = 4.0f;
         auto isVertical = style == juce::Slider::LinearVertical;
 
@@ -52,7 +52,7 @@ public:
 
         auto handleWidth = isVertical ? width * 0.8f : 30.0f;
         auto handleHeight = isVertical ? 20.0f : height * 0.8f;
-        
+
         juce::Rectangle<float> handle;
         if (isVertical)
             handle = { x + width * 0.5f - handleWidth * 0.5f, sliderPos - handleHeight * 0.5f, handleWidth, handleHeight };
@@ -61,13 +61,13 @@ public:
 
         g.setColour(juce::Colour(60, 60, 65));
         g.fillRoundedRectangle(handle, 3.0f);
-        
+
         g.setColour(juce::Colours::orange);
         if (isVertical)
             g.fillRect(handle.getX(), handle.getCentreY() - 1.0f, handle.getWidth(), 2.0f);
         else
             g.fillRect(handle.getCentreX() - 1.0f, handle.getY(), 2.0f, handle.getHeight());
-        
+
         g.setColour(juce::Colours::black.withAlpha(0.5f));
         g.drawRoundedRectangle(handle, 3.0f, 1.0f);
     }
@@ -91,8 +91,10 @@ public:
         float l = track->currentPeakLevelL;
         float r = track->currentPeakLevelR;
 
-        if (l > maxL) { maxL = l; ticksSincePeakL = 0; } else { if (++ticksSincePeakL > 30) maxL *= 0.95f; }
-        if (r > maxR) { maxR = r; ticksSincePeakR = 0; } else { if (++ticksSincePeakR > 30) maxR *= 0.95f; }
+        if (l > maxL) { maxL = l; ticksSincePeakL = 0; }
+        else { if (++ticksSincePeakL > 30) maxL *= 0.95f; }
+        if (r > maxR) { maxR = r; ticksSincePeakR = 0; }
+        else { if (++ticksSincePeakR > 30) maxR *= 0.95f; }
 
         drawBar(g, b.removeFromLeft(b.getWidth() * 0.48f), l, maxL);
         b.removeFromLeft(b.getWidth() * 0.04f);
@@ -149,10 +151,10 @@ public:
         auto b = getLocalBounds().reduced(1);
         bool hasPlugin = track && index < track->plugins.size();
         bool bypassed = hasPlugin && track->plugins[index]->isBypassed();
-        
+
         g.setColour(hasPlugin ? (bypassed ? juce::Colour(35, 35, 35) : juce::Colour(45, 50, 60)) : juce::Colour(25, 25, 25));
         g.fillRoundedRectangle(b.toFloat(), 2.0f);
-        
+
         g.setColour(juce::Colours::black.withAlpha(0.4f));
         g.drawRoundedRectangle(b.toFloat(), 2.0f, 1.0f);
 
@@ -162,7 +164,8 @@ public:
             g.setFont(10.0f);
             g.drawText(p->getLoadedPluginName().substring(0, 20), b.reduced(2).withTrimmedLeft(20), juce::Justification::centredLeft);
             bypassBtn.setVisible(true);
-        } else {
+        }
+        else {
             bypassBtn.setVisible(false);
         }
     }
@@ -176,13 +179,15 @@ public:
             if (e.mods.isPopupMenu()) {
                 juce::PopupMenu m; m.addItem(1, "Eliminar");
                 m.showMenuAsync(juce::PopupMenu::Options(), [this](int r) { if (r == 1 && onDeletePlugin) onDeletePlugin(index); });
-            } else if (onOpenPlugin) onOpenPlugin(index);
-        } else {
+            }
+            else if (onOpenPlugin) onOpenPlugin(index);
+        }
+        else {
             juce::PopupMenu m; m.addItem(1, "Native Utility"); m.addItem(2, "External VST3...");
             m.showMenuAsync(juce::PopupMenu::Options(), [this](int r) {
                 if (r == 1 && onAddNativeUtility) onAddNativeUtility(index);
                 if (r == 2 && onAddVST3) onAddVST3(index);
-            });
+                });
         }
     }
 
@@ -213,7 +218,8 @@ public:
                 juce::PopupMenu m; m.addItem(1, "Eliminar Envío");
                 m.showMenuAsync(juce::PopupMenu::Options(), [this](int r) { if (r == 1 && onDeleteSend) onDeleteSend(index); });
             }
-        } else if (onAddSend) onAddSend();
+        }
+        else if (onAddSend) onAddSend();
     }
     std::function<void()> onAddSend; std::function<void(int)> onDeleteSend;
 private:
@@ -236,7 +242,7 @@ public:
             s->onAddNativeUtility = [this](int idx) { if (onAddNativeUtility) onAddNativeUtility(*track); };
             s->onAddVST3 = [this](int idx) { if (onAddVST3) onAddVST3(*track); };
             s->onDeletePlugin = [this](int idx) { if (onDeleteEffect) onDeleteEffect(*track, idx); };
-            fxSlots.add(s); 
+            fxSlots.add(s);
             if (!isMiniMode) addAndMakeVisible(s);
         }
 
@@ -245,7 +251,7 @@ public:
             auto* s = new SendSlot(track, i);
             s->onAddSend = [this] { if (onAddSend) onAddSend(*track); };
             s->onDeleteSend = [this](int idx) { if (onDeleteSend) onDeleteSend(*track, idx); };
-            sendSlots.add(s); 
+            sendSlots.add(s);
             if (!isMiniMode) addAndMakeVisible(s);
         }
 
@@ -261,12 +267,12 @@ public:
             panToggle.setButtonText("NORM");
             panToggle.setClickingTogglesState(true);
             panToggle.setColour(juce::TextButton::buttonOnColourId, juce::Colours::darkgrey);
-            panToggle.onClick = [this] { 
+            panToggle.onClick = [this] {
                 bool dual = panToggle.getToggleState();
                 panToggle.setButtonText(dual ? "DUAL" : "NORM");
                 track->panningModeDual.store(dual);
                 updatePanVisibility();
-            };
+                };
             addAndMakeVisible(panToggle);
 
             panL.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
@@ -301,14 +307,14 @@ public:
         trackName.setJustificationType(juce::Justification::centred);
         trackName.setFont(juce::Font(13.0f, juce::Font::bold));
         addAndMakeVisible(trackName);
-        
+
         updateUI();
     }
 
     void updateUI() {
         fader.setValue(track->getVolume(), juce::dontSendNotification);
         panKnob.setValue(track->getBalance(), juce::dontSendNotification);
-        
+
         if (!isMiniMode) {
             bool dual = track->panningModeDual.load();
             panToggle.setToggleState(dual, juce::dontSendNotification);
@@ -336,16 +342,17 @@ public:
 
     void resized() override {
         auto b = getLocalBounds().reduced(4);
-        
+
         if (!isMiniMode) {
             auto topArea = b.removeFromTop(100);
             auto panToggleArea = topArea.removeFromTop(20);
             panToggle.setBounds(panToggleArea.withSizeKeepingCentre(40, 18));
-            
+
             if (track->panningModeDual.load()) {
                 panL.setBounds(topArea.removeFromLeft(topArea.getWidth() / 2).reduced(5));
                 panR.setBounds(topArea.reduced(5));
-            } else {
+            }
+            else {
                 panKnob.setBounds(topArea.withSizeKeepingCentre(45, 45));
             }
 
@@ -361,7 +368,8 @@ public:
                 s->setVisible(true);
             }
             b.removeFromTop(5);
-        } else {
+        }
+        else {
             // MiniMode: Solo Paneo Normal, No efectos
             auto topArea = b.removeFromTop(60);
             panKnob.setBounds(topArea.withSizeKeepingCentre(45, 45));
