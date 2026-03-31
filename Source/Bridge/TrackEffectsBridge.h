@@ -2,7 +2,7 @@
 #include <JuceHeader.h>
 #include "../Tracks/TrackContainer.h"
 #include "../Effects/EffectsPanel.h"
-#include "../Native_Plugins/UtilityPlugin.h" // <-- Inclusión vital
+#include "../Native_Plugins/UtilityPlugin.h" 
 
 #include "../Engine/Core/AudioEngine.h"
 
@@ -13,7 +13,7 @@ public:
         juce::CriticalSection& audioMutex,
         double& sampleRate,
         int& blockSize,
-        AudioEngine& engine, // NUEVO
+        AudioEngine& engine, 
         std::function<void()> onEffectsOpened)
     {
         container.onOpenEffects = [&ui, onEffectsOpened](Track& t) {
@@ -25,7 +25,7 @@ public:
             ui.setTrack(t);
         };
 
-        // --- SEÑAL 1: Carga VST3 (Anterior onAddEffect) ---
+        // --- CARGA VST3 ---
         ui.onAddVST3 = [&audioMutex, &sampleRate, &blockSize, &ui, &engine, &container](Track& t) {
             auto* host = new VSTHost();
             
@@ -36,18 +36,15 @@ public:
                         int currentBlockSize = blockSize > 0 ? blockSize : 512;
                         host->prepareToPlay(sampleRate, currentBlockSize);
                         t.plugins.add(host);
-                        t.allocatePdcBuffer(); // RAM: alocar PDC buffer ahora que hay un plugin
+                        t.allocatePdcBuffer(); 
                         host->setIsInstrument(t.getType() == TrackType::MIDI && t.plugins.size() == 1);
                         
-                        // Configurar callback de sidechain para relanzar ruteo
                         host->onSidechainChanged = [&engine, &container]() {
                             engine.routingMatrix.commitNewTopology(container.getTracks());
                         };
 
                         engine.routingMatrix.commitNewTopology(container.getTracks());
                         ui.updateSlots();
-
-                        // AUTO-ABRIR VENTANA AL INSERTAR
                         host->showWindow(&container);
                     });
                 }
@@ -63,29 +60,24 @@ public:
                         int currentBlockSize = blockSize > 0 ? blockSize : 512;
                         host->prepareToPlay(sampleRate, currentBlockSize);
                         
-                        // Restaurar el preset (estado binario)
                         if (base64State.isNotEmpty()) {
                             juce::MemoryBlock mb;
                             mb.fromBase64Encoding(base64State);
                             host->setStateInformation(mb.getData(), (int)mb.getSize());
                         }
 
-                        // Restaurar sidechain
                         host->sidechainSourceTrackId.store(sidechainSourceId);
 
                         t.plugins.add(host);
                         t.allocatePdcBuffer();
                         host->setIsInstrument(t.getType() == TrackType::MIDI && t.plugins.size() == 1);
                         
-                        // Configurar callback de sidechain
                         host->onSidechainChanged = [&engine, &container]() {
                             engine.routingMatrix.commitNewTopology(container.getTracks());
                         };
 
                         engine.routingMatrix.commitNewTopology(container.getTracks());
                         ui.updateSlots();
-
-                        // AUTO-ABRIR VENTANA AL INSERTAR
                         host->showWindow(&container);
                     });
                 } else {
@@ -94,31 +86,49 @@ public:
             });
         };
 
-        // --- SEÑAL 2: Carga Plugin Nativo ---
+        // --- CARGA NATIVO ---
         ui.onAddNativeUtility = [&audioMutex, &sampleRate, &blockSize, &ui, &engine, &container](Track& t) {
             juce::MessageManager::callAsync([&t, &audioMutex, sampleRate, blockSize, &ui, &engine, &container]() {
                 juce::ScopedLock sl(audioMutex);
-                
-                // Instanciamos directamente nuestra clase nativa
                 auto* utility = new UtilityPlugin();
                 int currentBlockSize = blockSize > 0 ? blockSize : 512;
                 utility->prepareToPlay(sampleRate, currentBlockSize);
-                
                 t.plugins.add(utility);
-                t.allocatePdcBuffer(); // RAM: alocar PDC buffer ahora que hay un plugin
-                utility->setIsInstrument(false); // Utility siempre es un efecto
-                
-                // Configurar callback de sidechain (aunque sea nativo y no lo use ahora, por coherencia)
+                t.allocatePdcBuffer(); 
+                utility->setIsInstrument(false); 
                 utility->onSidechainChanged = [&engine, &container]() {
                     engine.routingMatrix.commitNewTopology(container.getTracks());
                 };
-
                 engine.routingMatrix.commitNewTopology(container.getTracks());
                 ui.updateSlots();
-
-                // AUTO-ABRIR VENTANA AL INSERTAR
                 utility->showWindow(&container);
             });
+        };
+
+        // --- NUEVO: GESTIÓN DE ENVÍOS (SENDS) ---
+        ui.onAddSend = [&engine, &container, &ui](Track& t) {
+            t.sends.push_back({ -1, 1.0f, false, false }); 
+            engine.routingMatrix.commitNewTopology(container.getTracks());
+            ui.updateSlots();
+        };
+
+        ui.onDeleteSend = [&engine, &container, &ui](Track& t, int idx) {
+            if (idx >= 0 && idx < (int)t.sends.size()) {
+                t.sends.erase(t.sends.begin() + idx);
+                engine.routingMatrix.commitNewTopology(container.getTracks());
+                ui.updateSlots();
+            }
+        };
+
+        ui.onChangeSend = [&engine, &container](Track& t) {
+            engine.routingMatrix.commitNewTopology(container.getTracks());
+        };
+
+        ui.getAvailableTracks = [&container]() {
+            juce::Array<Track*> trackList;
+            for (auto* t : container.getTracks())
+                trackList.add(t);
+            return trackList;
         };
 
         ui.onOpenEffect = [&container](Track& t, int idx) {
@@ -141,7 +151,6 @@ public:
         ui.onReorderEffects = [&audioMutex, &ui, &engine, &container](Track& t, int oldIdx, int newIdx) {
             juce::ScopedLock sl(audioMutex);
             if (oldIdx == -1 && newIdx == -1) {
-                // Caso especial: cambio de Sidechain (o refresco de ruteo)
                 engine.routingMatrix.commitNewTopology(container.getTracks());
                 return;
             }

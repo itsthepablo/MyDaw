@@ -19,13 +19,11 @@ public:
 
     virtual void prepareToPlay(double sampleRate, int maximumExpectedSamplesPerBlock) = 0;
     virtual void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) = 0;
-    virtual void reset() = 0; // NUEVO: resetear ecos/colas sin reasignar RAM
-    virtual void setNonRealtime(bool isNonRealtime) {} // NUEVO: para plugins VST3 que soportan HQ mode en export
+    virtual void reset() = 0; 
+    virtual void setNonRealtime(bool isNonRealtime) {} 
 
-    // --- NUEVO: ANTENA DE RELOJ PARA QUE EL VST3 DIBUJE EL FFT CORRECTAMENTE ---
     virtual void updatePlayHead(bool isPlaying, int64_t samplePos) {}
 
-    // --- SIDECHAIN SUPPORT ---
     virtual void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages, const juce::AudioBuffer<float>* sidechainBuffer) { 
         processBlock(buffer, midiMessages); 
     }
@@ -33,10 +31,8 @@ public:
     std::atomic<int> sidechainSourceTrackId { -1 };
     virtual bool supportsSidechain() const { return false; }
     
-    // Callback para que el Bridge relance el grafo de ruteo cuando cambie el Sidechain desde el Header
     std::function<void()> onSidechainChanged;
 
-    // --- STATE MANAGEMENT ---
     virtual void getStateInformation(juce::MemoryBlock& destData) {}
     virtual void setStateInformation(const void* data, int sizeInBytes) {}
 

@@ -11,11 +11,23 @@
 #include <atomic>
 
 enum class TrackType { MIDI, Audio };
-enum class WaveformViewMode { Combined, SeparateLR, MidSide, Spectrogram }; // Agregado Espectrograma
+enum class WaveformViewMode { Combined, SeparateLR, MidSide, Spectrogram }; 
+enum class SendRouting { Stereo, Mid, Side }; 
 
 struct AudioPeak {
     float maxPos = 0.0f;
     float minNeg = 0.0f;
+};
+
+// ============================================================
+// ESTRUCTURA DE ENVÍO (SEND) — Ruteo entre pistas
+// ============================================================
+struct TrackSend {
+    int targetTrackId = -1;
+    float gain = 1.0f; // Multiplicador de volumen
+    bool isPreFader = false;
+    bool isMuted = false;
+    SendRouting routing = SendRouting::Stereo; 
 };
 
 struct AudioClipData {
@@ -26,7 +38,7 @@ struct AudioClipData {
     float originalWidth = 0.0f;
     bool isMuted = false;
     bool isSelected = false;
-    std::atomic<bool> isLoaded { true }; // Empieza en true, el drag async lo pone false
+    std::atomic<bool> isLoaded { true }; 
     juce::String sourceFilePath; 
     juce::AudioBuffer<float> fileBuffer;
     double sourceSampleRate = 44100.0;
@@ -36,7 +48,7 @@ struct AudioClipData {
     std::vector<AudioPeak> cachedPeaksMid;
     std::vector<AudioPeak> cachedPeaksSide;
     
-    juce::Image spectrogramImage; // Cache Matrix FFT
+    juce::Image spectrogramImage; 
 
     void generateCache() {
         const int samplesPerPoint = 256;
@@ -92,7 +104,6 @@ struct AudioClipData {
             }
         }
         
-        // --- FFT SPECTROGRAM GENERATION ---
         auto getHeatColor = [](float magnitude) -> juce::Colour {
             magnitude = juce::jlimit(0.0f, 1.0f, magnitude);
             juce::Colour c = juce::Colour(20, 22, 25);
@@ -101,9 +112,9 @@ struct AudioClipData {
             return juce::Colours::orange.interpolatedWith(juce::Colours::yellow, (magnitude - 0.6f) / 0.4f);
         };
 
-        const int fftOrder = 10; // 1024 samples (512 Freq Bins)
+        const int fftOrder = 10;
         const int fftSize = 1 << fftOrder;
-        const int hopSize = 256; // 4x Resolution (Overlap)
+        const int hopSize = 256; 
         
         juce::dsp::FFT fft(fftOrder);
         juce::dsp::WindowingFunction<float> window((size_t)fftSize, juce::dsp::WindowingFunction<float>::hann);
@@ -134,7 +145,7 @@ struct AudioClipData {
                        intensity = juce::jmin(1.0f, (float)std::log10(1.0f + rawMag * 50.0f) / 3.0f);
                     }
                     juce::Colour heat = getHeatColor(intensity);
-                    bmpData.setPixelColour(frame, imgHeight - 1 - bin, heat);
+                    bmpData.setPixelColour(frame, imgHeight - bin - 1, heat);
                 }
             }
         }
@@ -160,31 +171,23 @@ struct MidiClipData {
 // ============================================================
 // DOUBLE BUFFERING (SNAPSHOTS) — Thread-Safe Audio Access
 // ============================================================
-// El audio thread solo lee snapshot. La UI modifica los OwnedArrays
-// originales y luego llama commitSnapshot() para actualizar atómicamente.
-
-// Metadatos de un AudioClip que el audio thread necesita.
-// fileBufferPtr apunta al buffer original del OwnedArray — NUNCA se
-// libera mientras el Track vive, por lo que es seguro desde el audio thread.
 struct AudioClipSnapshot {
     float startX     = 0.0f;
     float width      = 0.0f;
     float offsetX    = 0.0f;
     bool  isMuted    = false;
-    bool  isLoaded   = true; // Para carga asincrona
-    const juce::AudioBuffer<float>* fileBufferPtr = nullptr; // solo lectura
+    bool  isLoaded   = true;
+    const juce::AudioBuffer<float>* fileBufferPtr = nullptr;
     int   numChannels = 0;
     int   numSamples  = 0;
 };
 
-// Copia plana de una nota MIDI.
 struct MidiNoteSnapshot {
     int   pitch = 0;
     int   x     = 0;
     int   width = 0;
 };
 
-// Metadatos de un MidiClip + notas para el audio thread.
 struct MidiClipSnapshot {
     float startX  = 0.0f;
     float width   = 320.0f;
@@ -193,12 +196,10 @@ struct MidiClipSnapshot {
     std::vector<MidiNoteSnapshot> notes;
 };
 
-// Snapshot completo de los datos de reproducción de una pista.
-// El audio thread lo adquiere con load(acquire) — wait-free, sin locks.
 struct TrackSnapshot {
     std::vector<AudioClipSnapshot> audioClips;
     std::vector<MidiClipSnapshot>  midiClips;
-    std::vector<MidiNoteSnapshot>  notes;        // notas directas (Piano Roll)
+    std::vector<MidiNoteSnapshot>  notes; 
 };
 
 // ============================================================
@@ -210,7 +211,6 @@ public:
     }
 
     ~Track() {
-        // Liberar el snapshot actual si existe (el destructor corre en el UI thread)
         auto* old = snapshot.exchange(nullptr, std::memory_order_acq_rel);
         delete old;
     }
@@ -243,9 +243,11 @@ public:
     bool isMonoActive = false;
 
     std::vector<Note> notes;
-
     juce::OwnedArray<BaseEffect> plugins;
 
+    // --- SENDS (ENVÍOS) ---
+    std::vector<TrackSend> sends;
+    
     // --- SIDECHAIN DEPENDENCIES ---
     std::vector<int> getSidechainDependencies() const {
         std::vector<int> deps;
@@ -278,17 +280,18 @@ public:
     juce::AudioBuffer<float> tempSynthBuffer;
     juce::AudioBuffer<float> midSideBuffer;
     
+    // Proteccion para suma concurrente (Sends + Folders)
+    juce::SpinLock bufferLock;
+
     // --- PDC (COMPENSACIÓN DE LATENCIA) ---
-    juce::AudioBuffer<float> pdcBuffer; // Empieza en tamaño 0. Se aloca via allocatePdcBuffer()
+    juce::AudioBuffer<float> pdcBuffer; 
     int pdcWritePtr = 0;
     int currentLatency = 0;
     int requiredDelay = 0;
 
-    // Llamar desde el UI thread cuando se carga un plugin con latencia.
-    // No hace nada si el buffer ya tiene el tamaño correcto (idempotente).
     void allocatePdcBuffer()
     {
-        if (pdcBuffer.getNumSamples() >= 524288) return; // Ya alocado, no re-alocar
+        if (pdcBuffer.getNumSamples() >= 524288) return; 
         pdcBuffer.setSize(2, 524288, false, true, false);
         pdcBuffer.clear();
         pdcWritePtr = 0;
@@ -301,7 +304,6 @@ public:
     SimpleLoudness postLoudness;
     bool isAnalyzersPrepared = false;
 
-    // --- CARGA DE AUDIO INTEGRADA (Para Persistencia) ---
     AudioClipData* loadAndAddAudioClip(const juce::File& file, float startX)
     {
         juce::AudioFormatManager manager;
@@ -315,8 +317,6 @@ public:
             clip->sourceFilePath = file.getFullPathName();
             clip->startX = startX;
             
-            // Calculamos ancho basado en la duración (asumiendo 120BPM -> 320px por compás de 2s)
-            // 320px / 2s = 160px/s
             double duration = (double)reader->lengthInSamples / reader->sampleRate;
             clip->width = (float)(duration * 160.0); 
             clip->originalWidth = clip->width;
@@ -333,19 +333,12 @@ public:
         return nullptr;
     }
 
-    // ============================================================
-    // SNAPSHOT ATÓMICO — acceso wait-free desde el audio thread
-    // Llamar commitSnapshot() desde el UI thread cada vez que se
-    // añadan, eliminen o muevan clips/notas en este track.
-    // ============================================================
     std::atomic<TrackSnapshot*> snapshot { nullptr };
 
     void commitSnapshot()
     {
-        // Construir el nuevo snapshot en el heap (UI thread — aloja aquí, no en audio)
         auto* snap = new TrackSnapshot();
 
-        // --- Audio clips: solo metadatos + puntero read-only al buffer ---
         snap->audioClips.reserve((size_t)audioClips.size());
         for (auto* ac : audioClips) {
             if (!ac) continue;
@@ -355,13 +348,12 @@ public:
             acs.offsetX       = ac->offsetX;
             acs.isMuted       = ac->isMuted;
             acs.isLoaded      = ac->isLoaded.load(std::memory_order_relaxed);
-            acs.fileBufferPtr = &ac->fileBuffer;   // puntero de solo lectura, seguro
+            acs.fileBufferPtr = &ac->fileBuffer;   
             acs.numChannels   = ac->fileBuffer.getNumChannels();
             acs.numSamples    = ac->fileBuffer.getNumSamples();
             snap->audioClips.push_back(acs);
         }
 
-        // --- MIDI clips: metadatos + copia plana de notas ---
         snap->midiClips.reserve((size_t)midiClips.size());
         for (auto* mc : midiClips) {
             if (!mc) continue;
@@ -377,14 +369,11 @@ public:
             snap->midiClips.push_back(std::move(mcs));
         }
 
-        // --- Notas directas (Piano Roll) ---
         snap->notes.reserve(notes.size());
         for (const auto& n : notes) {
             snap->notes.push_back({ n.pitch, n.x, n.width });
         }
 
-        // Exchange atómico: el audio thread verá el nuevo snapshot inmediatamente.
-        // El snapshot viejo se elimina en el Message Thread para no bloquear al audio.
         auto* old = snapshot.exchange(snap, std::memory_order_acq_rel);
         if (old) {
             juce::MessageManager::callAsync([old]() { delete old; });

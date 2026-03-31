@@ -14,7 +14,6 @@ EffectsPanel::EffectsPanel() {
             bool isBypassed = bypassAllBtn.getToggleState();
             for (auto* p : activeTrack->plugins) {
                 if (p) {
-                    // Evitamos bypassear el instrumento principal cuando se apagan los efectos
                     if (!p->getIsInstrument()) {
                         p->setBypassed(isBypassed);
                     }
@@ -28,7 +27,6 @@ EffectsPanel::EffectsPanel() {
     addEffectBtn.setButtonText("+ PLUGIN");
     addEffectBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(70, 75, 80));
 
-    // --- MENÚ DESPLEGABLE PARA ELEGIR VST O NATIVO ---
     addEffectBtn.onClick = [this] {
         if (activeTrack) {
             juce::PopupMenu m;
@@ -43,12 +41,21 @@ EffectsPanel::EffectsPanel() {
         }
         };
 
+    // --- NUEVO: BOTÓN PARA AÑADIR ENVÍOS ---
+    addAndMakeVisible(addSendBtn);
+    addSendBtn.setButtonText("+ SEND");
+    addSendBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(70, 75, 80));
+    addSendBtn.onClick = [this] {
+        if (activeTrack && onAddSend) onAddSend(*activeTrack);
+    };
+
     addEffectBtn.setVisible(false);
+    addSendBtn.setVisible(false);
 
     // --- BARRA NEGRA (SOLO VISIBLE CUANDO ESTÁ OCULTO) ---
     addAndMakeVisible(toggleGainStationBtn);
     toggleGainStationBtn.setButtonText(">");
-    toggleGainStationBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(15, 18, 20)); // Barra oscura
+    toggleGainStationBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(15, 18, 20)); 
     toggleGainStationBtn.setTooltip("Mostrar Gain Station");
     toggleGainStationBtn.onClick = [this] {
         isGainStationExpanded = true;
@@ -59,7 +66,6 @@ EffectsPanel::EffectsPanel() {
     // --- BOTÓN HIDE (SOLO VISIBLE CUANDO ESTÁ EXPANDIDO) ---
     addAndMakeVisible(hideGainStationBtn);
     hideGainStationBtn.setButtonText("HIDE");
-    // Diseño minimalista e integrado
     hideGainStationBtn.setColour(juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
     hideGainStationBtn.setColour(juce::TextButton::textColourOffId, juce::Colours::white.withAlpha(0.4f));
     hideGainStationBtn.setColour(juce::TextButton::textColourOnId, juce::Colours::white);
@@ -80,40 +86,42 @@ void EffectsPanel::setTrack(Track* t) {
 
 void EffectsPanel::updateSlots() {
     devices.clear();
+    sends.clear(); // NUEVO
+
     addEffectBtn.setVisible(activeTrack != nullptr);
+    addSendBtn.setVisible(activeTrack != nullptr);
     bypassAllBtn.setVisible(activeTrack != nullptr);
 
     bool allBypassed = true;
     bool hasPlugins = false;
 
     if (activeTrack) {
+        // --- 1. PLUGINS ---
         for (int i = 0; i < activeTrack->plugins.size(); ++i) {
             auto* effectRef = activeTrack->plugins[i];
-
             if (!effectRef) continue;
-
-            // --- NUEVO: FILTRO VISUAL PARA INSTRUMENTOS ---
-            // Revisamos si este plugin específico está marcado como instrumento
-            bool isInst = effectRef->getIsInstrument();
-
-            // Si es un instrumento, lo ignoramos por completo en la interfaz de efectos
-            if (isInst) {
-                continue;
-            }
-            // ----------------------------------------------
+            if (effectRef->getIsInstrument()) continue;
 
             hasPlugins = true;
             if (!effectRef->isBypassed()) allBypassed = false;
 
             juce::String name = "Plugin";
             if (effectRef->isLoaded()) name = effectRef->getLoadedPluginName();
-
             bool isBypassed = effectRef->isBypassed();
 
-            // Como ya filtramos, sabemos que siempre será "isInst = false" para los efectos
             auto* device = new EffectDevice(i, name, false, isBypassed, effectRef, *this);
             devices.add(device);
             addAndMakeVisible(device);
+        }
+
+        // --- 2. ENVÍOS ---
+        for (int i = 0; i < (int)activeTrack->sends.size(); ++i) {
+            auto tracks = getAvailableTracks ? getAvailableTracks() : juce::Array<Track*>();
+            auto* sendDev = new SendDevice(i, activeTrack, tracks, 
+                [this] { if (onChangeSend) onChangeSend(*activeTrack); },
+                [this](int idx) { if (onDeleteSend) onDeleteSend(*activeTrack, idx); });
+            sends.add(sendDev);
+            addAndMakeVisible(sendDev);
         }
     }
 
@@ -125,14 +133,12 @@ void EffectsPanel::updateSlots() {
 }
 
 void EffectsPanel::paint(juce::Graphics& g) {
-    g.fillAll(juce::Colour(40, 43, 48)); // Fondo principal donde van los plugins
+    g.fillAll(juce::Colour(40, 43, 48)); 
 
     int trackInfoWidth = 110;
     int gainStationWidth = isGainStationExpanded ? 180 : 0;
-    int totalLeftWidth = trackInfoWidth + gainStationWidth; // El panel unificado
+    int totalLeftWidth = trackInfoWidth + gainStationWidth; 
 
-    // --- FONDO UNIFICADO DEL PANEL IZQUIERDO ---
-    // Esto hace que la Gain Station parezca una extensión nativa de los controles de la pista
     g.setColour(juce::Colour(30, 33, 36));
     g.fillRect(0, 0, totalLeftWidth, getHeight());
     g.setColour(juce::Colours::black.withAlpha(0.5f));
@@ -178,37 +184,43 @@ void EffectsPanel::resized() {
         toggleGainStationBtn.setVisible(false);
         hideGainStationBtn.setVisible(true);
         loudnessMeter.setVisible(true);
-
-        // Se adhiere perfectamente a la información del track sin gaps
         loudnessMeter.setBounds(trackInfoWidth, 20, gainStationWidth, getHeight() - 30);
-
-        // El botón HIDE se ubica en la esquina superior derecha del área unificada
         hideGainStationBtn.setBounds(trackInfoWidth + gainStationWidth - 45, 5, 40, 15);
-
         startX += gainStationWidth + padding;
     }
     else {
         toggleGainStationBtn.setVisible(true);
         hideGainStationBtn.setVisible(false);
         loudnessMeter.setVisible(false);
-
-        // La barra negra colapsada se pega a la info del track
         toggleGainStationBtn.setBounds(trackInfoWidth, 0, toggleBarWidth, getHeight());
-
         startX += toggleBarWidth + padding;
     }
 
-    // --- POSICIONAMIENTO DINÁMICO DE PLUGINS ---
     int x = startX;
     int y = 20;
     int slotWidth = 140;
     int slotHeight = getHeight() - 40;
     if (slotHeight < 50) slotHeight = 50;
 
+    // --- 1. PLUGINS ---
     for (auto* device : devices) {
         device->setBounds(x, y, slotWidth, slotHeight);
         x += slotWidth + padding;
     }
 
     addEffectBtn.setBounds(x, y + (slotHeight / 2) - 20, 80, 40);
+    x += 100;
+
+    // --- 2. SEPARADOR VISUAL PARA SENDS ---
+    if (sends.size() > 0) {
+        x += 20;
+    }
+
+    // --- 3. SENDS ---
+    for (auto* send : sends) {
+        send->setBounds(x, y, 130, slotHeight);
+        x += 130 + padding;
+    }
+
+    addSendBtn.setBounds(x, y + (slotHeight / 2) - 20, 80, 40);
 }

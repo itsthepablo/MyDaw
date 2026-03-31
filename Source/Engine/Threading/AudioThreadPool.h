@@ -3,6 +3,7 @@
 #include <atomic>
 #include <thread>
 #include <vector>
+#include <map>
 #include "../Core/AudioClock.h"
 #include "../Routing/RoutingMatrix.h"
 #include "../Routing/MasterMixer.h"
@@ -56,10 +57,15 @@ public:
         ctx.isPlayingNow  = isPlayingNow;
         ctx.isStoppingNow = isStoppingNow;
 
+        // Limpiar el mapeo de ID a Índice para el acceso rápido de los workers a los Destinos de Envío
+        ctx.idToIndex.clear();
+        for (int i = 0; i < n; ++i) ctx.idToIndex[topo->activeTracks[i]->getId()] = i;
+
+        // Asegurar que el buffer de trabajo M/S tenga el tamaño adecuado
+        if (ctx.msWorkBuffer.getNumSamples() < numSamples)
+            ctx.msWorkBuffer.setSize(1, numSamples, false, false, true);
+
         for (int i = 0; i < n; ++i) {
-            // En los DAWs comerciales modernos (Reaper, FL, Ableton), diferentes instancias 
-            // de VST3 corren en diferentes hilos libremente. El grafo garantiza que nunca 
-            // se procese la misma pista 2 veces simultáneamente.
             mainThreadTask[i] = false;
 
             int pending = (i < (int)topo->initialPendingCounts.size())
@@ -69,13 +75,10 @@ public:
             taskStates[i].store((int)init, std::memory_order_relaxed);
         }
         doneCount.store(0, std::memory_order_release);
-        generation.fetch_add(1, std::memory_order_release); // Despertar workers
+        generation.fetch_add(1, std::memory_order_release); 
 
-        // Audio thread: procesa TODOS los tasks (incluidos los de plugins)
-        // Workers: solo procesa tasks sin plugins (mainThreadTask == false)
         while (doneCount.load(std::memory_order_acquire) < n) {
             stealOneTask(/*isAudioThread=*/true);
-            // Spin-Wait robusto: No le damos el control al OS para evitar dropouts de 15ms.
             for (int i = 0; i < 40; ++i) std::atomic_thread_fence(std::memory_order_acquire);
         }
     }
@@ -105,18 +108,15 @@ private:
         int  numTasks        = 0;
         bool isPlayingNow    = false;
         bool isStoppingNow   = false;
+        std::map<int, int> idToIndex; // Auxiliar rápido
+        juce::AudioBuffer<float> msWorkBuffer; // Buffer temporal para cálculos Mid/Side
     };
 
-    // -------------------------------------------------------------------------
-    // Intenta robar y ejecutar UN task listo.
-    // isAudioThread=true: puede tomar cualquier task (incluidos los de plugins).
-    // isAudioThread=false: salta los tasks que deben correr en el audio thread.
-    // -------------------------------------------------------------------------
     void stealOneTask(bool isAudioThread) noexcept
     {
         int n = ctx.numTasks;
         for (int i = 0; i < n; ++i) {
-            if (!isAudioThread && mainThreadTask[i]) continue; // Workers saltan plugins
+            if (!isAudioThread && mainThreadTask[i]) continue; 
             int expected = (int)TaskState::Ready;
             if (taskStates[i].compare_exchange_strong(
                     expected, (int)TaskState::InProgress,
@@ -130,7 +130,7 @@ private:
 
     void processOneTask(int idx) noexcept
     {
-        juce::ScopedNoDenormals noDenormals; // [PROTECCIÓN OBLIGATORIA] CPU sin picos por flotación
+        juce::ScopedNoDenormals noDenormals; 
 
         const TopoState* topo = ctx.topo;
         if (idx < 0 || idx >= ctx.numTasks) return;
@@ -140,6 +140,8 @@ private:
         if (idx < (int)topo->childrenOf.size()) {
             for (int childIdx : topo->childrenOf[idx]) {
                 auto* child = topo->activeTracks[childIdx];
+                // Bloqueamos el buffer actual porque otros hilos (sends) podrían intentar sumar aquí
+                const juce::SpinLock::ScopedLockType sl(track->bufferLock);
                 int chans = juce::jmin(track->audioBuffer.getNumChannels(),
                                         child->audioBuffer.getNumChannels());
                 for (int c = 0; c < chans; ++c)
@@ -147,17 +149,114 @@ private:
             }
         }
 
-        // 2. DSP principal
+        // 2. DSP principal (Instrumentos, Clips, Plugins)
         TrackProcessor::process(track, *ctx.clock, ctx.numSamples,
                                 ctx.isPlayingNow, ctx.isStoppingNow, *ctx.previewMidi, topo);
 
         // 3. Compensacion de latencia
         PDCManager::applyDelay(track, ctx.numSamples);
 
-        // 4. Volumen y pan (resultado queda en track->audioBuffer para Fase 2)
+        // 4. ENVÍOS PRE-FADER (Antes de Volumen/Pan)
+        bool midCalculated = false;
+        bool sideCalculated = false;
+
+        for (const auto& send : track->sends) {
+            if (!send.isMuted && send.isPreFader && ctx.idToIndex.count(send.targetTrackId)) {
+                int targetIdx = ctx.idToIndex.at(send.targetTrackId);
+                auto* target = topo->activeTracks[targetIdx];
+                const juce::SpinLock::ScopedLockType sl(target->bufferLock);
+                
+                if (send.routing == SendRouting::Stereo) {
+                    int chans = juce::jmin(target->audioBuffer.getNumChannels(), track->audioBuffer.getNumChannels());
+                    for (int c = 0; c < chans; ++c)
+                        target->audioBuffer.addFrom(c, 0, track->audioBuffer, c, 0, ctx.numSamples, send.gain);
+                }
+                else {
+                    // Cálculo bajo demanda fuera del bucle de samples
+                    if (send.routing == SendRouting::Mid && !midCalculated) {
+                        auto* l = track->audioBuffer.getReadPointer(0);
+                        auto* r = track->audioBuffer.getNumChannels() > 1 ? track->audioBuffer.getReadPointer(1) : l;
+                        auto* w = ctx.msWorkBuffer.getWritePointer(0);
+                        for (int s = 0; s < ctx.numSamples; ++s) w[s] = (l[s] + r[s]) * 0.5f;
+                        midCalculated = true;
+                        sideCalculated = false; // El buffer de trabajo es compartido
+                    }
+                    else if (send.routing == SendRouting::Side && !sideCalculated) {
+                        auto* l = track->audioBuffer.getReadPointer(0);
+                        auto* r = track->audioBuffer.getNumChannels() > 1 ? track->audioBuffer.getReadPointer(1) : l;
+                        auto* w = ctx.msWorkBuffer.getWritePointer(0);
+                        for (int s = 0; s < ctx.numSamples; ++s) w[s] = (l[s] - r[s]) * 0.5f;
+                        sideCalculated = true;
+                        midCalculated = false;
+                    }
+
+                    // Sumar el componente Mid (L+R) a ambos canales del destino
+                    if (send.routing == SendRouting::Mid) {
+                        for (int c = 0; c < target->audioBuffer.getNumChannels(); ++c)
+                            target->audioBuffer.addFrom(c, 0, ctx.msWorkBuffer, 0, 0, ctx.numSamples, send.gain);
+                    }
+                    // Sumar el componente Side (L-R) en contrafase: L += Side, R -= Side
+                    else if (send.routing == SendRouting::Side) {
+                        if (target->audioBuffer.getNumChannels() > 0)
+                            target->audioBuffer.addFrom(0, 0, ctx.msWorkBuffer, 0, 0, ctx.numSamples, send.gain);
+                        if (target->audioBuffer.getNumChannels() > 1)
+                            target->audioBuffer.addFrom(1, 0, ctx.msWorkBuffer, 0, 0, ctx.numSamples, -send.gain);
+                    }
+                }
+            }
+        }
+
+        // 5. Volumen y pan (resultado queda en track->audioBuffer para Fase 2)
         MasterMixer::applyGainAndPan(track, ctx.numSamples, ctx.hwOutChannels);
 
-        // 5. Notificar a los dependientes (Padres de Carpeta + Sidechain Destinos)
+        // 6. ENVÍOS POST-FADER (Después de Volumen/Pan)
+        midCalculated = false;
+        sideCalculated = false;
+
+        for (const auto& send : track->sends) {
+            if (!send.isMuted && !send.isPreFader && ctx.idToIndex.count(send.targetTrackId)) {
+                int targetIdx = ctx.idToIndex.at(send.targetTrackId);
+                auto* target = topo->activeTracks[targetIdx];
+                const juce::SpinLock::ScopedLockType sl(target->bufferLock);
+
+                if (send.routing == SendRouting::Stereo) {
+                    int chans = juce::jmin(target->audioBuffer.getNumChannels(), track->audioBuffer.getNumChannels());
+                    for (int c = 0; c < chans; ++c)
+                        target->audioBuffer.addFrom(c, 0, track->audioBuffer, c, 0, ctx.numSamples, send.gain);
+                }
+                else {
+                    if (send.routing == SendRouting::Mid && !midCalculated) {
+                        auto* l = track->audioBuffer.getReadPointer(0);
+                        auto* r = track->audioBuffer.getNumChannels() > 1 ? track->audioBuffer.getReadPointer(1) : l;
+                        auto* w = ctx.msWorkBuffer.getWritePointer(0);
+                        for (int s = 0; s < ctx.numSamples; ++s) w[s] = (l[s] + r[s]) * 0.5f;
+                        midCalculated = true;
+                        sideCalculated = false;
+                    }
+                    else if (send.routing == SendRouting::Side && !sideCalculated) {
+                        auto* l = track->audioBuffer.getReadPointer(0);
+                        auto* r = track->audioBuffer.getNumChannels() > 1 ? track->audioBuffer.getReadPointer(1) : l;
+                        auto* w = ctx.msWorkBuffer.getWritePointer(0);
+                        for (int s = 0; s < ctx.numSamples; ++s) w[s] = (l[s] - r[s]) * 0.5f;
+                        sideCalculated = true;
+                        midCalculated = false;
+                    }
+
+                    if (send.routing == SendRouting::Mid) {
+                        for (int c = 0; c < target->audioBuffer.getNumChannels(); ++c)
+                            target->audioBuffer.addFrom(c, 0, ctx.msWorkBuffer, 0, 0, ctx.numSamples, send.gain);
+                    }
+                    else if (send.routing == SendRouting::Side) {
+                        if (target->audioBuffer.getNumChannels() > 0)
+                            target->audioBuffer.addFrom(0, 0, ctx.msWorkBuffer, 0, 0, ctx.numSamples, send.gain);
+                        if (target->audioBuffer.getNumChannels() > 1)
+                            target->audioBuffer.addFrom(1, 0, ctx.msWorkBuffer, 0, 0, ctx.numSamples, -send.gain);
+                    }
+                }
+            }
+        }
+
+        // 7. Notificar a los dependientes
         if (idx < (int)topo->notifyList.size()) {
             for (int dependentIdx : topo->notifyList[idx]) {
                 if (dependentIdx >= 0 && dependentIdx < ctx.numTasks) {
@@ -181,18 +280,16 @@ private:
                 lastGen = gen;
                 spinIter = 0;
                 if (shouldStop.load(std::memory_order_relaxed)) break;
-                // Workers procesan solo tasks sin plugins
                 while (doneCount.load(std::memory_order_acquire) < ctx.numTasks) {
                     stealOneTask(/*isAudioThread=*/false);
                     for (int i = 0; i < 40; ++i) std::atomic_thread_fence(std::memory_order_acquire);
                 }
             } else {
-                // Hybrid Spin-Sleep: Evita consumir 100% de CPU en Task Manager
                 if (++spinIter < 15000) {
                     for (int i = 0; i < 10; ++i) std::atomic_thread_fence(std::memory_order_acquire);
                 } else { 
-                    spinIter = 15000; // Mantiene el límite una vez que empieza a dormir
-                    std::this_thread::sleep_for(std::chrono::milliseconds(1)); // Dormir OS-level, 0% CPU
+                    spinIter = 15000; 
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1)); 
                 }
             }
         }

@@ -17,7 +17,7 @@ public:
         // childrenOf[i] = indices de los tracks que son hijos (en carpeta) de track[i] (para suma de audio)
         std::vector<std::vector<int>> childrenOf;
         
-        // initialPendingCounts[i] = cuantos tracks faltan para que track[i] pueda empezar (incluye hijos y sidechains)
+        // initialPendingCounts[i] = cuantos tracks faltan para que track[i] pueda empezar (hijos, sidechains, sends)
         std::vector<int> initialPendingCounts;
     };
 
@@ -58,17 +58,17 @@ public:
             }
         }
         
-        // --- SIDECHAIN DEPENDENCIES (Zero Latency) ---
+        // Mapeo rápido de ID a Índice
         std::map<int, int> idToIndex;
         for (int i = 0; i < n; ++i) idToIndex[tracks[i]->getId()] = i;
 
+        // --- SIDECHAIN DEPENDENCIES ---
         for (int i = 0; i < n; ++i) {
             auto sidechainDeps = tracks[i]->getSidechainDependencies();
             for (int sourceId : sidechainDeps) {
                 if (idToIndex.count(sourceId)) {
                     int sourceIdx = idToIndex[sourceId];
                     if (sourceIdx != i) { 
-                        // El track i debe esperar al track sourceIdx (sidechain)
                         newState->notifyList[sourceIdx].push_back(i);
                         newState->initialPendingCounts[i]++;
                     }
@@ -76,13 +76,26 @@ public:
             }
         }
 
+        // --- SEND DEPENDENCIES (ENVÍOS) ---
+        for (int i = 0; i < n; ++i) {
+            for (const auto& send : tracks[i]->sends) {
+                if (!send.isMuted && idToIndex.count(send.targetTrackId)) {
+                    int targetIdx = idToIndex[send.targetTrackId];
+                    // El destino (target) debe esperar al origen (i)
+                    if (targetIdx != i) {
+                        newState->notifyList[i].push_back(targetIdx);
+                        newState->initialPendingCounts[targetIdx]++;
+                    }
+                }
+            }
+        }
+
         auto* oldState = currentState.exchange(newState);
         if (oldState) {
-            juce::MessageManager::callAsync([oldState]() { delete oldState; }); // Lock-free cleanup
+            juce::MessageManager::callAsync([oldState]() { delete oldState; }); 
         }
     }
 
-    // Llamada desde el Hilo de Audio. Estrictamente Wait-Free.
     TopoState* getAudioThreadState() const noexcept {
         return currentState.load(std::memory_order_acquire);
     }

@@ -57,6 +57,19 @@ void ProjectManager::saveProject(TrackContainer& trackContainer, AudioEngine& en
                 }
                 t.addChild(pluginsTree, -1, nullptr);
 
+                // --- SENDS (ENVÍOS) ---
+                juce::ValueTree sendsTree("SENDS");
+                for (const auto& send : track->sends) {
+                    juce::ValueTree s("SEND");
+                    s.setProperty("target", send.targetTrackId, nullptr);
+                    s.setProperty("gain", send.gain, nullptr);
+                    s.setProperty("isPre", send.isPreFader, nullptr);
+                    s.setProperty("isMuted", send.isMuted, nullptr);
+                    s.setProperty("routing", (int)send.routing, nullptr);
+                    sendsTree.addChild(s, -1, nullptr);
+                }
+                t.addChild(sendsTree, -1, nullptr);
+
                 // --- AUDIO CLIPS ---
                 juce::ValueTree aClips("AUDIO_CLIPS");
                 for (auto* clip : track->audioClips) {
@@ -144,6 +157,19 @@ void ProjectManager::loadProject(const juce::File& file, TrackContainer& trackCo
         t->setBalance(tTree.getProperty("pan", 0.0f));
         t->setColor(juce::Colour::fromString(tTree.getProperty("color").toString()));
 
+        // --- SENDS (ENVÍOS) ---
+        juce::ValueTree sList = tTree.getChildWithName("SENDS");
+        for (int j = 0; j < sList.getNumChildren(); ++j) {
+            juce::ValueTree sTree = sList.getChild(j);
+            TrackSend s;
+            s.targetTrackId = sTree.getProperty("target", -1);
+            s.gain = sTree.getProperty("gain", 1.0f);
+            s.isPreFader = sTree.getProperty("isPre", false);
+            s.isMuted = sTree.getProperty("isMuted", false);
+            s.routing = (SendRouting)(int)sTree.getProperty("routing", 0);
+            t->sends.push_back(s);
+        }
+
         // --- AUDIO CLIPS ---
         juce::ValueTree aClips = tTree.getChildWithName("AUDIO_CLIPS");
         for (int j = 0; j < aClips.getNumChildren(); ++j) {
@@ -194,6 +220,9 @@ void ProjectManager::loadProject(const juce::File& file, TrackContainer& trackCo
         
         t->commitSnapshot();
     }
+    
+    // Recalcular topología global tras cargar todos los envíos
+    engine.routingMatrix.commitNewTopology(trackContainer.getTracks());
 
     juce::MessageManager::callAsync([&playlistUI, &pickerUI, onFinished]() {
         playlistUI.updateScrollBars();

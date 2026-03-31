@@ -150,6 +150,7 @@
         <FILE id="LzcHep" name="EffectsPanel.cpp" compile="1" resource="0"
               file="Source/Effects/EffectsPanel.cpp"/>
         <FILE id="RbHrXU" name="EffectsPanel.h" compile="0" resource="0" file="Source/Effects/EffectsPanel.h"/>
+        <FILE id="hpmdn9" name="SendDevice.h" compile="0" resource="0" file="Source/Effects/SendDevice.h"/>
       </GROUP>
       <GROUP id="{57A16124-0184-7C27-B886-F155C0B20BDF}" name="Mixer">
         <FILE id="QuB7TA" name="MasterChannelUI.h" compile="0" resource="0"

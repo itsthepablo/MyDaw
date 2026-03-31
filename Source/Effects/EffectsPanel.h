@@ -4,10 +4,11 @@
 #include <functional>
 #include <map> 
 #include "EffectDevice.h"
-#include "../UI/GainStation/GainStationPanel.h" // Inclusión del nuevo módulo
+#include "SendDevice.h"
+#include "../UI/GainStation/GainStationPanel.h" 
 
 // ==============================================================================
-// EFFECTS PANEL (Contenedor Principal)
+// EFFECTS PANEL (Contenedor Principal de Plugins y Envíos)
 // ==============================================================================
 class EffectsPanel : public juce::Component {
 public:
@@ -21,13 +22,19 @@ public:
 
     Track* getActiveTrack() const { return activeTrack; }
 
-    std::function<void(Track&)> onAddVST3;           // <-- Para cargar VST3 normal
-    std::function<void(Track&, const juce::String&, const juce::String&, int)> onAddVST3FromFile; // <-- NUEVO: Para cargar desde archivo (Proyecto)
-    std::function<void(Track&)> onAddNativeUtility;  // <-- NUEVO: Carga el Utility nativo
+    std::function<void(Track&)> onAddVST3;           
+    std::function<void(Track&, const juce::String&, const juce::String&, int)> onAddVST3FromFile; 
+    std::function<void(Track&)> onAddNativeUtility;  
     std::function<void(Track&, int)> onOpenEffect;
     std::function<void(Track&, int, bool)> onBypassChanged;
     std::function<void(Track&, int, int)> onReorderEffects;
     std::function<void(Track&, int)> onDeleteEffect;
+    
+    // --- AUDIO SENDS ---
+    std::function<void(Track&)> onAddSend;
+    std::function<void(Track&, int)> onDeleteSend;
+    std::function<void(Track&)> onChangeSend; 
+
     std::function<juce::Array<Track*>()> getAvailableTracks; 
 
 private:
@@ -35,14 +42,15 @@ private:
 
     juce::TextButton bypassAllBtn;
     juce::TextButton addEffectBtn;
-    juce::OwnedArray<EffectDevice> devices;
+    juce::TextButton addSendBtn;
 
-    // Estado y botones de control del panel izquierdo
+    juce::OwnedArray<EffectDevice> devices;
+    juce::OwnedArray<SendDevice> sends;
+
     bool isGainStationExpanded = true;
     juce::TextButton toggleGainStationBtn; 
     juce::TextButton hideGainStationBtn;   
 
-    // El contenedor es la Gain Station. 
     GainStationPanel loudnessMeter;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EffectsPanel)
