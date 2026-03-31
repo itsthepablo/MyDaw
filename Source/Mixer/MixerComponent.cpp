@@ -38,44 +38,23 @@ void MixerComponent::paint(juce::Graphics& g) {
 }
 
 void MixerComponent::resized() {
-    viewport.setBounds(getLocalBounds());
+    auto b = getLocalBounds();
+    viewport.setBounds(b);
 
     // === EL ALTO MANDA PARA EL ASPECT RATIO ===
-    // 1. Vemos cuánto alto tenemos disponible en la pantalla
     int channelHeight = viewport.getHeight();
-
-    // 2. Calculamos cuánto se ha encogido respecto a tu diseño original de 600
     float scale = (float)channelHeight / 600.0f;
+    int channelWidth = juce::roundToInt(100.0f * scale);
 
-    // 3. Calculamos el ancho PROPORCIONAL, para que NUNCA pierda tu Aspect Ratio (120 * escala)
-    int channelWidth = juce::roundToInt(120.0f * scale);
-
-    // 4. ¿Necesitamos barra horizontal?
-    int totalWidth = channels.size() * channelWidth;
+    int totalWidth = channels.size() * (channelWidth + 1);
     if (totalWidth > viewport.getWidth()) {
-        // La barra horizontal roba alto, así que recalculamos la escala matemática otra vez
         channelHeight -= viewport.getScrollBarThickness();
-        scale = (float)channelHeight / 600.0f;
-        channelWidth = juce::roundToInt(120.0f * scale);
-        totalWidth = channels.size() * channelWidth;
+        totalWidth = channels.size() * (channelWidth + 1);
     }
 
     contentComp.setSize(juce::jmax(viewport.getWidth(), totalWidth), channelHeight);
 
-    // =========================================================================
-    // FLEXBOX: Ahora dibuja con los tamaños proporcionales perfectos
-    // =========================================================================
-    juce::FlexBox fb;
-    fb.flexDirection = juce::FlexBox::Direction::row;
-    fb.flexWrap = juce::FlexBox::Wrap::noWrap;
-    fb.alignItems = juce::FlexBox::AlignItems::flexStart;
-
-    for (auto* channel : channels) {
-        fb.items.add(juce::FlexItem(*channel)
-            .withWidth((float)channelWidth)
-            .withHeight((float)channelHeight)
-            .withMargin(juce::FlexItem::Margin(0, 1, 0, 0)));
+    for (int i = 0; i < channels.size(); ++i) {
+        channels[i]->setBounds(i * (channelWidth + 1), 0, channelWidth, channelHeight);
     }
-
-    fb.performLayout(contentComp.getLocalBounds());
-}
+}

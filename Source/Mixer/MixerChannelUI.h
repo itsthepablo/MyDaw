@@ -3,155 +3,374 @@
 #include "../Tracks/Track.h"
 
 // ==============================================================================
-// LOOK & FEEL Y COMPONENTES MENORES DEL CANAL
+// 1. LOOK AND FEEL PROFESIONAL PARA EL MIXER
 // ==============================================================================
-class ModernDialLookAndFeel : public juce::LookAndFeel_V4 {
+class MixerLookAndFeel : public juce::LookAndFeel_V4 {
 public:
+    MixerLookAndFeel() {
+        setColour(juce::Slider::thumbColourId, juce::Colour(200, 200, 200));
+        setColour(juce::Slider::trackColourId, juce::Colour(30, 30, 30));
+    }
+
     void drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height, float sliderPos,
         const float rotaryStartAngle, const float rotaryEndAngle, juce::Slider& slider) override {
-        auto dialBounds = juce::Rectangle<int>(x, y, width, height).toFloat().reduced(2.0f);
-        auto radius = (float)juce::jmin(dialBounds.getWidth() / 2, dialBounds.getHeight() / 2);
-        auto centreX = dialBounds.getCentreX();
-        auto centreY = dialBounds.getCentreY();
-        auto rx = centreX - radius;
-        auto ry = centreY - radius;
-        auto rw = radius * 2.0f;
+        auto outline = juce::Colour(50, 50, 50);
+        auto fill = slider.findColour(juce::Slider::rotarySliderFillColourId);
+
+        auto bounds = juce::Rectangle<int>(x, y, width, height).toFloat().reduced(2.0f);
+        auto radius = juce::jmin(bounds.getWidth(), bounds.getHeight()) / 2.0f;
+        auto toX = bounds.getCentreX();
+        auto toY = bounds.getCentreY();
         auto angle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
 
-        g.setColour(juce::Colour(30, 33, 36));
-        g.fillEllipse(rx, ry, rw, rw);
-        g.setColour(juce::Colours::orange);
+        // Fondo del dial
+        g.setColour(juce::Colour(25, 25, 25));
+        g.fillEllipse(toX - radius, toY - radius, radius * 2.0f, radius * 2.0f);
+        
+        // Borde sutil
+        g.setColour(outline);
+        g.drawEllipse(toX - radius, toY - radius, radius * 2.0f, radius * 2.0f, 1.5f);
+
+        // Indicador (Puntero)
         juce::Path p;
-        p.addRectangle(-1.0f, -radius, 2.0f, radius * 0.7f);
-        p.applyTransform(juce::AffineTransform::rotation(angle).translated(centreX, centreY));
+        auto pointerLength = radius * 0.8f;
+        auto pointerThickness = 2.5f;
+        p.addRectangle(-pointerThickness * 0.5f, -radius, pointerThickness, pointerLength);
+        p.applyTransform(juce::AffineTransform::rotation(angle).translated(toX, toY));
+
+        g.setColour(juce::Colours::orange.withAlpha(0.9f));
         g.fillPath(p);
     }
+
+    void drawLinearSlider(juce::Graphics& g, int x, int y, int width, int height,
+        float sliderPos, float minSliderPos, float maxSliderPos,
+        const juce::Slider::SliderStyle style, juce::Slider& slider) override {
+        
+        auto trackWidth = 4.0f;
+        auto isVertical = style == juce::Slider::LinearVertical;
+
+        // Dibujar el rail/pista
+        g.setColour(juce::Colour(15, 15, 15));
+        if (isVertical)
+            g.fillRoundedRectangle(x + width * 0.5f - trackWidth * 0.5f, y, trackWidth, height, 2.0f);
+        else
+            g.fillRoundedRectangle(x, y + height * 0.5f - trackWidth * 0.5f, width, trackWidth, 2.0f);
+
+        // Dibujar el "fader handle" (el bloque deslizante)
+        auto handleWidth = isVertical ? width * 0.8f : 30.0f;
+        auto handleHeight = isVertical ? 20.0f : height * 0.8f;
+        
+        juce::Rectangle<float> handle;
+        if (isVertical)
+            handle = { x + width * 0.5f - handleWidth * 0.5f, sliderPos - handleHeight * 0.5f, handleWidth, handleHeight };
+        else
+            handle = { sliderPos - handleWidth * 0.5f, y + height * 0.5f - handleHeight * 0.5f, handleWidth, handleHeight };
+
+        auto c = juce::Colour(60, 60, 65);
+        g.setColour(c);
+        g.fillRoundedRectangle(handle, 3.0f);
+        
+        // Línea central de color en el fader
+        g.setColour(juce::Colours::orange);
+        if (isVertical)
+            g.fillRect(handle.getX(), handle.getCentreY() - 1.0f, handle.getWidth(), 2.0f);
+        else
+            g.fillRect(handle.getCentreX() - 1.0f, handle.getY(), 2.0f, handle.getHeight());
+        
+        g.setColour(juce::Colours::black.withAlpha(0.5f));
+        g.drawRoundedRectangle(handle, 3.0f, 1.0f);
+    }
 };
 
-class DualPanBar : public juce::Component {
+// ==============================================================================
+// 2. VÚMETRO ESTÉREO AVANZADO
+// ==============================================================================
+class AdvancedMeter : public juce::Component, public juce::Timer {
 public:
-    juce::Slider sliderL, sliderR;
-    DualPanBar() {
-        addAndMakeVisible(sliderL); addAndMakeVisible(sliderR);
-        sliderL.setSliderStyle(juce::Slider::LinearHorizontal);
-        sliderR.setSliderStyle(juce::Slider::LinearHorizontal);
-        sliderL.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-        sliderR.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-        sliderL.setColour(juce::Slider::thumbColourId, juce::Colours::orange);
-        sliderR.setColour(juce::Slider::thumbColourId, juce::Colours::orange);
-    }
-    void resized() override {
-        sliderL.setBounds(0, 0, getWidth(), getHeight() / 2);
-        sliderR.setBounds(0, getHeight() / 2, getWidth(), getHeight() / 2);
-    }
-};
-
-class MixerMeter : public juce::Component, public juce::Timer {
-public:
-    MixerMeter(Track* t) : track(t) { startTimerHz(30); }
+    AdvancedMeter(Track* t) : track(t) { startTimerHz(30); }
     void timerCallback() override { repaint(); }
+
     void paint(juce::Graphics& g) override {
-        g.fillAll(juce::Colours::black.withAlpha(0.6f));
+        auto b = getLocalBounds().toFloat();
+        g.setColour(juce::Colour(10, 10, 10));
+        g.fillRoundedRectangle(b, 2.0f);
+
         if (!track) return;
-        float lufs = track->postLoudness.getShortTerm();
-        float mapped = juce::jmap(lufs, -70.0f, 0.0f, (float)getHeight(), 0.0f);
-        mapped = juce::jlimit(0.0f, (float)getHeight(), mapped);
-        g.setColour(juce::Colours::limegreen);
-        g.fillRect(0.0f, mapped, (float)getWidth(), getHeight() - mapped);
+
+        float l = track->currentPeakLevelL;
+        float r = track->currentPeakLevelR;
+
+        // Peak Hold logic
+        if (l > maxL) { maxL = l; ticksSincePeakL = 0; } else { if (++ticksSincePeakL > 30) maxL *= 0.95f; }
+        if (r > maxR) { maxR = r; ticksSincePeakR = 0; } else { if (++ticksSincePeakR > 30) maxR *= 0.95f; }
+
+        drawBar(g, b.removeFromLeft(b.getWidth() * 0.48f), l, maxL);
+        b.removeFromLeft(b.getWidth() * 0.04f); // Espaciador
+        drawBar(g, b, r, maxR);
+    }
+
+private:
+    void drawBar(juce::Graphics& g, juce::Rectangle<float> area, float level, float peak) {
+        float h = area.getHeight();
+        float levelY = juce::jmap(juce::Decibels::gainToDecibels(level), -60.0f, 6.0f, h, 0.0f);
+        float peakY = juce::jmap(juce::Decibels::gainToDecibels(peak), -60.0f, 6.0f, h, 0.0f);
+        
+        levelY = juce::jlimit(0.0f, h, levelY);
+        peakY = juce::jlimit(0.0f, h, peakY);
+
+        // Gradiente de color profesional
+        juce::ColourGradient grad(juce::Colours::red, area.getX(), area.getY(), juce::Colours::limegreen, area.getX(), area.getBottom(), false);
+        grad.addColour(0.2, juce::Colours::yellow);
+        g.setGradientFill(grad);
+        
+        g.fillRect(area.withTop(levelY));
+
+        // Peak line
+        g.setColour(juce::Colours::white);
+        g.fillRect(area.getX(), peakY, area.getWidth(), 1.5f);
+    }
+
+    Track* track;
+    float maxL = 0, maxR = 0;
+    int ticksSincePeakL = 0, ticksSincePeakR = 0;
+};
+
+// ==============================================================================
+// 3. SLOTS DE EFECTOS Y ENVÍOS
+// ==============================================================================
+class PluginSlot : public juce::Component {
+public:
+    PluginSlot(Track* t, int idx) : track(t), index(idx) {}
+    void paint(juce::Graphics& g) override {
+        auto b = getLocalBounds().reduced(1);
+        bool hasPlugin = track && index < track->plugins.size();
+        
+        g.setColour(hasPlugin ? juce::Colour(45, 50, 60) : juce::Colour(25, 25, 25));
+        g.fillRoundedRectangle(b.toFloat(), 2.0f);
+        
+        g.setColour(juce::Colours::black.withAlpha(0.4f));
+        g.drawRoundedRectangle(b.toFloat(), 2.0f, 1.0f);
+
+        if (hasPlugin) {
+            auto* p = track->plugins[index];
+            g.setColour(juce::Colours::white.withAlpha(0.8f));
+            g.setFont(10.0f);
+            g.drawText(p->getLoadedPluginName().substring(0, 12), b.reduced(2), juce::Justification::centredLeft);
+        }
     }
 private:
     Track* track;
+    int index;
+};
+
+class SendSlot : public juce::Component {
+public:
+    SendSlot(Track* t, int idx) : track(t), index(idx) {}
+    void paint(juce::Graphics& g) override {
+        auto b = getLocalBounds().reduced(1);
+        bool hasSend = track && index < track->sends.size();
+        
+        g.setColour(hasSend ? juce::Colour(35, 60, 45) : juce::Colour(20, 25, 20));
+        g.fillRoundedRectangle(b.toFloat(), 2.0f);
+
+        if (hasSend) {
+            g.setColour(juce::Colours::white.withAlpha(0.7f));
+            g.setFont(9.0f);
+            g.drawText("SEND " + juce::String(index + 1), b.reduced(2), juce::Justification::centred);
+        }
+    }
+private:
+    Track* track;
+    int index;
 };
 
 // ==============================================================================
-// CANAL PRINCIPAL DEL MIXER
+// 4. CANAL PRINCIPAL DEL MIXER (Overhaul Profesional)
 // ==============================================================================
 class MixerChannelUI : public juce::Component {
 public:
-    MixerChannelUI(Track* t) : track(t), peakMeter_1(t) {
-        setLookAndFeel(&globalLAF);
+    MixerChannelUI(Track* t) : track(t), meter(t) {
+        setLookAndFeel(&mixerLAF);
 
-        addAndMakeVisible(peakMeter_1);
+        // --- FX Rack (10 slots) ---
+        for (int i = 0; i < 10; ++i) {
+            auto* s = new PluginSlot(track, i);
+            fxSlots.add(s);
+            addAndMakeVisible(s);
+        }
 
-        midSideKnob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-        midSideKnob.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-        addAndMakeVisible(midSideKnob);
+        // --- Sends Rack (4 slots) ---
+        for (int i = 0; i < 4; ++i) {
+            auto* s = new SendSlot(track, i);
+            sendSlots.add(s);
+            addAndMakeVisible(s);
+        }
 
-        volumeSlider.setSliderStyle(juce::Slider::LinearVertical);
-        volumeSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 20);
-        volumeSlider.setColour(juce::Slider::thumbColourId, juce::Colours::orange);
-        volumeSlider.setRange(0.0, 1.0);
-        volumeSlider.setValue(track->getVolume());
-        volumeSlider.onValueChange = [this] { if (track) track->setVolume(volumeSlider.getValue()); };
-        addAndMakeVisible(volumeSlider);
+        // --- Paneo ---
+        panToggle.setButtonText("NORM");
+        panToggle.setClickingTogglesState(true);
+        panToggle.setColour(juce::TextButton::buttonOnColourId, juce::Colours::darkgrey);
+        panToggle.onClick = [this] { 
+            bool dual = panToggle.getToggleState();
+            panToggle.setButtonText(dual ? "DUAL" : "NORM");
+            track->panningModeDual.store(dual);
+            updatePanVisibility();
+        };
+        addAndMakeVisible(panToggle);
 
-        panKnobNormal.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-        panKnobNormal.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-        panKnobNormal.setRange(-1.0, 1.0);
-        panKnobNormal.setValue(track->getBalance());
-        panKnobNormal.onValueChange = [this] { if (track) track->setBalance(panKnobNormal.getValue()); };
-        addAndMakeVisible(panKnobNormal);
+        panKnob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+        panKnob.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+        panKnob.setRange(-1.0, 1.0);
+        panKnob.setValue(track->getBalance());
+        panKnob.onValueChange = [this] { track->setBalance((float)panKnob.getValue()); };
+        addAndMakeVisible(panKnob);
 
-        addAndMakeVisible(dualPanBar);
+        panL.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+        panL.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+        panL.setRange(-1.0, 1.0);
+        panL.setValue(track->panL.load());
+        panL.onValueChange = [this] { track->panL.store((float)panL.getValue()); };
+        addChildComponent(panL);
 
-        reversePolarityBtn.setButtonText("O");
-        addAndMakeVisible(reversePolarityBtn);
+        panR.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+        panR.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+        panR.setRange(-1.0, 1.0);
+        panR.setValue(track->panR.load());
+        panR.onValueChange = [this] { track->panR.store((float)panR.getValue()); };
+        addChildComponent(panR);
 
-        swapLRBtn.setButtonText("L/R");
-        addAndMakeVisible(swapLRBtn);
+        // --- Ganancia / Plugins ---
+        gainKnob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+        gainKnob.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+        gainKnob.setRange(0.0, 2.0);
+        gainKnob.setValue(1.0);
+        addAndMakeVisible(gainKnob);
 
-        bypassEffectsBtn.setButtonText("FX");
-        addAndMakeVisible(bypassEffectsBtn);
+        // --- Fader y Meter ---
+        addAndMakeVisible(meter);
+        
+        fader.setSliderStyle(juce::Slider::LinearVertical);
+        fader.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 15);
+        fader.setRange(0.0, 1.5);
+        fader.setValue(track->getVolume());
+        fader.onValueChange = [this] { track->setVolume((float)fader.getValue()); };
+        addAndMakeVisible(fader);
 
-        muteSoloBtn.setButtonText("M/S");
-        muteSoloBtn.setClickingTogglesState(true);
-        muteSoloBtn.setToggleState(track->isMuted, juce::dontSendNotification);
-        muteSoloBtn.onClick = [this] { if (track) track->isMuted = muteSoloBtn.getToggleState(); };
-        addAndMakeVisible(muteSoloBtn);
+        // --- Botones de Control ---
+        setupButton(muteBtn, "M", juce::Colours::red);
+        muteBtn.setToggleState(track->isMuted, juce::dontSendNotification);
+        muteBtn.onClick = [this] { track->isMuted = muteBtn.getToggleState(); };
+        
+        setupButton(soloBtn, "S", juce::Colours::yellow);
+        soloBtn.setToggleState(track->isSoloed, juce::dontSendNotification);
+        soloBtn.onClick = [this] { track->isSoloed = soloBtn.getToggleState(); };
 
+        setupButton(phaseBtn, "PHS", juce::Colours::cyan);
+        phaseBtn.setToggleState(track->isPhaseInverted, juce::dontSendNotification);
+        phaseBtn.onClick = [this] { track->isPhaseInverted = phaseBtn.getToggleState(); };
+
+        setupButton(recBtn, "R", juce::Colours::red.brighter());
+
+        // --- Info ---
         trackName.setText(track->getName(), juce::dontSendNotification);
         trackName.setJustificationType(juce::Justification::centred);
-        trackName.setColour(juce::Label::textColourId, juce::Colours::white);
+        trackName.setFont(juce::Font(13.0f, juce::Font::bold));
         addAndMakeVisible(trackName);
+
+        updatePanVisibility();
     }
 
     ~MixerChannelUI() override { setLookAndFeel(nullptr); }
 
     void paint(juce::Graphics& g) override {
-        g.fillAll(juce::Colour(40, 43, 48));
-        g.setColour(juce::Colour(20, 22, 25));
-        g.drawRect(getLocalBounds(), 2);
+        auto b = getLocalBounds();
+        g.fillAll(juce::Colour(35, 38, 42));
+        
+        // Separador lateral
+        g.setColour(juce::Colours::black.withAlpha(0.3f));
+        g.drawRect(b, 1);
+
+        // Franja de color del track
+        g.setColour(track->getColor());
+        g.fillRect(0, getHeight() - 5, getWidth(), 5);
     }
 
     void resized() override {
-        float scale = getHeight() / 600.0f;
+        auto b = getLocalBounds().reduced(4);
+        
+        // 1. Paneo (Arriba)
+        auto topArea = b.removeFromTop(100);
+        auto panToggleArea = topArea.removeFromTop(20);
+        panToggle.setBounds(panToggleArea.withSizeKeepingCentre(40, 18));
+        
+        if (track->panningModeDual.load()) {
+            panL.setBounds(topArea.removeFromLeft(topArea.getWidth() / 2).reduced(5));
+            panR.setBounds(topArea.reduced(5));
+        } else {
+            panKnob.setBounds(topArea.withSizeKeepingCentre(50, 50));
+        }
 
-        peakMeter_1.setBounds(juce::roundToInt(10 * scale), juce::roundToInt(100 * scale), juce::roundToInt(50 * scale), juce::roundToInt(490 * scale));
-        midSideKnob.setBounds(juce::roundToInt(10 * scale), juce::roundToInt(20 * scale), juce::roundToInt(40 * scale), juce::roundToInt(40 * scale));
-        volumeSlider.setBounds(juce::roundToInt(60 * scale), juce::roundToInt(220 * scale), juce::roundToInt(50 * scale), juce::roundToInt(370 * scale));
-        panKnobNormal.setBounds(juce::roundToInt(70 * scale), juce::roundToInt(20 * scale), juce::roundToInt(40 * scale), juce::roundToInt(40 * scale));
-        dualPanBar.setBounds(juce::roundToInt(10 * scale), juce::roundToInt(70 * scale), juce::roundToInt(100 * scale), juce::roundToInt(20 * scale));
-        reversePolarityBtn.setBounds(juce::roundToInt(70 * scale), juce::roundToInt(100 * scale), juce::roundToInt(30 * scale), juce::roundToInt(30 * scale));
-        swapLRBtn.setBounds(juce::roundToInt(70 * scale), juce::roundToInt(140 * scale), juce::roundToInt(30 * scale), juce::roundToInt(30 * scale));
-        bypassEffectsBtn.setBounds(juce::roundToInt(70 * scale), juce::roundToInt(180 * scale), juce::roundToInt(30 * scale), juce::roundToInt(30 * scale));
-        muteSoloBtn.setBounds(juce::roundToInt(50 * scale), 0, juce::roundToInt(20 * scale), juce::roundToInt(20 * scale));
+        // 2. FX Rack (10 slots de 16px c/u = 160px)
+        auto fxArea = b.removeFromTop(160);
+        for (int i = 0; i < fxSlots.size(); ++i) {
+            fxSlots[i]->setBounds(fxArea.removeFromTop(16).reduced(1));
+        }
+        b.removeFromTop(5); // Espacio
 
-        trackName.setBounds(0, getHeight() - juce::roundToInt(25 * scale), getWidth(), juce::roundToInt(20 * scale));
+        // 3. Sends Rack (4 slots de 15px c/u = 60px)
+        auto sendArea = b.removeFromTop(60);
+        for (int i = 0; i < sendSlots.size(); ++i) {
+            sendSlots[i]->setBounds(sendArea.removeFromTop(15).reduced(1));
+        }
+        b.removeFromTop(5); // Espacio
+
+        // 4. Botones de Control (M, S, PHS, R)
+        auto btnArea = b.removeFromTop(30);
+        auto btnW = btnArea.getWidth() / 4;
+        muteBtn.setBounds(btnArea.removeFromLeft(btnW).reduced(2));
+        soloBtn.setBounds(btnArea.removeFromLeft(btnW).reduced(2));
+        phaseBtn.setBounds(btnArea.removeFromLeft(btnW).reduced(2));
+        recBtn.setBounds(btnArea.removeFromLeft(btnW).reduced(2));
+
+        // 5. Meter y Fader (Abajo)
+        trackName.setBounds(b.removeFromBottom(20));
+        auto faderArea = b;
+        meter.setBounds(faderArea.removeFromRight(22));
+        faderArea.removeFromRight(5); // Gap
+        fader.setBounds(faderArea);
     }
 
 private:
-    Track* track;
-    ModernDialLookAndFeel globalLAF;
+    void setupButton(juce::TextButton& btn, juce::String text, juce::Colour onCol) {
+        btn.setButtonText(text);
+        btn.setClickingTogglesState(true);
+        btn.setColour(juce::TextButton::buttonOnColourId, onCol);
+        btn.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
+        addAndMakeVisible(btn);
+    }
 
-    MixerMeter peakMeter_1;
-    juce::Slider midSideKnob;
-    juce::Slider volumeSlider;
-    juce::Slider panKnobNormal;
-    DualPanBar dualPanBar;
-    juce::TextButton reversePolarityBtn;
-    juce::TextButton swapLRBtn;
-    juce::TextButton bypassEffectsBtn;
-    juce::TextButton muteSoloBtn;
+    void updatePanVisibility() {
+        bool dual = track->panningModeDual.load();
+        panKnob.setVisible(!dual);
+        panL.setVisible(dual);
+        panR.setVisible(dual);
+        resized();
+    }
+
+    Track* track;
+    MixerLookAndFeel mixerLAF;
+    
+    // UI Elements
+    juce::TextButton panToggle;
+    juce::Slider panKnob, panL, panR;
+    juce::Slider gainKnob;
+    
+    juce::OwnedArray<PluginSlot> fxSlots;
+    juce::OwnedArray<SendSlot> sendSlots;
+
+    AdvancedMeter meter;
+    juce::Slider fader;
+    juce::TextButton muteBtn, soloBtn, phaseBtn, recBtn;
     juce::Label trackName;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MixerChannelUI)

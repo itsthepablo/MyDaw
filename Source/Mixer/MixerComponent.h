@@ -1,7 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include "../Tracks/Track.h"
-#include "MixerChannelUI.h" // Incluimos el nuevo archivo
+#include "MixerChannelUI.h" 
 
 // ==============================================================================
 // CONTENEDOR PRINCIPAL DEL MIXER 

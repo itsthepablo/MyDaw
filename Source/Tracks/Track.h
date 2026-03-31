@@ -242,6 +242,10 @@ public:
     bool isPhaseInverted = false;
     bool isMonoActive = false;
 
+    std::atomic<bool> panningModeDual { false };
+    std::atomic<float> panL { -1.0f };
+    std::atomic<float> panR { 1.0f };
+
     std::vector<Note> notes;
     juce::OwnedArray<BaseEffect> plugins;
 

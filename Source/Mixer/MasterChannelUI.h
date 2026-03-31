@@ -1,22 +1,32 @@
 #pragma once
 #include <JuceHeader.h>
-#include "MixerComponent.h"
-#include "MixerChannelUI.h" // Para reutilizar el LookAndFeel por ahora
+#include <functional>
+#include <memory>
+#include "MixerChannelUI.h" 
+
+// Forward declaration de MixerComponent ya no es necesaria si usamos lambdas
+// class MixerComponent;
 
 // ==============================================================================
 // MASTER CHANNEL UI
 // ==============================================================================
 class MasterChannelUI : public juce::Component {
 public:
-    MasterChannelUI(MixerComponent& m) : mixer(m) {
-        setLookAndFeel(&globalLAF);
+    MasterChannelUI(std::function<float()> getVol, std::function<void(float)> setVol) 
+        : getVolumeCallback(getVol), setVolumeCallback(setVol), meter(nullptr) {
+        setLookAndFeel(&mixerLAF);
 
         volumeSlider.setSliderStyle(juce::Slider::LinearVertical);
-        volumeSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 20);
-        volumeSlider.setColour(juce::Slider::thumbColourId, juce::Colours::red);
-        volumeSlider.setRange(0.0, 1.2);
-        volumeSlider.setValue(mixer.getMasterVolume());
-        volumeSlider.onValueChange = [this] { mixer.setMasterVolume((float)volumeSlider.getValue()); };
+        volumeSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 15);
+        volumeSlider.setRange(0.0, 1.5);
+        
+        if (getVolumeCallback)
+            volumeSlider.setValue(getVolumeCallback());
+
+        volumeSlider.onValueChange = [this] { 
+            if (setVolumeCallback)
+                setVolumeCallback((float)volumeSlider.getValue()); 
+        };
         addAndMakeVisible(volumeSlider);
 
         trackName.setText("MASTER", juce::dontSendNotification);
@@ -24,33 +34,51 @@ public:
         trackName.setColour(juce::Label::textColourId, juce::Colours::white);
         trackName.setFont(juce::Font(14.0f, juce::Font::bold));
         addAndMakeVisible(trackName);
+
+        // En un escenario real, pasaríamos el Track del Master aquí para ver niveles
+        // meter = std::make_unique<AdvancedMeter>(masterTrack);
+        // addAndMakeVisible(*meter);
     }
 
     ~MasterChannelUI() override { setLookAndFeel(nullptr); }
 
     void paint(juce::Graphics& g) override {
-        g.fillAll(juce::Colour(45, 25, 25));
-        g.setColour(juce::Colour(20, 22, 25));
-        g.drawRect(getLocalBounds(), 2);
+        auto b = getLocalBounds();
+        g.fillAll(juce::Colour(30, 33, 37)); 
+        
+        g.setColour(juce::Colours::black.withAlpha(0.5f));
+        g.drawRect(b, 2);
+
+        // Franja de color especial para el Master (Rojo/Naranja)
+        g.setColour(juce::Colours::orangered);
+        g.fillRect(0, getHeight() - 6, getWidth(), 6);
+        g.fillRect(0, 0, getWidth(), 4);
     }
 
     void resized() override {
-        float scale = getHeight() / 600.0f;
-
-        int sliderW = juce::roundToInt(60 * scale);
-        int sliderH = juce::roundToInt(370 * scale);
-        int sliderX = (getWidth() - sliderW) / 2;
-        int sliderY = juce::roundToInt(220 * scale);
-
-        volumeSlider.setBounds(sliderX, sliderY, sliderW, sliderH);
-        trackName.setBounds(0, getHeight() - juce::roundToInt(25 * scale), getWidth(), juce::roundToInt(20 * scale));
+        auto b = getLocalBounds().reduced(6);
+        
+        // Un Master suele ser más limpio arriba
+        trackName.setBounds(b.removeFromTop(30));
+        b.removeFromTop(10); // Gap
+        
+        auto faderArea = b.removeFromBottom(getHeight() * 0.7f);
+        
+        // Si tuviéramos meter
+        if (meter) meter->setBounds(faderArea.removeFromRight(22));
+        
+        volumeSlider.setBounds(faderArea);
     }
 
 private:
-    MixerComponent& mixer;
-    ModernDialLookAndFeel globalLAF;
+    std::function<float()> getVolumeCallback;
+    std::function<void(float)> setVolumeCallback;
+
+    MixerLookAndFeel mixerLAF;
     juce::Slider volumeSlider;
     juce::Label trackName;
+    
+    std::unique_ptr<AdvancedMeter> meter;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MasterChannelUI)
-};
+};

@@ -28,7 +28,8 @@ struct DAWUIComponents {
     PianoRollComponent pianoRollUI;
     juce::TextButton closePianoRollBtn;
     MixerComponent mixerUI;
-    MasterChannelUI masterChannelUI{ mixerUI };
+    MasterChannelUI masterChannelUI{ [this] { return mixerUI.getMasterVolume(); }, 
+                                     [this](float v) { mixerUI.setMasterVolume(v); } };
     ChannelRackPanel rackPanelUI;
     EffectsPanel effectsPanelUI;
     InstrumentPanel instrumentPanelUI;
