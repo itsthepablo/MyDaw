@@ -8,6 +8,7 @@ MainComponent::MainComponent() {
     ui.resourceMeter = std::make_unique<ResourceMeter>(*this);
 
     UIManager::setupUI(ui, *this, [this] { closePianoRoll(); });
+    ui.onResized = [this] { resized(); };
 
     setupCallbacks();
     setupBridges();
@@ -161,8 +162,8 @@ void MainComponent::setupCallbacks() {
 
 void MainComponent::setupBridges() {
     BridgeManager::initializeAllBridges({
-        ui.trackContainer, ui.playlistUI, ui.pianoRollUI, ui.mixerUI, ui.effectsPanelUI,
-        ui.instrumentPanelUI, // <-- SE AÑADE AQUÍ
+        ui.trackContainer, ui.playlistUI, ui.pianoRollUI, ui.mixerUI, ui.miniMixerUI, ui.effectsPanelUI,
+        ui.instrumentPanelUI, 
         ui.transportBar, ui.topMenuBar, ui.bottomDock, ui.leftSidebar, audioEngine, audioMutex,
         isBottomDockVisible, isLeftSidebarVisible,
         [this] { openPianoRoll(); }, [this] { closePianoRoll(); },
@@ -173,7 +174,8 @@ void MainComponent::setupBridges() {
             isBottomDockVisible = true;
             ui.bottomDock.showTab(BottomDock::EffectsTab);
             resized();
-        }
+        },
+        ui.masterTrackObj.get()
         });
 }
 

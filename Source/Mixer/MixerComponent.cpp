@@ -7,7 +7,7 @@ MixerComponent::MixerComponent() {
     // Solo barra de scroll horizontal
     viewport.setScrollBarsShown(false, true, false, true);
 
-    startTimerHz(10);
+    startTimerHz(30);
 }
 
 MixerComponent::~MixerComponent() {
@@ -20,13 +20,32 @@ void MixerComponent::timerCallback() {
             updateChannels();
         }
     }
+
+    // Sincronizar valores de UI con el modelo en cada tick
+    for (auto* c : channels) {
+        c->updateUI();
+    }
 }
 
 void MixerComponent::updateChannels() {
     channels.clear();
+
+    // 1. PRIMERO EL CANAL MASTER (si existe)
+    if (masterTrackPtr != nullptr) {
+        auto* masterChannel = new MixerChannelUI(masterTrackPtr, isMiniMixer);
+        // El master no suele tener sends o borrado en el mezclador, pero vinculamos los básicos
+        masterChannel->onOpenPlugin = onOpenPlugin;
+        masterChannel->onDeleteEffect = onDeleteEffect;
+        masterChannel->onBypassChanged = onBypassChanged;
+        
+        channels.add(masterChannel);
+        contentComp.addAndMakeVisible(masterChannel);
+    }
+
+    // 2. LUEGO LOS TRACKS DEL PROYECTO
     if (tracksRef != nullptr) {
         for (auto* t : *tracksRef) {
-            auto* channel = new MixerChannelUI(t);
+            auto* channel = new MixerChannelUI(t, isMiniMixer);
             
             // Vincular callbacks
             channel->onAddVST3 = onAddVST3;
@@ -55,7 +74,10 @@ void MixerComponent::resized() {
     // === EL ALTO MANDA PARA EL ASPECT RATIO ===
     int channelHeight = viewport.getHeight();
     float scale = (float)channelHeight / 600.0f;
-    int channelWidth = juce::roundToInt(100.0f * scale);
+    
+    // Si es mini mixer, usamos una base más ancha (130 en lugar de 100)
+    int baseWidth = isMiniMixer ? 130 : 100;
+    int channelWidth = juce::roundToInt(baseWidth * scale);
 
     int totalWidth = channels.size() * (channelWidth + 1);
     if (totalWidth > viewport.getWidth()) {

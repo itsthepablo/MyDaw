@@ -17,6 +17,7 @@ struct BridgeDependencies {
     PlaylistComponent& playlistUI;
     PianoRollComponent& pianoRollUI;
     MixerComponent& mixerUI;
+    MixerComponent& miniMixerUI;
     EffectsPanel& effectsPanelUI;
     InstrumentPanel& instrumentPanelUI; // <-- NUEVO
     TransportBar& transportBar;
@@ -34,6 +35,8 @@ struct BridgeDependencies {
     std::function<void()> onResized;
     std::function<void()> onToggleView;
     std::function<void()> switchToArrangementWithEffects;
+
+    Track* masterTrack;
 };
 
 class BridgeManager {

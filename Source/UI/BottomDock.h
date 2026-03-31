@@ -3,19 +3,21 @@
 #include "ChannelRackPanel.h"
 #include "../Effects/EffectsPanel.h"
 #include "../Instruments/InstrumentPanel.h"
+#include "../Mixer/MixerComponent.h"
 
 class BottomDock : public juce::Component {
 public:
-    enum Tab { RackTab, EffectsTab, InstrumentTab };
+    enum Tab { RackTab, EffectsTab, InstrumentTab, MixerTab };
 
     std::function<void()> onClose;
 
-    BottomDock(ChannelRackPanel& rack, EffectsPanel& fx, InstrumentPanel& inst)
-        : rackPanel(rack), effectsPanel(fx), instrumentPanel(inst)
+    BottomDock(ChannelRackPanel& rack, EffectsPanel& fx, InstrumentPanel& inst, MixerComponent& mixer)
+        : rackPanel(rack), effectsPanel(fx), instrumentPanel(inst), miniMixer(mixer)
     {
         addAndMakeVisible(rackPanel);
         addAndMakeVisible(effectsPanel);
         addAndMakeVisible(instrumentPanel);
+        addAndMakeVisible(miniMixer);
 
         addAndMakeVisible(rackTabBtn);
         rackTabBtn.setButtonText("CHANNEL RACK");
@@ -41,6 +43,14 @@ public:
         instrumentTabBtn.setRadioGroupId(300);
         instrumentTabBtn.onClick = [this] { showTab(InstrumentTab); };
 
+        addAndMakeVisible(mixerTabBtn);
+        mixerTabBtn.setButtonText("MIXER");
+        mixerTabBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(25, 27, 30));
+        mixerTabBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(45, 48, 52));
+        mixerTabBtn.setClickingTogglesState(true);
+        mixerTabBtn.setRadioGroupId(300);
+        mixerTabBtn.onClick = [this] { showTab(MixerTab); };
+
         addAndMakeVisible(closeBtn);
         closeBtn.setButtonText("X");
         closeBtn.setTooltip("Cerrar Panel Inferior");
@@ -56,9 +66,11 @@ public:
         rackPanel.setVisible(tab == RackTab);
         effectsPanel.setVisible(tab == EffectsTab);
         instrumentPanel.setVisible(tab == InstrumentTab);
+        miniMixer.setVisible(tab == MixerTab);
 
         if (tab == RackTab) rackTabBtn.setToggleState(true, juce::dontSendNotification);
         else if (tab == EffectsTab) effectsTabBtn.setToggleState(true, juce::dontSendNotification);
+        else if (tab == MixerTab) mixerTabBtn.setToggleState(true, juce::dontSendNotification);
         else instrumentTabBtn.setToggleState(true, juce::dontSendNotification);
 
         resized();
@@ -75,9 +87,11 @@ public:
         rackTabBtn.setBounds(tabArea.removeFromLeft(120));
         effectsTabBtn.setBounds(tabArea.removeFromLeft(140));
         instrumentTabBtn.setBounds(tabArea.removeFromLeft(120));
+        mixerTabBtn.setBounds(tabArea.removeFromLeft(100));
 
         if (currentTab == RackTab) rackPanel.setBounds(area);
         else if (currentTab == EffectsTab) effectsPanel.setBounds(area);
+        else if (currentTab == MixerTab) miniMixer.setBounds(area);
         else instrumentPanel.setBounds(area);
     }
 
@@ -90,7 +104,8 @@ private:
     ChannelRackPanel& rackPanel;
     EffectsPanel& effectsPanel;
     InstrumentPanel& instrumentPanel;
-    juce::TextButton rackTabBtn, effectsTabBtn, instrumentTabBtn, closeBtn;
+    MixerComponent& miniMixer;
+    juce::TextButton rackTabBtn, effectsTabBtn, instrumentTabBtn, mixerTabBtn, closeBtn;
     Tab currentTab = EffectsTab;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(BottomDock)

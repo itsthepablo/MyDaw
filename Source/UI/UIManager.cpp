@@ -34,6 +34,24 @@ void UIManager::setupUI(DAWUIComponents& ui, juce::Component& parent, std::funct
     ui.closePianoRollBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(200, 70, 70));
     ui.closePianoRollBtn.onClick = onClosePianoRoll;
 
+    // --- CONFIGURACIÓN MINI MIXER ---
+    ui.miniMixerUI.isMiniMixer = true;
+
+    // --- ENRUTAMIENTO DE BOTONES ---
+    ui.topMenuBar.onToggleMixer = [&ui] {
+        if (!ui.bottomDock.isVisible()) {
+            ui.bottomDock.setVisible(true);
+            ui.bottomDock.showTab(BottomDock::MixerTab);
+        } else {
+            if (ui.bottomDock.getCurrentTab() == BottomDock::MixerTab) {
+                ui.bottomDock.setVisible(false);
+            } else {
+                ui.bottomDock.showTab(BottomDock::MixerTab);
+            }
+        }
+        if (ui.onResized) ui.onResized();
+    };
+
     ui.bottomDock.setVisible(true);
     ui.leftSidebar.setVisible(true);
 }

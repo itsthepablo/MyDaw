@@ -15,23 +15,18 @@ public:
     void drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height, float sliderPos,
         const float rotaryStartAngle, const float rotaryEndAngle, juce::Slider& slider) override {
         auto outline = juce::Colour(50, 50, 50);
-        auto fill = slider.findColour(juce::Slider::rotarySliderFillColourId);
-
         auto bounds = juce::Rectangle<int>(x, y, width, height).toFloat().reduced(2.0f);
         auto radius = juce::jmin(bounds.getWidth(), bounds.getHeight()) / 2.0f;
         auto toX = bounds.getCentreX();
         auto toY = bounds.getCentreY();
         auto angle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
 
-        // Fondo del dial
         g.setColour(juce::Colour(25, 25, 25));
         g.fillEllipse(toX - radius, toY - radius, radius * 2.0f, radius * 2.0f);
         
-        // Borde sutil
         g.setColour(outline);
         g.drawEllipse(toX - radius, toY - radius, radius * 2.0f, radius * 2.0f, 1.5f);
 
-        // Indicador (Puntero)
         juce::Path p;
         auto pointerLength = radius * 0.8f;
         auto pointerThickness = 2.5f;
@@ -49,14 +44,12 @@ public:
         auto trackWidth = 4.0f;
         auto isVertical = style == juce::Slider::LinearVertical;
 
-        // Dibujar el rail/pista
         g.setColour(juce::Colour(15, 15, 15));
         if (isVertical)
             g.fillRoundedRectangle(x + width * 0.5f - trackWidth * 0.5f, y, trackWidth, height, 2.0f);
         else
             g.fillRoundedRectangle(x, y + height * 0.5f - trackWidth * 0.5f, width, trackWidth, 2.0f);
 
-        // Dibujar el "fader handle" (el bloque deslizante)
         auto handleWidth = isVertical ? width * 0.8f : 30.0f;
         auto handleHeight = isVertical ? 20.0f : height * 0.8f;
         
@@ -66,11 +59,9 @@ public:
         else
             handle = { sliderPos - handleWidth * 0.5f, y + height * 0.5f - handleHeight * 0.5f, handleWidth, handleHeight };
 
-        auto c = juce::Colour(60, 60, 65);
-        g.setColour(c);
+        g.setColour(juce::Colour(60, 60, 65));
         g.fillRoundedRectangle(handle, 3.0f);
         
-        // Línea central de color en el fader
         g.setColour(juce::Colours::orange);
         if (isVertical)
             g.fillRect(handle.getX(), handle.getCentreY() - 1.0f, handle.getWidth(), 2.0f);
@@ -88,7 +79,7 @@ public:
 class AdvancedMeter : public juce::Component, public juce::Timer {
 public:
     AdvancedMeter(Track* t) : track(t) { startTimerHz(30); }
-    void timerCallback() override { repaint(); }
+    void timerCallback() override { if (isShowing()) repaint(); }
 
     void paint(juce::Graphics& g) override {
         auto b = getLocalBounds().toFloat();
@@ -100,12 +91,11 @@ public:
         float l = track->currentPeakLevelL;
         float r = track->currentPeakLevelR;
 
-        // Peak Hold logic
         if (l > maxL) { maxL = l; ticksSincePeakL = 0; } else { if (++ticksSincePeakL > 30) maxL *= 0.95f; }
         if (r > maxR) { maxR = r; ticksSincePeakR = 0; } else { if (++ticksSincePeakR > 30) maxR *= 0.95f; }
 
         drawBar(g, b.removeFromLeft(b.getWidth() * 0.48f), l, maxL);
-        b.removeFromLeft(b.getWidth() * 0.04f); // Espaciador
+        b.removeFromLeft(b.getWidth() * 0.04f);
         drawBar(g, b, r, maxR);
     }
 
@@ -114,18 +104,14 @@ private:
         float h = area.getHeight();
         float levelY = juce::jmap(juce::Decibels::gainToDecibels(level), -60.0f, 6.0f, h, 0.0f);
         float peakY = juce::jmap(juce::Decibels::gainToDecibels(peak), -60.0f, 6.0f, h, 0.0f);
-        
         levelY = juce::jlimit(0.0f, h, levelY);
         peakY = juce::jlimit(0.0f, h, peakY);
 
-        // Gradiente de color profesional
         juce::ColourGradient grad(juce::Colours::red, area.getX(), area.getY(), juce::Colours::limegreen, area.getX(), area.getBottom(), false);
         grad.addColour(0.2, juce::Colours::yellow);
         g.setGradientFill(grad);
-        
         g.fillRect(area.withTop(levelY));
 
-        // Peak line
         g.setColour(juce::Colours::white);
         g.fillRect(area.getX(), peakY, area.getWidth(), 1.5f);
     }
@@ -136,7 +122,7 @@ private:
 };
 
 // ==============================================================================
-// 3. SLOTS DE EFECTOS Y ENVÍOS INTERACTIVOS
+// 3. SLOTS DE EFECTOS Y ENVÍOS INTERACTIVOS (Componentes auxiliares)
 // ==============================================================================
 class PluginSlot : public juce::Component {
 public:
@@ -148,10 +134,15 @@ public:
         bypassBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colours::dodgerblue);
         bypassBtn.setColour(juce::TextButton::textColourOffId, juce::Colours::darkgrey);
         bypassBtn.setColour(juce::TextButton::textColourOnId, juce::Colours::white);
-        
-        bypassBtn.onClick = [this] {
-            if (onBypassChanged) onBypassChanged(index, !bypassBtn.getToggleState());
-        };
+        bypassBtn.onClick = [this] { if (onBypassChanged) onBypassChanged(index, !bypassBtn.getToggleState()); };
+    }
+
+    void syncWithModel() {
+        if (track && index < track->plugins.size()) {
+            bool bypassed = track->plugins[index]->isBypassed();
+            bypassBtn.setToggleState(!bypassed, juce::dontSendNotification);
+        }
+        repaint();
     }
 
     void paint(juce::Graphics& g) override {
@@ -169,55 +160,37 @@ public:
             auto* p = track->plugins[index];
             g.setColour(bypassed ? juce::Colours::grey : juce::Colours::white.withAlpha(0.8f));
             g.setFont(10.0f);
-            g.drawText(p->getLoadedPluginName().substring(0, 12), b.reduced(2).withTrimmedLeft(20), juce::Justification::centredLeft);
-            
+            g.drawText(p->getLoadedPluginName().substring(0, 20), b.reduced(2).withTrimmedLeft(20), juce::Justification::centredLeft);
             bypassBtn.setVisible(true);
-            bypassBtn.setToggleState(!bypassed, juce::dontSendNotification);
         } else {
             bypassBtn.setVisible(false);
         }
     }
 
-    void resized() override {
-        bypassBtn.setBounds(2, 2, 16, getHeight() - 4);
-    }
+    void resized() override { bypassBtn.setBounds(2, 2, 16, getHeight() - 4); }
 
     void mouseDown(const juce::MouseEvent& e) override {
         if (bypassBtn.getBounds().contains(e.getPosition())) return;
-
         bool hasPlugin = track && index < track->plugins.size();
-        
         if (hasPlugin) {
             if (e.mods.isPopupMenu()) {
-                juce::PopupMenu m;
-                m.addItem(1, "Eliminar");
-                m.showMenuAsync(juce::PopupMenu::Options(), [this](int result) {
-                    if (result == 1 && onDeletePlugin) onDeletePlugin(index);
-                });
-            } else if (onOpenPlugin) {
-                onOpenPlugin(index);
-            }
+                juce::PopupMenu m; m.addItem(1, "Eliminar");
+                m.showMenuAsync(juce::PopupMenu::Options(), [this](int r) { if (r == 1 && onDeletePlugin) onDeletePlugin(index); });
+            } else if (onOpenPlugin) onOpenPlugin(index);
         } else {
-            juce::PopupMenu m;
-            m.addItem(1, "Native Utility");
-            m.addItem(2, "External VST3...");
-            m.showMenuAsync(juce::PopupMenu::Options(), [this](int result) {
-                if (result == 1 && onAddNativeUtility) onAddNativeUtility(index);
-                if (result == 2 && onAddVST3) onAddVST3(index);
+            juce::PopupMenu m; m.addItem(1, "Native Utility"); m.addItem(2, "External VST3...");
+            m.showMenuAsync(juce::PopupMenu::Options(), [this](int r) {
+                if (r == 1 && onAddNativeUtility) onAddNativeUtility(index);
+                if (r == 2 && onAddVST3) onAddVST3(index);
             });
         }
     }
 
-    std::function<void(int)> onOpenPlugin;
+    std::function<void(int)> onOpenPlugin, onDeletePlugin, onAddNativeUtility, onAddVST3;
     std::function<void(int, bool)> onBypassChanged;
-    std::function<void(int)> onAddNativeUtility;
-    std::function<void(int)> onAddVST3;
-    std::function<void(int)> onDeletePlugin;
 
 private:
-    Track* track;
-    int index;
-    juce::TextButton bypassBtn;
+    Track* track; int index; juce::TextButton bypassBtn;
 };
 
 class SendSlot : public juce::Component {
@@ -226,46 +199,33 @@ public:
     void paint(juce::Graphics& g) override {
         auto b = getLocalBounds().reduced(1);
         bool hasSend = track && index < track->sends.size();
-        
         g.setColour(hasSend ? juce::Colour(35, 60, 45) : juce::Colour(20, 25, 20));
         g.fillRoundedRectangle(b.toFloat(), 2.0f);
-
         if (hasSend) {
-            g.setColour(juce::Colours::white.withAlpha(0.7f));
-            g.setFont(9.0f);
+            g.setColour(juce::Colours::white.withAlpha(0.7f)); g.setFont(9.0f);
             g.drawText("SEND " + juce::String(index + 1), b.reduced(2), juce::Justification::centred);
         }
     }
-
     void mouseDown(const juce::MouseEvent& e) override {
         bool hasSend = track && index < track->sends.size();
         if (hasSend) {
             if (e.mods.isPopupMenu()) {
-                juce::PopupMenu m;
-                m.addItem(1, "Eliminar Envío");
-                m.showMenuAsync(juce::PopupMenu::Options(), [this](int result) {
-                    if (result == 1 && onDeleteSend) onDeleteSend(index);
-                });
+                juce::PopupMenu m; m.addItem(1, "Eliminar Envío");
+                m.showMenuAsync(juce::PopupMenu::Options(), [this](int r) { if (r == 1 && onDeleteSend) onDeleteSend(index); });
             }
-        } else {
-            if (onAddSend) onAddSend();
-        }
+        } else if (onAddSend) onAddSend();
     }
-
-    std::function<void()> onAddSend;
-    std::function<void(int)> onDeleteSend;
-
+    std::function<void()> onAddSend; std::function<void(int)> onDeleteSend;
 private:
-    Track* track;
-    int index;
+    Track* track; int index;
 };
 
 // ==============================================================================
-// 4. CANAL PRINCIPAL DEL MIXER (Overhaul Profesional)
+// 4. CANAL PRINCIPAL DEL MIXER (Restauración de Dual Pan para modo principal)
 // ==============================================================================
 class MixerChannelUI : public juce::Component {
 public:
-    MixerChannelUI(Track* t) : track(t), meter(t) {
+    MixerChannelUI(Track* t, bool miniMode = false) : track(t), meter(t), isMiniMode(miniMode) {
         setLookAndFeel(&mixerLAF);
 
         // --- FX Rack (10 slots) ---
@@ -276,9 +236,8 @@ public:
             s->onAddNativeUtility = [this](int idx) { if (onAddNativeUtility) onAddNativeUtility(*track); };
             s->onAddVST3 = [this](int idx) { if (onAddVST3) onAddVST3(*track); };
             s->onDeletePlugin = [this](int idx) { if (onDeleteEffect) onDeleteEffect(*track, idx); };
-            
-            fxSlots.add(s);
-            addAndMakeVisible(s);
+            fxSlots.add(s); 
+            if (!isMiniMode) addAndMakeVisible(s);
         }
 
         // --- Sends Rack (4 slots) ---
@@ -286,165 +245,157 @@ public:
             auto* s = new SendSlot(track, i);
             s->onAddSend = [this] { if (onAddSend) onAddSend(*track); };
             s->onDeleteSend = [this](int idx) { if (onDeleteSend) onDeleteSend(*track, idx); };
-            
-            sendSlots.add(s);
-            addAndMakeVisible(s);
+            sendSlots.add(s); 
+            if (!isMiniMode) addAndMakeVisible(s);
         }
 
-        // --- Paneo ---
-        panToggle.setButtonText("NORM");
-        panToggle.setClickingTogglesState(true);
-        panToggle.setColour(juce::TextButton::buttonOnColourId, juce::Colours::darkgrey);
-        panToggle.onClick = [this] { 
-            bool dual = panToggle.getToggleState();
-            panToggle.setButtonText(dual ? "DUAL" : "NORM");
-            track->panningModeDual.store(dual);
-            updatePanVisibility();
-        };
-        addAndMakeVisible(panToggle);
-
+        // --- Paneo (Normal) ---
         panKnob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
         panKnob.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
         panKnob.setRange(-1.0, 1.0);
-        panKnob.setValue(track->getBalance());
         panKnob.onValueChange = [this] { track->setBalance((float)panKnob.getValue()); };
         addAndMakeVisible(panKnob);
 
-        panL.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-        panL.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-        panL.setRange(-1.0, 1.0);
-        panL.setValue(track->panL.load());
-        panL.onValueChange = [this] { track->panL.store((float)panL.getValue()); };
-        addChildComponent(panL);
+        // --- Paneo Dual (Solo para Modo Principal) ---
+        if (!isMiniMode) {
+            panToggle.setButtonText("NORM");
+            panToggle.setClickingTogglesState(true);
+            panToggle.setColour(juce::TextButton::buttonOnColourId, juce::Colours::darkgrey);
+            panToggle.onClick = [this] { 
+                bool dual = panToggle.getToggleState();
+                panToggle.setButtonText(dual ? "DUAL" : "NORM");
+                track->panningModeDual.store(dual);
+                updatePanVisibility();
+            };
+            addAndMakeVisible(panToggle);
 
-        panR.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-        panR.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-        panR.setRange(-1.0, 1.0);
-        panR.setValue(track->panR.load());
-        panR.onValueChange = [this] { track->panR.store((float)panR.getValue()); };
-        addChildComponent(panR);
+            panL.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+            panL.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+            panL.setRange(-1.0, 1.0);
+            panL.onValueChange = [this] { track->panL.store((float)panL.getValue()); };
+            addChildComponent(panL);
 
-        // --- Ganancia / Plugins ---
-        gainKnob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-        gainKnob.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-        gainKnob.setRange(0.0, 2.0);
-        gainKnob.setValue(1.0);
-        addAndMakeVisible(gainKnob);
+            panR.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+            panR.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+            panR.setRange(-1.0, 1.0);
+            panR.onValueChange = [this] { track->panR.store((float)panR.getValue()); };
+            addChildComponent(panR);
+        }
 
         // --- Fader y Meter ---
         addAndMakeVisible(meter);
-        
         fader.setSliderStyle(juce::Slider::LinearVertical);
         fader.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 15);
         fader.setRange(0.0, 1.5);
-        fader.setValue(track->getVolume());
         fader.onValueChange = [this] { track->setVolume((float)fader.getValue()); };
         addAndMakeVisible(fader);
 
-        // --- Botones de Control ---
         setupButton(muteBtn, "M", juce::Colours::red);
-        muteBtn.setToggleState(track->isMuted, juce::dontSendNotification);
         muteBtn.onClick = [this] { track->isMuted = muteBtn.getToggleState(); };
-        
         setupButton(soloBtn, "S", juce::Colours::yellow);
-        soloBtn.setToggleState(track->isSoloed, juce::dontSendNotification);
         soloBtn.onClick = [this] { track->isSoloed = soloBtn.getToggleState(); };
-
         setupButton(phaseBtn, "PHS", juce::Colours::cyan);
-        phaseBtn.setToggleState(track->isPhaseInverted, juce::dontSendNotification);
         phaseBtn.onClick = [this] { track->isPhaseInverted = phaseBtn.getToggleState(); };
-
         setupButton(recBtn, "R", juce::Colours::red.brighter());
 
-        // --- Info ---
-        trackName.setText(track->getName(), juce::dontSendNotification);
         trackName.setJustificationType(juce::Justification::centred);
         trackName.setFont(juce::Font(13.0f, juce::Font::bold));
         addAndMakeVisible(trackName);
-
-        updatePanVisibility();
+        
+        updateUI();
     }
 
-    // --- CALLBACKS PARA EL SISTEMA ---
-    std::function<void(Track&)> onAddVST3;
-    std::function<void(Track&)> onAddNativeUtility;
-    std::function<void(Track&, int)> onOpenPlugin;
-    std::function<void(Track&, int)> onDeleteEffect;
-    std::function<void(Track&, int, bool)> onBypassChanged;
-    
-    std::function<void(Track&)> onAddSend;
-    std::function<void(Track&, int)> onDeleteSend;
+    void updateUI() {
+        fader.setValue(track->getVolume(), juce::dontSendNotification);
+        panKnob.setValue(track->getBalance(), juce::dontSendNotification);
+        
+        if (!isMiniMode) {
+            bool dual = track->panningModeDual.load();
+            panToggle.setToggleState(dual, juce::dontSendNotification);
+            panToggle.setButtonText(dual ? "DUAL" : "NORM");
+            panL.setValue(track->panL.load(), juce::dontSendNotification);
+            panR.setValue(track->panR.load(), juce::dontSendNotification);
+            updatePanVisibility();
+        }
+
+        muteBtn.setToggleState(track->isMuted, juce::dontSendNotification);
+        soloBtn.setToggleState(track->isSoloed, juce::dontSendNotification);
+        phaseBtn.setToggleState(track->isPhaseInverted, juce::dontSendNotification);
+        if (trackName.getText() != track->getName()) trackName.setText(track->getName(), juce::dontSendNotification);
+        for (auto* s : fxSlots) s->syncWithModel();
+        repaint();
+    }
 
     ~MixerChannelUI() override { setLookAndFeel(nullptr); }
 
     void paint(juce::Graphics& g) override {
-        auto b = getLocalBounds();
         g.fillAll(juce::Colour(35, 38, 42));
-        
-        // Separador lateral
-        g.setColour(juce::Colours::black.withAlpha(0.3f));
-        g.drawRect(b, 1);
-
-        // Franja de color del track
-        g.setColour(track->getColor());
-        g.fillRect(0, getHeight() - 5, getWidth(), 5);
+        g.setColour(juce::Colours::black.withAlpha(0.3f)); g.drawRect(getLocalBounds(), 1);
+        g.setColour(track->getColor()); g.fillRect(0, getHeight() - 5, getWidth(), 5);
     }
 
     void resized() override {
         auto b = getLocalBounds().reduced(4);
         
-        // 1. Paneo (Arriba)
-        auto topArea = b.removeFromTop(100);
-        auto panToggleArea = topArea.removeFromTop(20);
-        panToggle.setBounds(panToggleArea.withSizeKeepingCentre(40, 18));
-        
-        if (track->panningModeDual.load()) {
-            panL.setBounds(topArea.removeFromLeft(topArea.getWidth() / 2).reduced(5));
-            panR.setBounds(topArea.reduced(5));
+        if (!isMiniMode) {
+            auto topArea = b.removeFromTop(100);
+            auto panToggleArea = topArea.removeFromTop(20);
+            panToggle.setBounds(panToggleArea.withSizeKeepingCentre(40, 18));
+            
+            if (track->panningModeDual.load()) {
+                panL.setBounds(topArea.removeFromLeft(topArea.getWidth() / 2).reduced(5));
+                panR.setBounds(topArea.reduced(5));
+            } else {
+                panKnob.setBounds(topArea.withSizeKeepingCentre(45, 45));
+            }
+
+            auto fxArea = b.removeFromTop(160);
+            for (auto* s : fxSlots) {
+                s->setBounds(fxArea.removeFromTop(16).reduced(1));
+                s->setVisible(true);
+            }
+            b.removeFromTop(5);
+            auto sendArea = b.removeFromTop(60);
+            for (auto* s : sendSlots) {
+                s->setBounds(sendArea.removeFromTop(15).reduced(1));
+                s->setVisible(true);
+            }
+            b.removeFromTop(5);
         } else {
-            panKnob.setBounds(topArea.withSizeKeepingCentre(50, 50));
+            // MiniMode: Solo Paneo Normal, No efectos
+            auto topArea = b.removeFromTop(60);
+            panKnob.setBounds(topArea.withSizeKeepingCentre(45, 45));
+            for (auto* s : fxSlots) s->setVisible(false);
+            for (auto* s : sendSlots) s->setVisible(false);
         }
 
-        // 2. FX Rack (10 slots de 16px c/u = 160px)
-        auto fxArea = b.removeFromTop(160);
-        for (int i = 0; i < fxSlots.size(); ++i) {
-            fxSlots[i]->setBounds(fxArea.removeFromTop(16).reduced(1));
-        }
-        b.removeFromTop(5); // Espacio
-
-        // 3. Sends Rack (4 slots de 15px c/u = 60px)
-        auto sendArea = b.removeFromTop(60);
-        for (int i = 0; i < sendSlots.size(); ++i) {
-            sendSlots[i]->setBounds(sendArea.removeFromTop(15).reduced(1));
-        }
-        b.removeFromTop(5); // Espacio
-
-        // 4. Botones de Control (M, S, PHS, R)
-        auto btnArea = b.removeFromTop(30);
+        auto btnArea = b.removeFromTop(25);
         auto btnW = btnArea.getWidth() / 4;
-        muteBtn.setBounds(btnArea.removeFromLeft(btnW).reduced(2));
-        soloBtn.setBounds(btnArea.removeFromLeft(btnW).reduced(2));
-        phaseBtn.setBounds(btnArea.removeFromLeft(btnW).reduced(2));
-        recBtn.setBounds(btnArea.removeFromLeft(btnW).reduced(2));
+        muteBtn.setBounds(btnArea.removeFromLeft(btnW).reduced(1));
+        soloBtn.setBounds(btnArea.removeFromLeft(btnW).reduced(1));
+        phaseBtn.setBounds(btnArea.removeFromLeft(btnW).reduced(1));
+        recBtn.setBounds(btnArea.removeFromLeft(btnW).reduced(1));
 
-        // 5. Meter y Fader (Abajo)
         trackName.setBounds(b.removeFromBottom(20));
-        auto faderArea = b;
-        meter.setBounds(faderArea.removeFromRight(22));
-        faderArea.removeFromRight(5); // Gap
-        fader.setBounds(faderArea);
+        meter.setBounds(b.removeFromRight(isMiniMode ? 20 : 22));
+        b.removeFromRight(3);
+        fader.setBounds(b);
     }
+
+    std::function<void(Track&)> onAddVST3, onAddNativeUtility, onAddSend;
+    std::function<void(Track&, int)> onOpenPlugin, onDeleteEffect, onDeleteSend;
+    std::function<void(Track&, int, bool)> onBypassChanged;
 
 private:
     void setupButton(juce::TextButton& btn, juce::String text, juce::Colour onCol) {
-        btn.setButtonText(text);
-        btn.setClickingTogglesState(true);
+        btn.setButtonText(text); btn.setClickingTogglesState(true);
         btn.setColour(juce::TextButton::buttonOnColourId, onCol);
         btn.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
         addAndMakeVisible(btn);
     }
 
     void updatePanVisibility() {
+        if (isMiniMode) return;
         bool dual = track->panningModeDual.load();
         panKnob.setVisible(!dual);
         panL.setVisible(dual);
@@ -452,22 +403,10 @@ private:
         resized();
     }
 
-    Track* track;
-    MixerLookAndFeel mixerLAF;
-    
-    // UI Elements
+    bool isMiniMode; Track* track; MixerLookAndFeel mixerLAF;
     juce::TextButton panToggle;
-    juce::Slider panKnob, panL, panR;
-    juce::Slider gainKnob;
-    
-    juce::OwnedArray<PluginSlot> fxSlots;
-    juce::OwnedArray<SendSlot> sendSlots;
-
-
-    AdvancedMeter meter;
-    juce::Slider fader;
-    juce::TextButton muteBtn, soloBtn, phaseBtn, recBtn;
-    juce::Label trackName;
-
+    juce::Slider panKnob, panL, panR, fader; AdvancedMeter meter;
+    juce::TextButton muteBtn, soloBtn, phaseBtn, recBtn; juce::Label trackName;
+    juce::OwnedArray<PluginSlot> fxSlots; juce::OwnedArray<SendSlot> sendSlots;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MixerChannelUI)
 };

@@ -10,12 +10,12 @@ void BridgeManager::initializeAllBridges(BridgeDependencies d) {
     TrackPianoRollBridge::connect(d.trackContainer, d.playlistUI, d.pianoRollUI, d.openPianoRoll);
     TrackPianoRollBridge::connectPlaylist(d.playlistUI, d.pianoRollUI, d.openPianoRoll);
 
-    TrackEffectsBridge::connect(d.trackContainer, d.effectsPanelUI, d.mixerUI, d.audioMutex,
+    TrackEffectsBridge::connect(d.trackContainer, d.effectsPanelUI, d.mixerUI, d.miniMixerUI, d.audioMutex,
         d.audioEngine.clock.sampleRate, d.audioEngine.clock.maxBlockSize,
         d.audioEngine, 
         d.switchToArrangementWithEffects);
 
-    TrackMixerPlaylistBridge::connect(d.trackContainer, d.mixerUI, d.playlistUI);
+    TrackMixerPlaylistBridge::connect(d.trackContainer, d.mixerUI, d.miniMixerUI, d.playlistUI, d.masterTrack);
     TransportBridge::connect(d.transportBar, d.topMenuBar, d.pianoRollUI, d.playlistUI);
 
     InterfaceBridge::connect(d.topMenuBar, d.isBottomDockVisible, d.isLeftSidebarVisible,

@@ -28,12 +28,13 @@ struct DAWUIComponents {
     PianoRollComponent pianoRollUI;
     juce::TextButton closePianoRollBtn;
     MixerComponent mixerUI;
+    MixerComponent miniMixerUI;
     MasterChannelUI masterChannelUI{ [this] { return mixerUI.getMasterVolume(); }, 
                                      [this](float v) { mixerUI.setMasterVolume(v); } };
     ChannelRackPanel rackPanelUI;
     EffectsPanel effectsPanelUI;
     InstrumentPanel instrumentPanelUI;
-    BottomDock bottomDock{ rackPanelUI, effectsPanelUI, instrumentPanelUI };
+    BottomDock bottomDock{ rackPanelUI, effectsPanelUI, instrumentPanelUI, miniMixerUI };
     BottomDockResizer bottomDockResizer;
     PickerPanel pickerPanelUI;
     FileBrowserPanel fileBrowserPanelUI;
@@ -45,6 +46,8 @@ struct DAWUIComponents {
     std::unique_ptr<Track> masterTrackObj;
 
     std::unique_ptr<ResourceMeter> resourceMeter;
+
+    std::function<void()> onResized;
 };
 
 class UIManager {

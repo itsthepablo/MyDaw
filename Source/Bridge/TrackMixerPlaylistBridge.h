@@ -8,10 +8,16 @@ class TrackMixerPlaylistBridge {
 public:
     static void connect(TrackContainer& container,
         MixerComponent& mixer,
-        PlaylistComponent& playlist)
+        MixerComponent& miniMixer,
+        PlaylistComponent& playlist,
+        Track* masterTrack)
     {
-        // Pasamos la referencia de los tracks
+        // Pasamos la referencia de los tracks a ambos mixers
+        mixer.setMasterTrack(masterTrack);
+        miniMixer.setMasterTrack(masterTrack);
+        
         mixer.setTracksReference(&(container.getTracks()));
+        miniMixer.setTracksReference(&(container.getTracks()));
         playlist.setTracksReference(&(container.getTracks()));
 
         // Sincronización del Scroll Vertical
@@ -20,7 +26,6 @@ public:
             };
 
         // --- SOLUCIÓN AL BUG DEL SCROLL y OVERWRITE DEL AUDIO ENGINE ---
-        // Concatenamos las funciones para no borrar las conexiones hechas en MainComponent
         auto prevOnTrack = container.onTrackAdded;
         container.onTrackAdded = [&playlist, prevOnTrack] {
             if (prevOnTrack) prevOnTrack();
@@ -30,9 +35,10 @@ public:
 
         // Cuando se reordenan (Drag & Drop)
         auto prevOnReorder = container.onTracksReordered;
-        container.onTracksReordered = [&container, &mixer, &playlist, prevOnReorder] {
+        container.onTracksReordered = [&container, &mixer, &miniMixer, &playlist, prevOnReorder] {
             if (prevOnReorder) prevOnReorder();
             mixer.setTracksReference(&(container.getTracks()));
+            miniMixer.setTracksReference(&(container.getTracks()));
             playlist.updateScrollBars();
             playlist.repaint();
             };

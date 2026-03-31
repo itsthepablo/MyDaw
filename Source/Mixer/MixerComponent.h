@@ -14,10 +14,18 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override;
     void updateChannels();
+
+    bool isMiniMixer = false;
+
     void timerCallback() override;
 
     void setTracksReference(const juce::OwnedArray<Track>* tracks) {
         tracksRef = tracks;
+        updateChannels();
+    }
+
+    void setMasterTrack(Track* master) {
+        masterTrackPtr = master;
         updateChannels();
     }
 
@@ -36,6 +44,7 @@ public:
 
 private:
     const juce::OwnedArray<Track>* tracksRef = nullptr;
+    Track* masterTrackPtr = nullptr;
     float masterVolume = 1.0f;
 
     juce::Viewport viewport;

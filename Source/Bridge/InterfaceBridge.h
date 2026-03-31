@@ -58,9 +58,19 @@ public:
             triggerResize();
             };
 
-        topMenu.onToggleMixer = [toggleMixerMode] {
-            if (toggleMixerMode) toggleMixerMode();
-            };
+        topMenu.onToggleMixer = [&isBottomDockVisible, &bottomDock, triggerResize] {
+            if (!isBottomDockVisible) {
+                isBottomDockVisible = true;
+                bottomDock.showTab(BottomDock::MixerTab);
+            }
+            else {
+                if (bottomDock.getCurrentTab() == BottomDock::MixerTab)
+                    isBottomDockVisible = false;
+                else
+                    bottomDock.showTab(BottomDock::MixerTab);
+            }
+            triggerResize();
+        };
 
         topMenu.onToggleRack = [&isBottomDockVisible, &bottomDock, triggerResize] {
             if (!isBottomDockVisible) {
