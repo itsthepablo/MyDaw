@@ -136,16 +136,30 @@ private:
 };
 
 // ==============================================================================
-// 3. SLOTS DE EFECTOS Y ENVÍOS
+// 3. SLOTS DE EFECTOS Y ENVÍOS INTERACTIVOS
 // ==============================================================================
 class PluginSlot : public juce::Component {
 public:
-    PluginSlot(Track* t, int idx) : track(t), index(idx) {}
+    PluginSlot(Track* t, int idx) : track(t), index(idx) {
+        addAndMakeVisible(bypassBtn);
+        bypassBtn.setButtonText("B");
+        bypassBtn.setClickingTogglesState(true);
+        bypassBtn.setColour(juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
+        bypassBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colours::dodgerblue);
+        bypassBtn.setColour(juce::TextButton::textColourOffId, juce::Colours::darkgrey);
+        bypassBtn.setColour(juce::TextButton::textColourOnId, juce::Colours::white);
+        
+        bypassBtn.onClick = [this] {
+            if (onBypassChanged) onBypassChanged(index, !bypassBtn.getToggleState());
+        };
+    }
+
     void paint(juce::Graphics& g) override {
         auto b = getLocalBounds().reduced(1);
         bool hasPlugin = track && index < track->plugins.size();
+        bool bypassed = hasPlugin && track->plugins[index]->isBypassed();
         
-        g.setColour(hasPlugin ? juce::Colour(45, 50, 60) : juce::Colour(25, 25, 25));
+        g.setColour(hasPlugin ? (bypassed ? juce::Colour(35, 35, 35) : juce::Colour(45, 50, 60)) : juce::Colour(25, 25, 25));
         g.fillRoundedRectangle(b.toFloat(), 2.0f);
         
         g.setColour(juce::Colours::black.withAlpha(0.4f));
@@ -153,14 +167,57 @@ public:
 
         if (hasPlugin) {
             auto* p = track->plugins[index];
-            g.setColour(juce::Colours::white.withAlpha(0.8f));
+            g.setColour(bypassed ? juce::Colours::grey : juce::Colours::white.withAlpha(0.8f));
             g.setFont(10.0f);
-            g.drawText(p->getLoadedPluginName().substring(0, 12), b.reduced(2), juce::Justification::centredLeft);
+            g.drawText(p->getLoadedPluginName().substring(0, 12), b.reduced(2).withTrimmedLeft(20), juce::Justification::centredLeft);
+            
+            bypassBtn.setVisible(true);
+            bypassBtn.setToggleState(!bypassed, juce::dontSendNotification);
+        } else {
+            bypassBtn.setVisible(false);
         }
     }
+
+    void resized() override {
+        bypassBtn.setBounds(2, 2, 16, getHeight() - 4);
+    }
+
+    void mouseDown(const juce::MouseEvent& e) override {
+        if (bypassBtn.getBounds().contains(e.getPosition())) return;
+
+        bool hasPlugin = track && index < track->plugins.size();
+        
+        if (hasPlugin) {
+            if (e.mods.isPopupMenu()) {
+                juce::PopupMenu m;
+                m.addItem(1, "Eliminar");
+                m.showMenuAsync(juce::PopupMenu::Options(), [this](int result) {
+                    if (result == 1 && onDeletePlugin) onDeletePlugin(index);
+                });
+            } else if (onOpenPlugin) {
+                onOpenPlugin(index);
+            }
+        } else {
+            juce::PopupMenu m;
+            m.addItem(1, "Native Utility");
+            m.addItem(2, "External VST3...");
+            m.showMenuAsync(juce::PopupMenu::Options(), [this](int result) {
+                if (result == 1 && onAddNativeUtility) onAddNativeUtility(index);
+                if (result == 2 && onAddVST3) onAddVST3(index);
+            });
+        }
+    }
+
+    std::function<void(int)> onOpenPlugin;
+    std::function<void(int, bool)> onBypassChanged;
+    std::function<void(int)> onAddNativeUtility;
+    std::function<void(int)> onAddVST3;
+    std::function<void(int)> onDeletePlugin;
+
 private:
     Track* track;
     int index;
+    juce::TextButton bypassBtn;
 };
 
 class SendSlot : public juce::Component {
@@ -179,6 +236,25 @@ public:
             g.drawText("SEND " + juce::String(index + 1), b.reduced(2), juce::Justification::centred);
         }
     }
+
+    void mouseDown(const juce::MouseEvent& e) override {
+        bool hasSend = track && index < track->sends.size();
+        if (hasSend) {
+            if (e.mods.isPopupMenu()) {
+                juce::PopupMenu m;
+                m.addItem(1, "Eliminar Envío");
+                m.showMenuAsync(juce::PopupMenu::Options(), [this](int result) {
+                    if (result == 1 && onDeleteSend) onDeleteSend(index);
+                });
+            }
+        } else {
+            if (onAddSend) onAddSend();
+        }
+    }
+
+    std::function<void()> onAddSend;
+    std::function<void(int)> onDeleteSend;
+
 private:
     Track* track;
     int index;
@@ -195,6 +271,12 @@ public:
         // --- FX Rack (10 slots) ---
         for (int i = 0; i < 10; ++i) {
             auto* s = new PluginSlot(track, i);
+            s->onOpenPlugin = [this](int idx) { if (onOpenPlugin) onOpenPlugin(*track, idx); };
+            s->onBypassChanged = [this](int idx, bool b) { if (onBypassChanged) onBypassChanged(*track, idx, b); };
+            s->onAddNativeUtility = [this](int idx) { if (onAddNativeUtility) onAddNativeUtility(*track); };
+            s->onAddVST3 = [this](int idx) { if (onAddVST3) onAddVST3(*track); };
+            s->onDeletePlugin = [this](int idx) { if (onDeleteEffect) onDeleteEffect(*track, idx); };
+            
             fxSlots.add(s);
             addAndMakeVisible(s);
         }
@@ -202,6 +284,9 @@ public:
         // --- Sends Rack (4 slots) ---
         for (int i = 0; i < 4; ++i) {
             auto* s = new SendSlot(track, i);
+            s->onAddSend = [this] { if (onAddSend) onAddSend(*track); };
+            s->onDeleteSend = [this](int idx) { if (onDeleteSend) onDeleteSend(*track, idx); };
+            
             sendSlots.add(s);
             addAndMakeVisible(s);
         }
@@ -279,6 +364,16 @@ public:
 
         updatePanVisibility();
     }
+
+    // --- CALLBACKS PARA EL SISTEMA ---
+    std::function<void(Track&)> onAddVST3;
+    std::function<void(Track&)> onAddNativeUtility;
+    std::function<void(Track&, int)> onOpenPlugin;
+    std::function<void(Track&, int)> onDeleteEffect;
+    std::function<void(Track&, int, bool)> onBypassChanged;
+    
+    std::function<void(Track&)> onAddSend;
+    std::function<void(Track&, int)> onDeleteSend;
 
     ~MixerChannelUI() override { setLookAndFeel(nullptr); }
 
@@ -367,6 +462,7 @@ private:
     
     juce::OwnedArray<PluginSlot> fxSlots;
     juce::OwnedArray<SendSlot> sendSlots;
+
 
     AdvancedMeter meter;
     juce::Slider fader;

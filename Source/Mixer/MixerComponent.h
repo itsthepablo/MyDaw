@@ -24,6 +24,16 @@ public:
     float getMasterVolume() const { return masterVolume; }
     void setMasterVolume(float v) { masterVolume = v; }
 
+    // --- CALLBACKS PARA EL SISTEMA ---
+    std::function<void(Track&)> onAddVST3;
+    std::function<void(Track&)> onAddNativeUtility;
+    std::function<void(Track&, int)> onOpenPlugin;
+    std::function<void(Track&, int)> onDeleteEffect;
+    std::function<void(Track&, int, bool)> onBypassChanged;
+    
+    std::function<void(Track&)> onAddSend;
+    std::function<void(Track&, int)> onDeleteSend;
+
 private:
     const juce::OwnedArray<Track>* tracksRef = nullptr;
     float masterVolume = 1.0f;

@@ -26,8 +26,19 @@ void MixerComponent::updateChannels() {
     channels.clear();
     if (tracksRef != nullptr) {
         for (auto* t : *tracksRef) {
-            channels.add(new MixerChannelUI(t));
-            contentComp.addAndMakeVisible(channels.getLast());
+            auto* channel = new MixerChannelUI(t);
+            
+            // Vincular callbacks
+            channel->onAddVST3 = onAddVST3;
+            channel->onAddNativeUtility = onAddNativeUtility;
+            channel->onOpenPlugin = onOpenPlugin;
+            channel->onDeleteEffect = onDeleteEffect;
+            channel->onBypassChanged = onBypassChanged;
+            channel->onAddSend = onAddSend;
+            channel->onDeleteSend = onDeleteSend;
+
+            channels.add(channel);
+            contentComp.addAndMakeVisible(channel);
         }
     }
     resized();
