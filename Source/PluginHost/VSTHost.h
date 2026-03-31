@@ -86,6 +86,8 @@ public:
     {
         setUsingNativeTitleBar(false);
         setTitleBarHeight(0);
+        setAlwaysOnTop(true);
+        
         if (auto* editor = plugin->createEditorIfNeeded()) {
             setContentOwned(new VSTContainer(this, editor), true);
             setResizable(editor->isResizable(), false);
@@ -93,20 +95,27 @@ public:
     }
     void closeButtonPressed() override { setVisible(false); }
 };
-
 class VSTHost : public BaseEffect {
 public:
     VSTHost();
     ~VSTHost();
     void loadPluginAsync(double sampleRate, std::function<void(bool)> callback);
+    void loadPluginFromPath(const juce::String& path, double sampleRate, std::function<void(bool)> callback);
 
     bool isLoaded() const override;
     void showWindow() override;
     void prepareToPlay(double sampleRate, int maximumExpectedSamplesPerBlock) override;
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override;
+    void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages, const juce::AudioBuffer<float>* sidechainBuffer) override;
+    
+    bool supportsSidechain() const override;
     void reset() override;
     void setNonRealtime(bool isNonRealtime) override;
     juce::String getLoadedPluginName() const override;
+    juce::String getPluginPath() const { return pluginPath; }
+
+    void getStateInformation(juce::MemoryBlock& destData) override;
+    void setStateInformation(const void* data, int sizeInBytes) override;
 
     // Conexión del reloj
     void updatePlayHead(bool isPlaying, int64_t samplePos) override;
@@ -121,6 +130,7 @@ private:
     std::unique_ptr<juce::AudioPluginInstance> vstPlugin;
     std::unique_ptr<VSTWindow> vstWindow;
     std::unique_ptr<juce::FileChooser> fileChooser;
+    juce::String pluginPath;
     bool bypassed = false;
 
     DawPlayHead playHead; // El reloj interno del host

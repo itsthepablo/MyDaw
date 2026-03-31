@@ -133,9 +133,7 @@ void MainComponent::setupCallbacks() {
             BridgeManager::cleanupTrack(trackToDelete, ui.pianoRollUI, [this] { closePianoRoll(); });
 
             ui.playlistUI.purgeClipsOfTrack(trackToDelete);
-            ui.trackContainer.removeTrack(index);
-
-            // Reflejar la eliminación atómica al motor de audio
+            ui.trackContainer.removeTrack(index); 
             audioEngine.routingMatrix.commitNewTopology(ui.trackContainer.getTracks());
 
             ui.playlistUI.updateScrollBars();
@@ -150,7 +148,15 @@ void MainComponent::setupCallbacks() {
 
             resized();
         }
-        };
+    };
+
+    // --- CONEXIÓN SIDECHAIN (DATA SOURCE) ---
+    ui.effectsPanelUI.getAvailableTracks = [this]() -> juce::Array<Track*> {
+        juce::Array<Track*> trackList;
+        for (auto* t : ui.trackContainer.getTracks()) 
+            trackList.add(t);
+        return trackList;
+    };
 }
 
 void MainComponent::setupBridges() {
@@ -271,11 +277,11 @@ void MainComponent::closePianoRoll() {
 }
 
 void MainComponent::loadProject(const juce::File& file) {
-    ProjectManager::loadProject(file, ui.trackContainer, audioMutex, ui.playlistUI, ui.pickerPanelUI, [this] { resized(); });
+    ProjectManager::loadProject(file, ui.trackContainer, audioEngine, &audioMutex, ui.playlistUI, ui.effectsPanelUI, ui.pickerPanelUI, [this] { resized(); });
 }
 
 void MainComponent::saveProject() {
-    ProjectManager::saveProject(ui.trackContainer, fileChooser);
+    ProjectManager::saveProject(ui.trackContainer, audioEngine, fileChooser);
 }
 
 // --- INYECCIÓN 3: LOGICA DE EXPORTACIÓN (ESTILO REAPER) ---
@@ -293,7 +299,7 @@ void MainComponent::startExport() {
         offlineRenderer->onProcessOfflineBlock = [this](juce::AudioBuffer<float>& buffer, int numSamples) {
             juce::AudioSourceChannelInfo info(&buffer, 0, numSamples);
             audioEngine.processBlock(info);
-            };
+        };
 
         offlineRenderer->onClose = [this] {
             audioEngine.transportState.isPlaying.store(false);

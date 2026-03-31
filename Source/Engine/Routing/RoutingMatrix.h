@@ -2,6 +2,7 @@
 #include <JuceHeader.h>
 #include <atomic>
 #include <vector>
+#include <map>
 #include "../../Tracks/Track.h"
 
 class RoutingMatrix {
@@ -10,10 +11,13 @@ public:
         juce::Array<Track*> activeTracks;
         std::vector<int> parentIndices;
 
-        // Para el Task Graph paralelo:
-        // childrenOf[i]  = indices de los tracks que son hijos directos de track[i]
-        // initialPendingCounts[i] = numero de hijos que debe esperar track[i] (0 = hoja, lista de inmediato)
+        // notifyList[i] = lista de tracks que dependen de track[i] y deben ser notificados al terminar.
+        std::vector<std::vector<int>> notifyList;
+
+        // childrenOf[i] = indices de los tracks que son hijos (en carpeta) de track[i] (para suma de audio)
         std::vector<std::vector<int>> childrenOf;
+        
+        // initialPendingCounts[i] = cuantos tracks faltan para que track[i] pueda empezar (incluye hijos y sidechains)
         std::vector<int> initialPendingCounts;
     };
 
@@ -27,7 +31,7 @@ public:
 
         int n = tracks.size();
 
-        // --- parentIndices ---
+        // --- parentIndices (Estructura de Carpetas para Suma) ---
         newState->parentIndices.resize(n, -1);
         std::vector<int> parentStack;
         for (int i = 0; i < n; ++i) {
@@ -39,14 +43,36 @@ public:
             }
         }
 
-        // --- childrenOf + initialPendingCounts (construidos de parentIndices) ---
+        // --- childrenOf + initialPendingCounts + notifyList ---
         newState->childrenOf.resize(n);
+        newState->notifyList.resize(n);
         newState->initialPendingCounts.resize(n, 0);
+
         for (int i = 0; i < n; ++i) {
             int parent = newState->parentIndices[i];
             if (parent >= 0 && parent < n) {
+                // Relación de Carpeta: El padre espera a i para sumarlo.
                 newState->childrenOf[parent].push_back(i);
+                newState->notifyList[i].push_back(parent);
                 newState->initialPendingCounts[parent]++;
+            }
+        }
+        
+        // --- SIDECHAIN DEPENDENCIES (Zero Latency) ---
+        std::map<int, int> idToIndex;
+        for (int i = 0; i < n; ++i) idToIndex[tracks[i]->getId()] = i;
+
+        for (int i = 0; i < n; ++i) {
+            auto sidechainDeps = tracks[i]->getSidechainDependencies();
+            for (int sourceId : sidechainDeps) {
+                if (idToIndex.count(sourceId)) {
+                    int sourceIdx = idToIndex[sourceId];
+                    if (sourceIdx != i) { 
+                        // El track i debe esperar al track sourceIdx (sidechain)
+                        newState->notifyList[sourceIdx].push_back(i);
+                        newState->initialPendingCounts[i]++;
+                    }
+                }
             }
         }
 

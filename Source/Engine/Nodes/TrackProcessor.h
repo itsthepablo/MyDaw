@@ -4,6 +4,7 @@
 #include "../../Tracks/Track.h"
 #include "../../UI/GainStation/GainStationDSP.h" 
 #include "../../Effects/EffectsPanel.h" 
+#include "../Routing/RoutingMatrix.h" // NUEVO: Para TopoState
 
 class TrackProcessor {
 public:
@@ -12,7 +13,8 @@ public:
         int numSamples,
         bool isPlayingNow,
         bool isStoppingNow,
-        const juce::MidiBuffer& previewMidi) noexcept // lock-free guarantee
+        const juce::MidiBuffer& previewMidi,
+        const RoutingMatrix::TopoState* topo) noexcept // lock-free guarantee
     {
         bool hasClipsOrNotes = !(track->audioClips.isEmpty() && track->midiClips.isEmpty() && track->notes.empty());
 
@@ -176,7 +178,21 @@ public:
                 
                 // Truco de encapsulado de buffer temporal para evitar setSize
                 juce::AudioBuffer<float> proxyBuffer(track->tempSynthBuffer.getArrayOfWritePointers(), safeChannels, numSamples);
-                p->processBlock(proxyBuffer, midiForThisSynth);
+                
+                // --- SIDECHAIN SUPPORT ---
+                const juce::AudioBuffer<float>* sidechainBuf = nullptr;
+                int scId = p->sidechainSourceTrackId.load(std::memory_order_relaxed);
+                if (scId != -1 && topo != nullptr) {
+                    for (int i = 0; i < topo->activeTracks.size(); ++i) {
+                        auto* t = topo->activeTracks[i];
+                        if (t->getId() == scId) {
+                            sidechainBuf = &t->audioBuffer;
+                            break;
+                        }
+                    }
+                }
+                
+                p->processBlock(proxyBuffer, midiForThisSynth, sidechainBuf);
 
                 for (int ch = 0; ch < safeChannels; ++ch) {
                     track->instrumentMixBuffer.addFrom(ch, 0, track->tempSynthBuffer, ch, 0, numSamples);
@@ -196,9 +212,22 @@ public:
 
                 p->updatePlayHead(isPlayingNow, clock.currentSamplePos);
 
+                // --- SIDECHAIN SUPPORT ---
+                const juce::AudioBuffer<float>* sidechainBuf = nullptr;
+                int scId = p->sidechainSourceTrackId.load(std::memory_order_relaxed);
+                if (scId != -1 && topo != nullptr) {
+                    for (int i = 0; i < topo->activeTracks.size(); ++i) {
+                        auto* t = topo->activeTracks[i];
+                        if (t->getId() == scId) {
+                            sidechainBuf = &t->audioBuffer;
+                            break;
+                        }
+                    }
+                }
+
                 if (r == PluginRouting::Stereo || numChannels < 2) {
                     juce::AudioBuffer<float> proxyBuffer(track->audioBuffer.getArrayOfWritePointers(), numChannels, numSamples);
-                    p->processBlock(proxyBuffer, trackMidi);
+                    p->processBlock(proxyBuffer, trackMidi, sidechainBuf);
                 } else {
                     auto* preservedSignal = track->midSideBuffer.getWritePointer(0);
                     auto* left = track->audioBuffer.getWritePointer(0);
@@ -220,7 +249,7 @@ public:
                     }
 
                     juce::AudioBuffer<float> proxyBuffer(track->audioBuffer.getArrayOfWritePointers(), numChannels, numSamples);
-                    p->processBlock(proxyBuffer, trackMidi);
+                    p->processBlock(proxyBuffer, trackMidi, sidechainBuf);
 
                     for (int i = 0; i < numSamples; ++i) {
                         float processedMono = (left[i] + right[i]) * 0.5f;

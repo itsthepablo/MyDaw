@@ -1,6 +1,8 @@
 #include "ProjectManager.h"
+#include "../PluginHost/VSTHost.h"
+#include "../Native_Plugins/UtilityPlugin.h"
 
-void ProjectManager::saveProject(TrackContainer& trackContainer, std::unique_ptr<juce::FileChooser>& fileChooser) {
+void ProjectManager::saveProject(TrackContainer& trackContainer, AudioEngine& engine, std::unique_ptr<juce::FileChooser>& fileChooser) {
     fileChooser = std::make_unique<juce::FileChooser>(
         "Guardar Proyecto (.perritogordo)",
         juce::File::getSpecialLocation(juce::File::userDocumentsDirectory),
@@ -8,7 +10,7 @@ void ProjectManager::saveProject(TrackContainer& trackContainer, std::unique_ptr
 
     auto chooserFlags = juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles;
 
-    fileChooser->launchAsync(chooserFlags, [&trackContainer](const juce::FileChooser& fc) {
+    fileChooser->launchAsync(chooserFlags, [&trackContainer, &engine](const juce::FileChooser& fc) {
         auto file = fc.getResult();
 
         if (file != juce::File()) {
@@ -16,17 +18,80 @@ void ProjectManager::saveProject(TrackContainer& trackContainer, std::unique_ptr
                 file = file.withFileExtension(".perritogordo");
 
             juce::ValueTree projectTree("PERRITOGORDO_PROJECT");
-            projectTree.setProperty("dawVersion", ProjectInfo::versionString, nullptr);
+            projectTree.setProperty("dawVersion", "1.0.0", nullptr);
             projectTree.setProperty("projectName", file.getFileNameWithoutExtension(), nullptr);
 
             juce::ValueTree settings("SETTINGS");
-            settings.setProperty("bpm", 120.0, nullptr);
+            settings.setProperty("bpm", (double)engine.transportState.bpm.load(), nullptr);
             projectTree.addChild(settings, -1, nullptr);
 
             juce::ValueTree tracksTree("TRACK_LIST");
             for (auto* track : trackContainer.getTracks()) {
                 juce::ValueTree t("TRACK");
+                t.setProperty("id", track->getId(), nullptr);
                 t.setProperty("name", track->getName(), nullptr);
+                t.setProperty("type", (int)track->getType(), nullptr);
+                t.setProperty("vol", track->getVolume(), nullptr);
+                t.setProperty("pan", track->getBalance(), nullptr);
+                t.setProperty("color", track->getColor().toString(), nullptr);
+
+                // --- PLUGINS ---
+                juce::ValueTree pluginsTree("PLUGINS");
+                for (auto* plugin : track->plugins) {
+                    juce::ValueTree p("PLUGIN");
+                    p.setProperty("name", plugin->getLoadedPluginName(), nullptr);
+                    p.setProperty("isNative", plugin->isNative(), nullptr);
+                    p.setProperty("bypassed", plugin->isBypassed(), nullptr);
+                    p.setProperty("sidechainSource", (int)plugin->sidechainSourceTrackId.load(), nullptr);
+
+                    if (auto* v = dynamic_cast<VSTHost*>(plugin)) {
+                        p.setProperty("vstPath", v->getPluginPath(), nullptr);
+                    }
+
+                    juce::MemoryBlock state;
+                    plugin->getStateInformation(state);
+                    if (state.getSize() > 0)
+                        p.setProperty("base64State", state.toBase64Encoding(), nullptr);
+
+                    pluginsTree.addChild(p, -1, nullptr);
+                }
+                t.addChild(pluginsTree, -1, nullptr);
+
+                // --- AUDIO CLIPS ---
+                juce::ValueTree aClips("AUDIO_CLIPS");
+                for (auto* clip : track->audioClips) {
+                    juce::ValueTree c("CLIP");
+                    c.setProperty("name", clip->name, nullptr);
+                    c.setProperty("startX", (double)clip->startX, nullptr);
+                    c.setProperty("width", (double)clip->width, nullptr);
+                    c.setProperty("offsetX", (double)clip->offsetX, nullptr);
+                    c.setProperty("path", clip->sourceFilePath, nullptr);
+                    aClips.addChild(c, -1, nullptr);
+                }
+                t.addChild(aClips, -1, nullptr);
+
+                // --- MIDI CLIPS ---
+                juce::ValueTree mClips("MIDI_CLIPS");
+                for (auto* clip : track->midiClips) {
+                    juce::ValueTree c("CLIP");
+                    c.setProperty("name", clip->name, nullptr);
+                    c.setProperty("startX", (double)clip->startX, nullptr);
+                    c.setProperty("width", (double)clip->width, nullptr);
+                    c.setProperty("offsetX", (double)clip->offsetX, nullptr);
+
+                    juce::ValueTree notesTree("NOTES");
+                    for (const auto& note : clip->notes) {
+                        juce::ValueTree n("N");
+                        n.setProperty("p", note.pitch, nullptr);
+                        n.setProperty("x", note.x, nullptr);
+                        n.setProperty("w", note.width, nullptr);
+                        notesTree.addChild(n, -1, nullptr);
+                    }
+                    c.addChild(notesTree, -1, nullptr);
+                    mClips.addChild(c, -1, nullptr);
+                }
+                t.addChild(mClips, -1, nullptr);
+
                 tracksTree.addChild(t, -1, nullptr);
             }
             projectTree.addChild(tracksTree, -1, nullptr);
@@ -38,35 +103,99 @@ void ProjectManager::saveProject(TrackContainer& trackContainer, std::unique_ptr
     });
 }
 
-void ProjectManager::loadProject(const juce::File& file, 
-                                TrackContainer& trackContainer, 
-                                juce::CriticalSection& audioMutex,
-                                PlaylistComponent& playlistUI,
-                                PickerPanel& pickerPanelUI,
-                                std::function<void()> onFinished) {
+void ProjectManager::loadProject(const juce::File& file, TrackContainer& trackContainer, AudioEngine& engine, juce::CriticalSection* audioMutex, PlaylistComponent& playlistUI, EffectsPanel& effectsUI, PickerPanel& pickerUI, std::function<void()> onFinished) {
     if (!file.existsAsFile()) return;
 
     auto xml = juce::XmlDocument::parse(file);
-    if (xml != nullptr) {
-        if (xml->hasTagName("PERRITOGORDO_PROJECT")) {
-            const juce::ScopedLock sl(audioMutex);
+    if (xml == nullptr) return;
 
-            while (trackContainer.getTracks().size() > 0) {
-                trackContainer.removeTrack(0);
-            }
+    juce::ValueTree projectTree = juce::ValueTree::fromXml(*xml);
+    if (!projectTree.hasType("PERRITOGORDO_PROJECT")) return;
 
-            if (auto* tracksTree = xml->getChildByName("TRACK_LIST")) {
-                for (auto* tXml : tracksTree->getChildIterator()) {
-                    if (tXml->hasTagName("TRACK")) {
-                        trackContainer.addTrack(TrackType::Audio);
-                    }
-                }
-            }
-
-            playlistUI.updateScrollBars();
-            playlistUI.repaint();
-            pickerPanelUI.refreshList();
-            if (onFinished) onFinished();
+    {
+        juce::ScopedLock sl(*audioMutex);
+        trackContainer.deselectAllTracks();
+        while (trackContainer.getTracks().size() > 0) {
+            trackContainer.removeTrack(0);
         }
     }
+
+    // 1. Settings
+    juce::ValueTree settings = projectTree.getChildWithName("SETTINGS");
+    if (settings.isValid()) {
+        double bpm = settings.getProperty("bpm", 120.0);
+        engine.transportState.bpm.store(bpm);
+        playlistUI.setBpm(bpm);
+    }
+
+    // 2. Tracks
+    juce::ValueTree tracksTree = projectTree.getChildWithName("TRACK_LIST");
+    for (int i = 0; i < tracksTree.getNumChildren(); ++i) {
+        juce::ValueTree tTree = tracksTree.getChild(i);
+        
+        int id = tTree.getProperty("id");
+        TrackType type = (TrackType)(int)tTree.getProperty("type");
+        
+        auto* t = trackContainer.addTrack(type, id);
+        if (t == nullptr) continue;
+
+        t->setName(tTree.getProperty("name").toString());
+        t->setVolume(tTree.getProperty("vol", 0.8f));
+        t->setBalance(tTree.getProperty("pan", 0.0f));
+        t->setColor(juce::Colour::fromString(tTree.getProperty("color").toString()));
+
+        // --- AUDIO CLIPS ---
+        juce::ValueTree aClips = tTree.getChildWithName("AUDIO_CLIPS");
+        for (int j = 0; j < aClips.getNumChildren(); ++j) {
+            juce::ValueTree cTree = aClips.getChild(j);
+            juce::File sampleFile(cTree.getProperty("path").toString());
+            if (sampleFile.existsAsFile()) {
+                t->loadAndAddAudioClip(sampleFile, (float)cTree.getProperty("startX"));
+            }
+        }
+
+        // --- MIDI CLIPS ---
+        juce::ValueTree mClips = tTree.getChildWithName("MIDI_CLIPS");
+        for (int j = 0; j < mClips.getNumChildren(); ++j) {
+            juce::ValueTree cTree = mClips.getChild(j);
+            auto* clip = new MidiClipData();
+            clip->name = cTree.getProperty("name").toString();
+            clip->startX = (float)cTree.getProperty("startX");
+            clip->width = (float)cTree.getProperty("width");
+            
+            juce::ValueTree notesTree = cTree.getChildWithName("NOTES");
+            for (int k = 0; k < notesTree.getNumChildren(); ++k) {
+                juce::ValueTree nTree = notesTree.getChild(k);
+                clip->notes.push_back({ (int)nTree.getProperty("p"), (int)nTree.getProperty("x"), (int)nTree.getProperty("w") });
+            }
+            t->midiClips.add(clip);
+            playlistUI.addMidiClipToView(t, clip);
+        }
+
+        // --- PLUGINS ---
+        juce::ValueTree pTreeList = tTree.getChildWithName("PLUGINS");
+        for (int j = 0; j < pTreeList.getNumChildren(); ++j) {
+            juce::ValueTree pTree = pTreeList.getChild(j);
+            bool isNative = pTree.getProperty("isNative");
+            juce::String name = pTree.getProperty("name").toString();
+            juce::String path = pTree.getProperty("vstPath").toString();
+            juce::String state64 = pTree.getProperty("base64State").toString();
+            int scSource = pTree.getProperty("sidechainSource", -1);
+
+            if (isNative && name == "Utility") {
+                effectsUI.onAddNativeUtility(*t);
+            } else if (path.isNotEmpty() && effectsUI.onAddVST3FromFile) {
+                effectsUI.onAddVST3FromFile(*t, path, state64, scSource);
+            }
+        }
+        
+        t->commitSnapshot();
+    }
+
+    juce::MessageManager::callAsync([&playlistUI, &pickerUI, onFinished]() {
+        playlistUI.updateScrollBars();
+        playlistUI.repaint();
+        pickerUI.refreshList();
+        if (onFinished) onFinished();
+    });
 }

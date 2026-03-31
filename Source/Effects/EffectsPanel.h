@@ -22,11 +22,13 @@ public:
     Track* getActiveTrack() const { return activeTrack; }
 
     std::function<void(Track&)> onAddVST3;           // <-- Para cargar VST3 normal
+    std::function<void(Track&, const juce::String&, const juce::String&, int)> onAddVST3FromFile; // <-- NUEVO: Para cargar desde archivo (Proyecto)
     std::function<void(Track&)> onAddNativeUtility;  // <-- NUEVO: Carga el Utility nativo
     std::function<void(Track&, int)> onOpenEffect;
     std::function<void(Track&, int, bool)> onBypassChanged;
     std::function<void(Track&, int, int)> onReorderEffects;
     std::function<void(Track&, int)> onDeleteEffect;
+    std::function<juce::Array<Track*>()> getAvailableTracks; 
 
 private:
     Track* activeTrack = nullptr;
@@ -37,10 +39,10 @@ private:
 
     // Estado y botones de control del panel izquierdo
     bool isGainStationExpanded = true;
-    juce::TextButton toggleGainStationBtn; // La barra negra cuando está oculto
-    juce::TextButton hideGainStationBtn;   // El botón HIDE cuando está visible
+    juce::TextButton toggleGainStationBtn; 
+    juce::TextButton hideGainStationBtn;   
 
-    // El contenedor es la Gain Station. Variable nombrada loudnessMeter para no romper EffectsPanel.cpp
+    // El contenedor es la Gain Station. 
     GainStationPanel loudnessMeter;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EffectsPanel)

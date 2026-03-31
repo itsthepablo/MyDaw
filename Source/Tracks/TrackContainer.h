@@ -93,11 +93,11 @@ public:
         if (onActiveTrackChanged) onActiveTrackChanged(selectedTrack);
     }
 
-    void addTrack(TrackType type) {
+    Track* addTrack(TrackType type, int idToUse = -1) {
         std::unique_ptr<juce::ScopedLock> lock;
         if (audioMutex != nullptr) lock = std::make_unique<juce::ScopedLock>(*audioMutex);
 
-        int id = (int)tracks.size() + 1;
+        int id = idToUse > 0 ? idToUse : (int)tracks.size() + 1;
         auto* t = new Track(id, (type == TrackType::MIDI ? "Inst " : "Audio ") + juce::String(id), type);
         tracks.add(t);
         auto* p = new TrackControlPanel(*t);
@@ -160,6 +160,7 @@ public:
 
         if (onTracksReordered) onTracksReordered();
         if (onTrackAdded) onTrackAdded();
+        return t;
     }
 
     // --- MODIFICADO: Salvar clips al pool antes de destruir el track ---

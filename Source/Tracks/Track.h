@@ -246,6 +246,18 @@ public:
 
     juce::OwnedArray<BaseEffect> plugins;
 
+    // --- SIDECHAIN DEPENDENCIES ---
+    std::vector<int> getSidechainDependencies() const {
+        std::vector<int> deps;
+        for (auto* p : plugins) {
+            if (p != nullptr) {
+                int sourceId = p->sidechainSourceTrackId.load(std::memory_order_relaxed);
+                if (sourceId != -1) deps.push_back(sourceId);
+            }
+        }
+        return deps;
+    }
+
     juce::OwnedArray<AudioClipData> audioClips;
     juce::OwnedArray<MidiClipData> midiClips;
 
@@ -288,6 +300,36 @@ public:
     SimpleLoudness preLoudness;
     SimpleLoudness postLoudness;
     bool isAnalyzersPrepared = false;
+
+    // --- CARGA DE AUDIO INTEGRADA (Para Persistencia) ---
+    void loadAndAddAudioClip(const juce::File& file, float startX)
+    {
+        juce::AudioFormatManager manager;
+        manager.registerBasicFormats();
+        std::unique_ptr<juce::AudioFormatReader> reader(manager.createReaderFor(file));
+
+        if (reader != nullptr)
+        {
+            auto* clip = new AudioClipData();
+            clip->name = file.getFileNameWithoutExtension();
+            clip->sourceFilePath = file.getFullPathName();
+            clip->startX = startX;
+            
+            // Calculamos ancho basado en la duración (asumiendo 120BPM -> 320px por compás de 2s)
+            // 320px / 2s = 160px/s
+            double duration = (double)reader->lengthInSamples / reader->sampleRate;
+            clip->width = (float)(duration * 160.0); 
+            clip->originalWidth = clip->width;
+            clip->sourceSampleRate = reader->sampleRate;
+
+            clip->fileBuffer.setSize((int)reader->numChannels, (int)reader->lengthInSamples);
+            reader->read(&clip->fileBuffer, 0, (int)reader->lengthInSamples, 0, true, true);
+
+            clip->generateCache();
+            audioClips.add(clip);
+            commitSnapshot();
+        }
+    }
 
     // ============================================================
     // SNAPSHOT ATÓMICO — acceso wait-free desde el audio thread

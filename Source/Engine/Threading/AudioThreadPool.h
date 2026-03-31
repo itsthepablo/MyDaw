@@ -149,7 +149,7 @@ private:
 
         // 2. DSP principal
         TrackProcessor::process(track, *ctx.clock, ctx.numSamples,
-                                ctx.isPlayingNow, ctx.isStoppingNow, *ctx.previewMidi);
+                                ctx.isPlayingNow, ctx.isStoppingNow, *ctx.previewMidi, topo);
 
         // 3. Compensacion de latencia
         PDCManager::applyDelay(track, ctx.numSamples);
@@ -157,13 +157,15 @@ private:
         // 4. Volumen y pan (resultado queda en track->audioBuffer para Fase 2)
         MasterMixer::applyGainAndPan(track, ctx.numSamples, ctx.hwOutChannels);
 
-        // 5. Notificar al padre
-        int parentIdx = (idx < (int)topo->parentIndices.size())
-                        ? topo->parentIndices[idx] : -1;
-        if (parentIdx >= 0 && parentIdx < ctx.numTasks) {
-            int remaining = pendingChildren[parentIdx].fetch_sub(1, std::memory_order_acq_rel) - 1;
-            if (remaining == 0)
-                taskStates[parentIdx].store((int)TaskState::Ready, std::memory_order_release);
+        // 5. Notificar a los dependientes (Padres de Carpeta + Sidechain Destinos)
+        if (idx < (int)topo->notifyList.size()) {
+            for (int dependentIdx : topo->notifyList[idx]) {
+                if (dependentIdx >= 0 && dependentIdx < ctx.numTasks) {
+                    int remaining = pendingChildren[dependentIdx].fetch_sub(1, std::memory_order_acq_rel) - 1;
+                    if (remaining == 0)
+                        taskStates[dependentIdx].store((int)TaskState::Ready, std::memory_order_release);
+                }
+            }
         }
 
         doneCount.fetch_add(1, std::memory_order_release);

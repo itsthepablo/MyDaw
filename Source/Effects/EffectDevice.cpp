@@ -1,5 +1,6 @@
 #include "EffectDevice.h"
 #include "EffectsPanel.h"
+#include <memory>
 
 EffectDevice::EffectDevice(int index, juce::String name, bool isInst, bool bypassed, BaseEffect* effectRef, EffectsPanel& p)
     : idx(index), fxName(name), isInstrument(isInst), isBypassed(bypassed), effect(effectRef), panel(p) {
@@ -41,6 +42,28 @@ EffectDevice::EffectDevice(int index, juce::String name, bool isInst, bool bypas
         if (nativeEditor) {
             addAndMakeVisible(nativeEditor);
         }
+    }
+
+    // --- NUEVO: CONFIGURACIÓN DEL PICKER DE SIDECHAIN ---
+    if (effect && effect->supportsSidechain()) {
+        sidechainPicker = std::make_unique<SidechainPicker>([this](int sourceId) {
+            if (effect) {
+                effect->sidechainSourceTrackId.store(sourceId);
+                // Notificar cambio de ruteo para relanzar el grafo
+                if (panel.onReorderEffects && panel.getActiveTrack()) {
+                    panel.onReorderEffects(*panel.getActiveTrack(), -1, -1); 
+                }
+            }
+        });
+        addAndMakeVisible(*sidechainPicker);
+        updateSidechainPicker();
+    }
+}
+
+void EffectDevice::updateSidechainPicker() {
+    if (sidechainPicker && panel.getAvailableTracks) {
+        auto tracks = panel.getAvailableTracks();
+        sidechainPicker->refresh(panel.getActiveTrack(), tracks, effect->sidechainSourceTrackId.load());
     }
 }
 
@@ -120,7 +143,18 @@ void EffectDevice::resized() {
     auto headerArea = area.removeFromTop(24);
 
     bypassBtn.setBounds(headerArea.getX() + 4, headerArea.getY() + 3, 20, 18);
-    routingBtn.setBounds(headerArea.getRight() - 28, headerArea.getY() + 3, 24, 18); // Posicionado a la derecha del header
+    
+    int rightX = headerArea.getRight() - 4;
+    
+    // Botón de Ruteo (M/S/ST)
+    rightX -= 24;
+    routingBtn.setBounds(rightX, headerArea.getY() + 3, 24, 18);
+
+    // Picker de Sidechain (si existe)
+    if (sidechainPicker) {
+        rightX -= 85; // Un poco más ancho para que se lea el track
+        sidechainPicker->setBounds(rightX, headerArea.getY() + 3, 80, 18);
+    }
 
     // El UI nativo ocupa todo el cuerpo restante de la "píldora" de efecto
     if (nativeEditor) {

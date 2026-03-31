@@ -36,6 +36,7 @@ void PlaylistDropHandler::processExternalFiles(const juce::StringArray& files, i
             if (reader) {
                 auto* data = new AudioClipData();
                 data->name = f.getFileNameWithoutExtension();
+                data->sourceFilePath = f.getFullPathName();
                 data->startX = absX;
 
                 // Configurar tamaño inicial vacío y calcular el ancho en píxeles.
@@ -162,6 +163,7 @@ void PlaylistDropHandler::processInternalItem(const juce::DragAndDropTarget::Sou
                 newAudioClip->width = sourceAudio->width;
                 newAudioClip->sourceSampleRate = sourceAudio->sourceSampleRate;
                 newAudioClip->fileBuffer.makeCopyOf(sourceAudio->fileBuffer);
+                newAudioClip->sourceFilePath = sourceAudio->sourceFilePath;
                 newAudioClip->cachedPeaksL = sourceAudio->cachedPeaksL;
                 newAudioClip->cachedPeaksR = sourceAudio->cachedPeaksR;
                 newAudioClip->cachedPeaksMid = sourceAudio->cachedPeaksMid;

@@ -207,7 +207,7 @@ public:
         // FASE 2.5: PROCESAR EL MASTER TRACK (Global FX & Gain)
         // =======================================================
         if (masterTrack != nullptr) {
-            TrackProcessor::process(masterTrack, clock, bufferToFill.numSamples, isPlayingNow, isStoppingNow, previewMidi);
+            TrackProcessor::process(masterTrack, clock, bufferToFill.numSamples, isPlayingNow, isStoppingNow, previewMidi, topo);
             MasterMixer::applyGainAndPan(masterTrack, bufferToFill.numSamples, hardwareOutChannels);
             
             // Volcar Master Track al buffer de hardware final

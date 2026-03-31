@@ -23,6 +23,18 @@ public:
     // --- NUEVO: ANTENA DE RELOJ PARA QUE EL VST3 DIBUJE EL FFT CORRECTAMENTE ---
     virtual void updatePlayHead(bool isPlaying, int64_t samplePos) {}
 
+    // --- SIDECHAIN SUPPORT ---
+    virtual void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages, const juce::AudioBuffer<float>* sidechainBuffer) { 
+        processBlock(buffer, midiMessages); 
+    }
+    
+    std::atomic<int> sidechainSourceTrackId { -1 };
+    virtual bool supportsSidechain() const { return false; }
+
+    // --- STATE MANAGEMENT ---
+    virtual void getStateInformation(juce::MemoryBlock& destData) {}
+    virtual void setStateInformation(const void* data, int sizeInBytes) {}
+
     virtual int getLatencySamples() const = 0;
     virtual int getLastKnownLatency() const { return lastKnownLatency; }
     virtual void setLastKnownLatency(int l) { lastKnownLatency = l; }
