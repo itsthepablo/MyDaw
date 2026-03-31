@@ -1,6 +1,8 @@
 #pragma once
 #include <JuceHeader.h>
 
+class TrackContainer; // Forward declaration
+
 enum class PluginRouting { Stereo, Mid, Side };
 
 class BaseEffect {
@@ -13,7 +15,7 @@ public:
     virtual bool isBypassed() const = 0;
     virtual void setBypassed(bool shouldBypass) = 0;
 
-    virtual void showWindow() = 0;
+    virtual void showWindow(TrackContainer* container = nullptr) = 0;
 
     virtual void prepareToPlay(double sampleRate, int maximumExpectedSamplesPerBlock) = 0;
     virtual void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) = 0;
@@ -30,6 +32,9 @@ public:
     
     std::atomic<int> sidechainSourceTrackId { -1 };
     virtual bool supportsSidechain() const { return false; }
+    
+    // Callback para que el Bridge relance el grafo de ruteo cuando cambie el Sidechain desde el Header
+    std::function<void()> onSidechainChanged;
 
     // --- STATE MANAGEMENT ---
     virtual void getStateInformation(juce::MemoryBlock& destData) {}

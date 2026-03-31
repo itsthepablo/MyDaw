@@ -92,6 +92,7 @@ public:
 
     void setExternalMutex(juce::CriticalSection* mutex) { audioMutex = mutex; }
     void addMidiClipToView(Track* targetTrack, MidiClipData* newClip);
+    void addAudioClipToView(Track* targetTrack, AudioClipData* newClip);
     void updateScrollBars();
 
     void setTool(int toolId);

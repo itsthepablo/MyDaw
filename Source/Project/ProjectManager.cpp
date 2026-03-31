@@ -150,7 +150,10 @@ void ProjectManager::loadProject(const juce::File& file, TrackContainer& trackCo
             juce::ValueTree cTree = aClips.getChild(j);
             juce::File sampleFile(cTree.getProperty("path").toString());
             if (sampleFile.existsAsFile()) {
-                t->loadAndAddAudioClip(sampleFile, (float)cTree.getProperty("startX"));
+                auto* clip = t->loadAndAddAudioClip(sampleFile, (float)cTree.getProperty("startX"));
+                if (clip != nullptr) {
+                    playlistUI.addAudioClipToView(t, clip);
+                }
             }
         }
 

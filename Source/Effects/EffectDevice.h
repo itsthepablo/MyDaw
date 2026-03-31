@@ -2,7 +2,6 @@
 #include <JuceHeader.h>
 #include <functional>
 #include "../Native_Plugins/BaseEffect.h"
-#include "../UI/SidechainPicker.h"
 
 class EffectsPanel;
 
@@ -37,15 +36,11 @@ private:
     juce::Component* nativeEditor = nullptr;
 
     juce::TextButton bypassBtn;
-    juce::TextButton routingBtn; // <-- NUEVO: Bot n de Ruteo
-    std::unique_ptr<SidechainPicker> sidechainPicker; // NUEVO
+    juce::TextButton routingBtn;
 
     int dragHoverMode = 0;
     const juce::String dragID = "EFFECT_DEVICE_SLOT";
     void updateRoutingButtonText(); // Helper para actualizar la UI
-    void updateSidechainPicker(); // NUEVO
-
-
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EffectDevice)
 };

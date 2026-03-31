@@ -302,7 +302,7 @@ public:
     bool isAnalyzersPrepared = false;
 
     // --- CARGA DE AUDIO INTEGRADA (Para Persistencia) ---
-    void loadAndAddAudioClip(const juce::File& file, float startX)
+    AudioClipData* loadAndAddAudioClip(const juce::File& file, float startX)
     {
         juce::AudioFormatManager manager;
         manager.registerBasicFormats();
@@ -328,7 +328,9 @@ public:
             clip->generateCache();
             audioClips.add(clip);
             commitSnapshot();
+            return clip;
         }
+        return nullptr;
     }
 
     // ============================================================

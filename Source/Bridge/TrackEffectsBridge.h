@@ -38,8 +38,17 @@ public:
                         t.plugins.add(host);
                         t.allocatePdcBuffer(); // RAM: alocar PDC buffer ahora que hay un plugin
                         host->setIsInstrument(t.getType() == TrackType::MIDI && t.plugins.size() == 1);
+                        
+                        // Configurar callback de sidechain para relanzar ruteo
+                        host->onSidechainChanged = [&engine, &container]() {
+                            engine.routingMatrix.commitNewTopology(container.getTracks());
+                        };
+
                         engine.routingMatrix.commitNewTopology(container.getTracks());
                         ui.updateSlots();
+
+                        // AUTO-ABRIR VENTANA AL INSERTAR
+                        host->showWindow(&container);
                     });
                 }
             });
@@ -67,8 +76,17 @@ public:
                         t.plugins.add(host);
                         t.allocatePdcBuffer();
                         host->setIsInstrument(t.getType() == TrackType::MIDI && t.plugins.size() == 1);
+                        
+                        // Configurar callback de sidechain
+                        host->onSidechainChanged = [&engine, &container]() {
+                            engine.routingMatrix.commitNewTopology(container.getTracks());
+                        };
+
                         engine.routingMatrix.commitNewTopology(container.getTracks());
                         ui.updateSlots();
+
+                        // AUTO-ABRIR VENTANA AL INSERTAR
+                        host->showWindow(&container);
                     });
                 } else {
                     delete host; 
@@ -89,15 +107,24 @@ public:
                 t.plugins.add(utility);
                 t.allocatePdcBuffer(); // RAM: alocar PDC buffer ahora que hay un plugin
                 utility->setIsInstrument(false); // Utility siempre es un efecto
+                
+                // Configurar callback de sidechain (aunque sea nativo y no lo use ahora, por coherencia)
+                utility->onSidechainChanged = [&engine, &container]() {
+                    engine.routingMatrix.commitNewTopology(container.getTracks());
+                };
+
                 engine.routingMatrix.commitNewTopology(container.getTracks());
                 ui.updateSlots();
+
+                // AUTO-ABRIR VENTANA AL INSERTAR
+                utility->showWindow(&container);
             });
         };
 
-        ui.onOpenEffect = [](Track& t, int idx) {
+        ui.onOpenEffect = [&container](Track& t, int idx) {
             if (idx >= 0 && idx < t.plugins.size()) {
                 if (auto* plugin = t.plugins[idx]) {
-                    plugin->showWindow(); 
+                    plugin->showWindow(&container); 
                 }
             }
         };

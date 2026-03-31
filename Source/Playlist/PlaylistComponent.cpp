@@ -96,6 +96,14 @@ void PlaylistComponent::addMidiClipToView(Track* targetTrack, MidiClipData* newC
     hNavigator.repaint();
 }
 
+void PlaylistComponent::addAudioClipToView(Track* targetTrack, AudioClipData* newClip) {
+    clips.push_back({ targetTrack, newClip->startX, newClip->width, newClip->name, newClip, nullptr });
+    if (targetTrack != nullptr) targetTrack->commitSnapshot(); 
+    updateScrollBars();
+    repaint();
+    hNavigator.repaint();
+}
+
 void PlaylistComponent::drawMinimap(juce::Graphics& g, juce::Rectangle<int> bounds) {
     if (!tracksRef || tracksRef->isEmpty()) return;
 
@@ -447,6 +455,7 @@ void PlaylistComponent::mouseWheelMove(const juce::MouseEvent& e, const juce::Mo
         double newStart = juce::jlimit(0.0, juce::jmax(0.0, (double)totalH - ((double)getHeight() - topOffset - 60.0)), vBar.getCurrentRangeStart() - (w.deltaY * 100.0));
         vBar.setCurrentRange(newStart, (double)(getHeight() - topOffset - 60.0));
         updateScrollBars();
+        repaint();
     }
     repaint();
 }

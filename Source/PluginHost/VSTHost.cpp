@@ -1,5 +1,79 @@
 #include "VSTHost.h"
+#include "../Tracks/TrackContainer.h"
 
+// ==============================================================================
+// VST CUSTOM HEADER IMPLEMENTATION
+// ==============================================================================
+VSTCustomHeader::VSTCustomHeader(juce::DocumentWindow* w, BaseEffect* fx, TrackContainer* container)
+    : window(w), effect(fx), trackContainer(container)
+{
+    addAndMakeVisible(closeBtn);
+    closeBtn.setButtonText("x");
+    closeBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(150, 40, 40));
+    closeBtn.onClick = [this] { window->closeButtonPressed(); };
+
+    if (effect && effect->supportsSidechain() && trackContainer)
+    {
+        addAndMakeVisible(sidechainLabel);
+        sidechainLabel.setText("Sidechain:", juce::dontSendNotification);
+        sidechainLabel.setFont(juce::Font(11.0f));
+        sidechainLabel.setColour(juce::Label::textColourId, juce::Colours::white.withAlpha(0.6f));
+
+        addAndMakeVisible(sidechainSelector);
+        sidechainSelector.addItem("None", 1000); // ID especial para desactivar
+        
+        const auto& tracks = trackContainer->getTracks();
+        for (int i = 0; i < tracks.size(); ++i)
+        {
+            // Evitar que una pista se use a sí misma como sidechain (Feedback loop)
+            // Nota: Aquí necesitaríamos saber en qué pista está el plugin. 
+            // Por simplicidad, listamos todas y el motor gestionará la seguridad.
+            sidechainSelector.addItem(tracks[i]->getName(), tracks[i]->getId());
+        }
+
+        int currentSc = effect->sidechainSourceTrackId.load();
+        if (currentSc == -1) sidechainSelector.setSelectedId(1000, juce::dontSendNotification);
+        else sidechainSelector.setSelectedId(currentSc, juce::dontSendNotification);
+
+        sidechainSelector.onChange = [this] {
+            int selectedId = sidechainSelector.getSelectedId();
+            if (selectedId == 1000) effect->sidechainSourceTrackId.store(-1);
+            else effect->sidechainSourceTrackId.store(selectedId);
+            
+            if (effect->onSidechainChanged) effect->onSidechainChanged();
+        };
+    }
+}
+
+void VSTCustomHeader::paint(juce::Graphics& g)
+{
+    g.fillAll(juce::Colour(20, 22, 25));
+    g.setColour(juce::Colours::white.withAlpha(0.7f));
+    g.setFont(juce::Font(15.0f, juce::Font::bold));
+    
+    // Si hay selector de sidechain, movemos el título a la izquierda
+    if (sidechainSelector.isVisible())
+        g.drawText(window->getName(), 10, 0, getWidth() / 2, getHeight(), juce::Justification::centredLeft);
+    else
+        g.drawText(window->getName(), getLocalBounds(), juce::Justification::centred);
+}
+
+void VSTCustomHeader::resized()
+{
+    int bs = getHeight() - 8;
+    closeBtn.setBounds(getWidth() - bs - 8, 4, bs, bs);
+
+    if (sidechainSelector.isVisible())
+    {
+        int comboW = 120;
+        sidechainSelector.setBounds(getWidth() - bs - 20 - comboW, 5, comboW, getHeight() - 10);
+        sidechainLabel.setBounds(sidechainSelector.getX() - 65, 0, 60, getHeight());
+    }
+}
+
+// ==============================================================================
+// VST HOST IMPLEMENTATION
+// ==============================================================================
 VSTHost::VSTHost()
 {
     formatManager.addDefaultFormats();
@@ -61,33 +135,26 @@ void VSTHost::loadPluginFromPath(const juce::String& path, double sampleRate, st
                 vstPlugin->setPlayHead(&playHead);
 
                 // --- CONFIGURACIÓN DE BUSES (RESTABLECER ESTADO ORIGINAL) ---
-                // No borramos lógica, restauramos la configuración granular de buses
                 juce::AudioProcessor::BusesLayout layout = vstPlugin->getBusesLayout();
                 
-                // Configurar Bus Principal a Stereo si es posible
                 if (layout.inputBuses.size() > 0)
                     layout.inputBuses.getReference(0) = juce::AudioChannelSet::stereo();
                 if (layout.outputBuses.size() > 0)
                     layout.outputBuses.getReference(0) = juce::AudioChannelSet::stereo();
 
-                // Activar Bus de Sidechain (Input 1) a Stereo si existe
                 if (layout.inputBuses.size() > 1) {
                     layout.inputBuses.getReference(1) = juce::AudioChannelSet::stereo();
                 }
 
-                // Intentar aplicar el layout
                 if (!vstPlugin->setBusesLayout(layout)) {
-                    // Fallback a Mono-Stereo dinámico (algunos plugins antiguos)
                     layout = vstPlugin->getBusesLayout();
                 }
 
                 vstPlugin->enableAllBuses();
-                
-                // Reiniciar para asegurar que el plugin procese el nuevo layout
                 vstPlugin->releaseResources();
                 vstPlugin->prepareToPlay(sampleRate, 512);
 
-                vstWindow = std::make_unique<VSTWindow>(vstPlugin.get());
+                // Eliminada la creación inmediata de la ventana para que showWindow la cree con el TrackContainer correcto
                 callback(true);
                 return;
             }
@@ -101,10 +168,16 @@ bool VSTHost::isLoaded() const
     return vstPlugin != nullptr;
 }
 
-void VSTHost::showWindow()
+void VSTHost::showWindow(TrackContainer* container)
 {
-    if (vstWindow != nullptr)
+    if (vstPlugin != nullptr)
     {
+        // Si no hay ventana o el container cambió (necesario para refrescar el selector), la recreamos
+        if (vstWindow == nullptr)
+        {
+            vstWindow = std::make_unique<VSTWindow>(vstPlugin.get(), this, container);
+        }
+        
         vstWindow->setVisible(true);
         vstWindow->toFront(true);
     }
@@ -113,7 +186,6 @@ void VSTHost::showWindow()
 void VSTHost::prepareToPlay(double sampleRate, int maximumExpectedSamplesPerBlock)
 {
     if (vstPlugin != nullptr) {
-        // Reservar buffer de fallback con margen de seguridad (evita allocations en runtime)
         int maxInputChans = vstPlugin->getTotalNumInputChannels();
         int maxOutputChans = vstPlugin->getTotalNumOutputChannels();
         int totalChansNeeded = juce::jmax(maxInputChans, maxOutputChans, 2);
@@ -154,7 +226,6 @@ void VSTHost::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& m
         const int outCh = vstPlugin->getTotalNumOutputChannels();
         const int totalChans = juce::jmax(inCh, outCh);
 
-        // --- DETECCIÓN DE SIDECHAIN ACTIVO ---
         bool hasSidechainBus = false;
         int sidechainBusInputOffset = 0;
         
@@ -166,18 +237,14 @@ void VSTHost::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& m
             }
         }
 
-        // --- CASO 1: PROCESAMIENTO CON SIDECHAIN ---
         if (sidechainBuffer != nullptr && hasSidechainBus) {
-            // Limpiar y preparar buffer de trabajo interno (SIN ALLOCATIONS)
             for (int i = 0; i < totalChans; ++i) fallbackBuffer.clear(i, 0, numSamples);
 
-            // Copiar entrada principal (Normalmente canales 0-1)
             int mainInCh = vstPlugin->getBus(true, 0)->getNumberOfChannels();
             int chansToCopyMain = juce::jmin(buffer.getNumChannels(), mainInCh);
             for (int i = 0; i < chansToCopyMain; ++i)
                 fallbackBuffer.copyFrom(i, 0, buffer, i, 0, numSamples);
 
-            // Copiar sidechain al offset del bus secundario
             int scChToCopy = juce::jmin(sidechainBuffer->getNumChannels(), vstPlugin->getBus(true, 1)->getNumberOfChannels());
             for (int i = 0; i < scChToCopy; ++i)
                 fallbackBuffer.copyFrom(sidechainBusInputOffset + i, 0, *sidechainBuffer, i, 0, numSamples);
@@ -185,12 +252,10 @@ void VSTHost::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& m
             juce::AudioBuffer<float> proxyBuffer(fallbackBuffer.getArrayOfWritePointers(), totalChans, numSamples);
             vstPlugin->processBlock(proxyBuffer, midiMessages);
 
-            // Mapear resultado de vuelta (Stereo Out)
             int chansToRestore = juce::jmin(buffer.getNumChannels(), outCh);
             for (int i = 0; i < chansToRestore; ++i)
                 buffer.copyFrom(i, 0, proxyBuffer, i, 0, numSamples);
         }
-        // --- CASO 2: MAPEO DE CANALES (Si el VST necesita más canales que el host) ---
         else if (totalChans > buffer.getNumChannels()) {
             if (numSamples <= fallbackBuffer.getNumSamples() && totalChans <= fallbackBuffer.getNumChannels()) {
                 for (int i = 0; i < totalChans; ++i) fallbackBuffer.clear(i, 0, numSamples);
@@ -207,7 +272,6 @@ void VSTHost::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& m
                     buffer.copyFrom(i, 0, proxyBuffer, i, 0, numSamples);
             }
         }
-        // --- CASO 3: FAST-PATH (Canales directos) ---
         else {
             int safeChans = juce::jmin(totalChans, buffer.getNumChannels());
             if (safeChans > 0) {
@@ -216,7 +280,6 @@ void VSTHost::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& m
             }
         }
 
-        // Limpieza de canales residuales para evitar ruido
         for (int ch = outCh; ch < buffer.getNumChannels(); ++ch) {
             buffer.clear(ch, 0, numSamples);
         }

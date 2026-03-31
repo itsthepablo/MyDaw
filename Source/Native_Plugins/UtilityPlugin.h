@@ -70,8 +70,8 @@ public:
     bool isBypassed() const override { return bypassed; }
     void setBypassed(bool b) override { bypassed = b; }
 
-    void showWindow() override {
-        // Los plugins nativos no usan ventana flotante
+    void showWindow(TrackContainer* container = nullptr) override {
+        // Los plugins nativos no usan ventana flotante por ahora
     }
 
     void prepareToPlay(double, int) override {
