@@ -124,11 +124,13 @@ void PlaylistComponent::drawMinimap(juce::Graphics& g, juce::Rectangle<int> boun
         int tIdx = -1;
         int currentVisIdx = 0;
         for (int i = 0; i < tracksRef->size(); ++i) {
-            if ((*tracksRef)[i] == clip.trackPtr) {
+            auto* t = (*tracksRef)[i];
+            if (t == clip.trackPtr) {
+                if (!t->isShowingInChildren) { tIdx = -1; break; } // CLIP OCULTO
                 tIdx = currentVisIdx;
                 break;
             }
-            if ((*tracksRef)[i]->isShowingInChildren) currentVisIdx++;
+            if (t->isShowingInChildren) currentVisIdx++;
         }
         if (tIdx == -1) continue;
 
@@ -143,9 +145,14 @@ void PlaylistComponent::drawMinimap(juce::Graphics& g, juce::Rectangle<int> boun
 }
 
 int PlaylistComponent::getTrackY(Track* targetTrack) const {
-    if (!tracksRef) return -1;
+    if (!tracksRef || !targetTrack) return -1;
+    
+    // BUG FIX: Si el track está oculto por una carpeta, los clips NO se dibujan (coordenada Y = -1)
+    if (!targetTrack->isShowingInChildren) return -1;
+
     int topOffset = menuBarH + navigatorH + timelineH;
     int currentY = topOffset - (int)vBar.getCurrentRangeStart();
+    
     for (auto* t : *tracksRef) {
         if (t == targetTrack) return currentY;
         if (t->isShowingInChildren) currentY += (int)trackHeight;
@@ -261,6 +268,9 @@ void PlaylistComponent::paint(juce::Graphics& g) {
     for (int i = 0; i < (int)clips.size(); ++i) {
         const auto& clip = clips[i];
         int yPos = getTrackY(clip.trackPtr);
+        
+        // BUG FIX: Si el track está oculto por una carpeta, yPos será -1. Ignoramos este clip.
+        if (yPos == -1) continue;
 
         int clipTop = yPos;
         int clipBottom = yPos + (int)trackHeight;
@@ -400,12 +410,9 @@ void PlaylistComponent::mouseWheelMove(const juce::MouseEvent& e, const juce::Mo
     if (e.mods.isCtrlDown()) {
         // Zoom Horizontal Detallado - Centrado en el mouse
         double mouseAbsX = getAbsoluteXFromMouse(e.x);
-
         double zoomFactor = (w.deltaY > 0) ? 1.15 : (1.0 / 1.15);
         if (w.isReversed) zoomFactor = 1.0 / zoomFactor;
-
         hZoom = juce::jlimit(0.05, 10.0, hZoom * zoomFactor);
-
         double newStart = (mouseAbsX * hZoom) - e.x;
         hNavigator.setRangeLimits(0.0, getTimelineLength() * hZoom);
         hNavigator.setCurrentRange(newStart, (double)(getWidth() - vBarWidth));
@@ -421,24 +428,16 @@ void PlaylistComponent::mouseWheelMove(const juce::MouseEvent& e, const juce::Mo
         // Zoom Vertical Detallado - Centrado en el mouse (Reaper style)
         double currentMouseY = e.y;
         int topOffset = menuBarH + navigatorH + timelineH;
-
         if (currentMouseY > topOffset) {
             double vS = vBar.getCurrentRangeStart();
             double mouseAbsY = vS + (currentMouseY - topOffset);
-
             double zoomFactor = (w.deltaY > 0) ? 1.15 : (1.0 / 1.15);
             if (w.isReversed) zoomFactor = 1.0 / zoomFactor;
-
             double oldTrackHeight = trackHeight;
             trackHeight = (float)juce::jlimit(30.0, 400.0, trackHeight * zoomFactor);
-
-            if (trackContainer) {
-                trackContainer->setTrackHeight(trackHeight);
-            }
-
+            if (trackContainer) trackContainer->setTrackHeight(trackHeight);
             double heightRatio = trackHeight / oldTrackHeight;
             double newVS = mouseAbsY * heightRatio - (currentMouseY - topOffset);
-
             vBar.setCurrentRange(newVS, (double)(getHeight() - topOffset));
             updateScrollBars();
         }
@@ -450,8 +449,6 @@ void PlaylistComponent::mouseWheelMove(const juce::MouseEvent& e, const juce::Mo
             for (auto* t : *tracksRef) if (t->isShowingInChildren) totalH += (int)trackHeight;
         }
         int topOffset = menuBarH + navigatorH + timelineH;
-
-        // CORRECCIÓN LÍMITE INFERIOR (- 60px)
         double newStart = juce::jlimit(0.0, juce::jmax(0.0, (double)totalH - ((double)getHeight() - topOffset - 60.0)), vBar.getCurrentRangeStart() - (w.deltaY * 100.0));
         vBar.setCurrentRange(newStart, (double)(getHeight() - topOffset - 60.0));
         updateScrollBars();
@@ -491,10 +488,7 @@ void PlaylistComponent::mouseDrag(const juce::MouseEvent& e) {
 }
 
 void PlaylistComponent::mouseUp(const juce::MouseEvent& e) {
-    if (isDraggingTimeline) {
-        isDraggingTimeline = false;
-        return;
-    }
+    if (isDraggingTimeline) { isDraggingTimeline = false; return; }
     if (activeTool) activeTool->mouseUp(e, *this);
 }
 

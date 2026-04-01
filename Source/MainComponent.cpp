@@ -99,10 +99,18 @@ void MainComponent::setupCallbacks() {
             newTrack->commitSnapshot();
         }
         audioEngine.routingMatrix.commitNewTopology(ui.trackContainer.getTracks());
+        
+        // BUG FIX: Sincronizar playlist al añadir tracks (incluyendo carpetas)
+        ui.playlistUI.updateScrollBars();
+        ui.playlistUI.repaint();
         };
 
     ui.trackContainer.onTracksReordered = [this] {
         audioEngine.routingMatrix.commitNewTopology(ui.trackContainer.getTracks());
+        
+        // BUG FIX: Sincronizar playlist tras reordenar o plegar/desplegar carpetas
+        ui.playlistUI.updateScrollBars();
+        ui.playlistUI.repaint();
         };
 
 
