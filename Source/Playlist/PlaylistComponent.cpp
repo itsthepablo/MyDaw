@@ -126,7 +126,7 @@ void PlaylistComponent::drawMinimap(juce::Graphics& g, juce::Rectangle<int> boun
         for (int i = 0; i < tracksRef->size(); ++i) {
             auto* t = (*tracksRef)[i];
             if (t == clip.trackPtr) {
-                if (!t->isShowingInChildren) { tIdx = -1; break; } // CLIP OCULTO
+                if (!t->isShowingInChildren) { tIdx = -1; break; }
                 tIdx = currentVisIdx;
                 break;
             }
@@ -147,7 +147,7 @@ void PlaylistComponent::drawMinimap(juce::Graphics& g, juce::Rectangle<int> boun
 int PlaylistComponent::getTrackY(Track* targetTrack) const {
     if (!tracksRef || !targetTrack) return -1;
     
-    // BUG FIX: Si el track está oculto por una carpeta, los clips NO se dibujan (coordenada Y = -1)
+    // BUG FIX: Si el track está oculto por una carpeta, sus clips NO TIENEN COORDENADA Y (deberían ocultarse)
     if (!targetTrack->isShowingInChildren) return -1;
 
     int topOffset = menuBarH + navigatorH + timelineH;
@@ -262,6 +262,51 @@ void PlaylistComponent::paint(juce::Graphics& g) {
             g.setColour(juce::Colours::black.withAlpha(0.8f)); // Separador mucho más oscuro
             g.fillRect(0.0f, (float)(currentY + (int)trackHeight - 2), (float)getWidth(), 2.0f); // 2 píxeles de grosor puro
             currentY += (int)trackHeight;
+        }
+    }
+
+    // --- NUEVO: RENDERIZADO DE RESÚMENES DE CARPETA (REAPER STYLE) ---
+    if (tracksRef) {
+        for (auto* t : *tracksRef) {
+            if (t->getType() == TrackType::Folder) {
+                int yPos = getTrackY(t);
+                if (yPos == -1) continue;
+
+                // Culling vertical básico para el resumen de la carpeta
+                if (yPos + (int)trackHeight < topOffset || yPos > getHeight()) continue;
+
+                // 1. Recolectar IDs de todos los descendientes (recursivo)
+                std::vector<int> descendantIds;
+                std::function<void(int)> gatherDescendantIds = [&](int pid) {
+                    for (auto* trk : *tracksRef) {
+                        if (trk->parentId == pid) {
+                            descendantIds.push_back(trk->getId());
+                            if (trk->getType() == TrackType::Folder) gatherDescendantIds(trk->getId());
+                        }
+                    }
+                };
+                gatherDescendantIds(t->getId());
+
+                if (descendantIds.empty()) continue;
+
+                // 2. Dibujar resúmenes de clips que pertenezcan a esos descendientes
+                juce::Rectangle<int> summaryArea(0, yPos + 20, getWidth(), (int)trackHeight - 24);
+                for (const auto& clip : clips) {
+                    if (clip.linkedAudio == nullptr) continue;
+
+                    bool isChild = std::find(descendantIds.begin(), descendantIds.end(), clip.trackPtr->getId()) != descendantIds.end();
+                    if (isChild) {
+                        int xPos = (int)(clip.startX * hZoom) - (int)hS;
+                        int wPos = (int)(clip.width * hZoom);
+                        
+                        // Solo renderizar si el clip es visible horizontalmente
+                        if (xPos + wPos > 0 && xPos < getWidth()) {
+                            juce::Rectangle<int> clipSummaryRect(xPos, summaryArea.getY(), wPos, summaryArea.getHeight());
+                            WaveformRenderer::drawWaveformSummary(g, *clip.linkedAudio, clipSummaryRect, t->getColor(), hZoom);
+                        }
+                    }
+                }
+            }
         }
     }
 

@@ -77,12 +77,12 @@ public:
                 int safeStart = std::max(0, startIdx);
                 int safeEnd = std::min((int)cache.size() - 1, endIdx);
                 if (safeStart <= safeEnd) {
-                   peak.maxPos = cache[safeStart].maxPos;
-                   peak.minNeg = cache[safeStart].minNeg;
-                   for (int i = safeStart + 1; i <= safeEnd; ++i) {
-                       peak.maxPos = std::max(peak.maxPos, cache[i].maxPos);
-                       peak.minNeg = std::min(peak.minNeg, cache[i].minNeg);
-                   }
+                    peak.maxPos = cache[safeStart].maxPos;
+                    peak.minNeg = cache[safeStart].minNeg;
+                    for (int i = safeStart + 1; i <= safeEnd; ++i) {
+                        peak.maxPos = std::max(peak.maxPos, cache[i].maxPos);
+                        peak.minNeg = std::min(peak.minNeg, cache[i].minNeg);
+                    }
                 }
             }
             return peak;
@@ -186,6 +186,57 @@ public:
                 g.fillRect((float)currentX, topY, 1.0f, 1.0f);
                 g.fillRect((float)currentX, bottomY, 1.0f, 1.0f);
             }
+        }
+    }
+
+    // ====================================================================================
+    // RENDERIZADO DE RESUMEN (FANTASMA) PARA CARPETAS
+    // ====================================================================================
+    static void drawWaveformSummary(juce::Graphics& g,
+        const AudioClipData& clipData,
+        juce::Rectangle<int> area,
+        juce::Colour color,
+        double hZoom)
+    {
+        const auto& cache = !clipData.cachedPeaksMid.empty() ? clipData.cachedPeaksMid : clipData.cachedPeaksL;
+        if (cache.empty()) return;
+
+        const int width = area.getWidth();
+        const int height = area.getHeight();
+        if (width <= 0 || height <= 0) return;
+
+        float baseW = clipData.originalWidth <= 0 ? clipData.width : clipData.originalWidth;
+        const float originalWidthPx = baseW * (float)hZoom;
+        const float pointsPerPixel = originalWidthPx > 0 ? ((float)cache.size() / originalWidthPx) : 1.0f;
+        const int cacheOffset = (int)(clipData.offsetX * (float)hZoom * pointsPerPixel);
+
+        const float midY = (float)area.getY() + (float)height / 2.0f;
+        const float halfHeight = (float)height * 0.45f; 
+
+        // COLOR BLANCO CON 80% DE OPACIDAD (como pediste para máxima visibilidad)
+        g.setColour(juce::Colours::white.withAlpha(0.8f)); 
+
+        for (int x = 0; x < width; ++x) {
+            int startIdx = (int)(cacheOffset + x * pointsPerPixel);
+            int endIdx = (int)(cacheOffset + (x + 1) * pointsPerPixel);
+            
+            AudioPeak peak;
+            int safeStart = std::max(0, startIdx);
+            int safeEnd = std::min((int)cache.size() - 1, endIdx);
+            
+            if (safeStart < (int)cache.size()) {
+                peak.maxPos = cache[safeStart].maxPos;
+                peak.minNeg = cache[safeStart].minNeg;
+                for (int i = safeStart + 1; i <= safeEnd; ++i) {
+                    peak.maxPos = std::max(peak.maxPos, cache[i].maxPos);
+                    peak.minNeg = std::min(peak.minNeg, cache[i].minNeg);
+                }
+            }
+
+            float topY = midY - (juce::jmin(1.0f, peak.maxPos * 1.05f) * halfHeight);
+            float bottomY = midY - (juce::jmax(-1.0f, peak.minNeg * 1.05f) * halfHeight);
+
+            g.drawVerticalLine(area.getX() + x, topY, bottomY);
         }
     }
 };
