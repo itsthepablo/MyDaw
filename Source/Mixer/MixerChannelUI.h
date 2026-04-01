@@ -317,11 +317,17 @@ public:
 
         if (!isMiniMode) {
             bool dual = track->panningModeDual.load();
-            panToggle.setToggleState(dual, juce::dontSendNotification);
-            panToggle.setButtonText(dual ? "DUAL" : "NORM");
+            // Solo actualizar visibilidad y layout si el estado del modelo
+            // difiere del estado actual de la UI. Esto evita que el timer
+            // interfiera con el onClick del boton panToggle.
+            bool uiDual = panToggle.getToggleState();
+            if (dual != uiDual) {
+                panToggle.setToggleState(dual, juce::dontSendNotification);
+                panToggle.setButtonText(dual ? "DUAL" : "NORM");
+                updatePanVisibility();
+            }
             panL.setValue(track->panL.load(), juce::dontSendNotification);
             panR.setValue(track->panR.load(), juce::dontSendNotification);
-            updatePanVisibility();
         }
 
         muteBtn.setToggleState(track->isMuted, juce::dontSendNotification);
@@ -405,6 +411,8 @@ private:
     void updatePanVisibility() {
         if (isMiniMode) return;
         bool dual = track->panningModeDual.load();
+        // IMPORTANTE: primero establecer visibilidad, luego llamar resized().
+        // JUCE puede omitir el layout de componentes que aun no son visibles.
         panKnob.setVisible(!dual);
         panL.setVisible(dual);
         panR.setVisible(dual);

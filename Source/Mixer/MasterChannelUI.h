@@ -81,4 +81,4 @@ private:
     std::unique_ptr<AdvancedMeter> meter;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MasterChannelUI)
-};
+};

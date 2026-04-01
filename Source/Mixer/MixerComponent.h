@@ -4,6 +4,30 @@
 #include "MixerChannelUI.h" 
 
 // ==============================================================================
+// VIEWPORT SIN INTERCEPCION DE DRAG
+// El Viewport de JUCE por defecto intercepta los eventos mouseDrag para
+// hacer scroll, lo que impide que los Sliders hijos reciban esos eventos.
+// Esta subclase deshabilita ese comportamiento para que el drag llegue
+// directamente a los sliders (faders y knobs).
+// ==============================================================================
+class NonDraggableViewport : public juce::Viewport {
+public:
+    using juce::Viewport::Viewport;
+
+    void mouseDrag(const juce::MouseEvent& e) override {
+        // No propagar al Viewport base: eso causaria scroll y robaria
+        // el evento de los Sliders hijos. Los hijos ya reciben el evento
+        // directamente via el mecanismo de propagacion de JUCE.
+        juce::ignoreUnused(e);
+    }
+
+    void mouseDown(const juce::MouseEvent& e) override {
+        // Tampoco interceptar mouseDown para scroll.
+        juce::ignoreUnused(e);
+    }
+};
+
+// ==============================================================================
 // CONTENEDOR PRINCIPAL DEL MIXER 
 // ==============================================================================
 class MixerComponent : public juce::Component, private juce::Timer {
@@ -47,7 +71,7 @@ private:
     Track* masterTrackPtr = nullptr;
     float masterVolume = 1.0f;
 
-    juce::Viewport viewport;
+    NonDraggableViewport viewport;
     juce::Component contentComp;
     juce::OwnedArray<MixerChannelUI> channels;
 

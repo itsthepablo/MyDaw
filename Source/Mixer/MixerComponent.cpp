@@ -15,15 +15,24 @@ MixerComponent::~MixerComponent() {
 }
 
 void MixerComponent::timerCallback() {
+    if (!isShowing()) return;
+
     if (tracksRef != nullptr) {
-        if (tracksRef->size() != channels.size()) {
+        // Corregir comparación: channels ya incluye el Master (si existe)
+        const int expectedChannels = tracksRef->size() + (masterTrackPtr != nullptr ? 1 : 0);
+        
+        if (expectedChannels != channels.size()) {
             updateChannels();
         }
     }
 
-    // Sincronizar valores de UI con el modelo en cada tick
-    for (auto* c : channels) {
-        c->updateUI();
+    // Sincronizar valores de UI con el modelo SOLO si el usuario no esta
+    // interactuando con ningun control (evita sobreescribir faders/knobs
+    // mientras se arrastra con el mouse).
+    if (!juce::ModifierKeys::getCurrentModifiers().isAnyMouseButtonDown()) {
+        for (auto* c : channels) {
+            c->updateUI();
+        }
     }
 }
 
@@ -90,4 +99,4 @@ void MixerComponent::resized() {
     for (int i = 0; i < channels.size(); ++i) {
         channels[i]->setBounds(i * (channelWidth + 1), 0, channelWidth, channelHeight);
     }
-}
+}
