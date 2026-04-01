@@ -92,9 +92,8 @@ void MainComponent::setupCallbacks() {
             newTrack->instrumentMixBuffer.setSize(2, maxSamples, false, true, false);
             newTrack->tempSynthBuffer.setSize(2, maxSamples, false, true, false);
             newTrack->midSideBuffer.setSize(1, maxSamples, false, true, false);
-            // pdcBuffer NO se pre-aloca para pistas vacias (ahorra 4MB por pista).
-            // Se aloca bajo demanda en allocatePdcBuffer() cuando se carga un plugin.
-            // PDCManager::applyDelay() ya tiene guard 'if (bufferSize == 0) return'.
+            // pdcBuffer se aloca bajo demanda en commitSnapshot() cuando el track
+            // recibe contenido (clips, patterns o plugins). Tracks vacios no lo necesitan.
             // DOUBLE BUFFER: inicializar snapshot vacio antes de exponer el track al audio thread
             newTrack->commitSnapshot();
         }

@@ -342,6 +342,11 @@ public:
 
     void commitSnapshot()
     {
+        // PDC: alocar buffer bajo demanda — solo si el track tiene contenido.
+        // Tracks vacios no consumen los 4MB del ring buffer de retardo.
+        if (!audioClips.isEmpty() || !midiClips.isEmpty() || !plugins.isEmpty() || !notes.empty())
+            allocatePdcBuffer();
+
         auto* snap = new TrackSnapshot();
 
         snap->audioClips.reserve((size_t)audioClips.size());

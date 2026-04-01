@@ -11,12 +11,7 @@ public:
     // ============================================================
     static void applyGainAndPan(Track* track, int numSamples, int hardwareOutChannels) noexcept
     {
-        // 1. PHASE INVERSION (Corregido: Argumentos de applyGain)
-        if (track->isPhaseInverted) {
-            track->audioBuffer.applyGain(0, 0, numSamples, -1.0f);
-            if (track->audioBuffer.getNumChannels() > 1)
-                track->audioBuffer.applyGain(1, 0, numSamples, -1.0f);
-        }
+        // PHASE INVERSION — manejado en GainStationDSP::processPreFX (pre-fader)
 
         // 2. VOLUME & PAN PREP
         float v = track->getVolume();
