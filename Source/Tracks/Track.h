@@ -10,7 +10,7 @@
 #include <cmath>
 #include <atomic>
 
-enum class TrackType { MIDI, Audio };
+enum class TrackType { MIDI, Audio, Folder };
 enum class WaveformViewMode { Combined, SeparateLR, MidSide, Spectrogram }; 
 enum class SendRouting { Stereo, Mid, Side }; 
 
@@ -208,6 +208,7 @@ class Track {
 public:
     Track(int id, juce::String n, TrackType t) : trackId(id), name(n), type(t) {
         color = juce::Colour(juce::Random::getSystemRandom().nextFloat(), 0.6f, 0.8f, 1.0f);
+        if (t == TrackType::Folder) color = juce::Colour(60, 65, 75); // Color por defecto de carpeta
     }
 
     ~Track() {
@@ -267,12 +268,10 @@ public:
     juce::OwnedArray<AudioClipData> audioClips;
     juce::OwnedArray<MidiClipData> midiClips;
 
-    int folderDepthChange = 0;
+    int parentId = -1;
     int folderDepth = 0;
     bool isCollapsed = false;
     bool isShowingInChildren = true;
-    bool isFolderStart = false;
-    bool isFolderEnd = false;
 
     bool isMuted = false;
     bool isSoloed = false;

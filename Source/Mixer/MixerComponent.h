@@ -55,6 +55,7 @@ public:
 
     float getMasterVolume() const { return masterVolume; }
     void setMasterVolume(float v) { masterVolume = v; }
+    void setAudioMutex(juce::CriticalSection* m) { audioMutex = m; }
 
     // --- CALLBACKS PARA EL SISTEMA ---
     std::function<void(Track&)> onAddVST3;
@@ -68,6 +69,7 @@ public:
 
 private:
     const juce::OwnedArray<Track>* tracksRef = nullptr;
+    juce::CriticalSection* audioMutex = nullptr;
     Track* masterTrackPtr = nullptr;
     float masterVolume = 1.0f;
 

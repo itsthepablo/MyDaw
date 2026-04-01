@@ -33,14 +33,27 @@ public:
 
         // --- parentIndices (Estructura de Carpetas para Suma) ---
         newState->parentIndices.resize(n, -1);
-        std::vector<int> parentStack;
+        std::map<int, int> idToIndex;
+        for (int i = 0; i < n; ++i) idToIndex[tracks[i]->getId()] = i;
+
         for (int i = 0; i < n; ++i) {
-            if (!parentStack.empty()) newState->parentIndices[i] = parentStack.back();
-            if (tracks[i]->folderDepthChange == 1) parentStack.push_back(i);
-            else if (tracks[i]->folderDepthChange < 0) {
-                int drops = -tracks[i]->folderDepthChange;
-                for (int d = 0; d < drops; ++d) { if (!parentStack.empty()) parentStack.pop_back(); }
+            int pId = tracks[i]->parentId;
+            if (pId != -1 && idToIndex.count(pId)) {
+                newState->parentIndices[i] = idToIndex[pId];
             }
+        }
+
+        // --- Calcular folderDepth para UI (sangría) ---
+        for (int i = 0; i < n; ++i) {
+            int depth = 0;
+            int curr = newState->parentIndices[i];
+            int safety = 0;
+            while (curr != -1 && safety < 32) {
+                depth++;
+                curr = newState->parentIndices[curr];
+                safety++;
+            }
+            tracks[i]->folderDepth = depth;
         }
 
         // --- childrenOf + initialPendingCounts + notifyList ---
@@ -58,9 +71,7 @@ public:
             }
         }
         
-        // Mapeo rápido de ID a Índice
-        std::map<int, int> idToIndex;
-        for (int i = 0; i < n; ++i) idToIndex[tracks[i]->getId()] = i;
+        // Mapeo rápido de ID a Índice ya está populado en idToIndex
 
         // --- SIDECHAIN DEPENDENCIES ---
         for (int i = 0; i < n; ++i) {

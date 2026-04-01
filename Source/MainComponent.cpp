@@ -15,6 +15,8 @@ MainComponent::MainComponent() {
 
     ui.trackContainer.setExternalMutex(&audioMutex);
     ui.playlistUI.setExternalMutex(&audioMutex);
+    ui.mixerUI.setAudioMutex(&audioMutex);
+    ui.miniMixerUI.setAudioMutex(&audioMutex);
     ui.playlistUI.setTrackContainer(&ui.trackContainer);
     ui.pickerPanelUI.setTrackContainer(&ui.trackContainer);
 

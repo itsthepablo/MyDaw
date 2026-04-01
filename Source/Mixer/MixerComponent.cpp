@@ -1,4 +1,5 @@
 #include "MixerComponent.h"
+#include <memory>
 
 MixerComponent::MixerComponent() {
     addAndMakeVisible(viewport);
@@ -18,8 +19,9 @@ void MixerComponent::timerCallback() {
     if (!isShowing()) return;
 
     if (tracksRef != nullptr) {
-        // En el Mini Mixer, el Master está incluido en el scroll.
-        // En el Mixer grande, el Master es un componente externo fijo.
+        std::unique_ptr<juce::ScopedLock> lock;
+        if (audioMutex != nullptr) lock = std::make_unique<juce::ScopedLock>(*audioMutex);
+
         const int expectedChannels = tracksRef->size() + ((isMiniMixer && masterTrackPtr != nullptr) ? 1 : 0);
         
         if (expectedChannels != channels.size()) {
@@ -27,9 +29,6 @@ void MixerComponent::timerCallback() {
         }
     }
 
-    // Sincronizar valores de UI con el modelo SOLO si el usuario no esta
-    // interactuando con ningun control (evita sobreescribir faders/knobs
-    // mientras se arrastra con el mouse).
     if (!juce::ModifierKeys::getCurrentModifiers().isAnyMouseButtonDown()) {
         for (auto* c : channels) {
             c->updateUI();
@@ -38,14 +37,13 @@ void MixerComponent::timerCallback() {
 }
 
 void MixerComponent::updateChannels() {
+    std::unique_ptr<juce::ScopedLock> lock;
+    if (audioMutex != nullptr) lock = std::make_unique<juce::ScopedLock>(*audioMutex);
+
     channels.clear();
 
-    // 1. EL MASTER SE AÑADE AQUÍ SOLO SI ES MINI MIXER
-    // (En el Mixer grande es un componente externo fijo)
     if (isMiniMixer && masterTrackPtr != nullptr) {
         auto* masterChannel = new MixerChannelUI(masterTrackPtr, isMiniMixer);
-        
-        // Vincular callbacks (igual que los otros canales)
         masterChannel->onOpenPlugin = onOpenPlugin;
         masterChannel->onDeleteEffect = onDeleteEffect;
         masterChannel->onBypassChanged = onBypassChanged;
@@ -58,12 +56,9 @@ void MixerComponent::updateChannels() {
         contentComp.addAndMakeVisible(masterChannel);
     }
 
-    // 2. LUEGO LOS TRACKS DEL PROYECTO
     if (tracksRef != nullptr) {
         for (auto* t : *tracksRef) {
             auto* channel = new MixerChannelUI(t, isMiniMixer);
-            
-            // Vincular callbacks
             channel->onAddVST3 = onAddVST3;
             channel->onAddNativeUtility = onAddNativeUtility;
             channel->onOpenPlugin = onOpenPlugin;
@@ -87,11 +82,9 @@ void MixerComponent::resized() {
     auto b = getLocalBounds();
     viewport.setBounds(b);
 
-    // === EL ALTO MANDA PARA EL ASPECT RATIO ===
     int channelHeight = viewport.getHeight();
     float scale = (float)channelHeight / 600.0f;
     
-    // Si es mini mixer, usamos una base más ancha (130 en lugar de 100)
     int baseWidth = isMiniMixer ? 130 : 100;
     int channelWidth = juce::roundToInt(baseWidth * scale);
 
