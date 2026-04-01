@@ -74,13 +74,14 @@ public:
     float dragStartNoteX = 0.0f;
     float dragStartNoteWidth = 0.0f;
 
-    struct DraggingAutomationNodeInfo {
+    struct DraggingAutoNode {
         AutomationClipData* clip = nullptr;
         int nodeIndex = -1;
-    };
-    DraggingAutomationNodeInfo draggingAutoNode;
+        int tensionNodeIndex = -1;
+    } draggingAutoNode;
 
     juce::CriticalSection* audioMutex = nullptr;
+    AutomationClipData* hoveredAutoClip = nullptr;
 
     const int menuBarH = 34;
     const int navigatorH = 51;

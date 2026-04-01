@@ -30,6 +30,18 @@ public:
                                 }
                             }
 
+                            int hitTensionNodeIdx = -1;
+                            if (hitNodeIdx == -1 && aut->lane.nodes.size() > 1 && p.hoveredAutoClip == aut) {
+                                for (size_t i = 0; i < aut->lane.nodes.size() - 1; ++i) {
+                                    float midTimeX = (aut->lane.nodes[i].x + aut->lane.nodes[i+1].x) * 0.5f;
+                                    float midValY = yPos + p.trackHeight - (aut->lane.getValueAt(midTimeX) * p.trackHeight);
+                                    float screenX = (midTimeX * p.hZoom) - hS;
+                                    if (std::abs(e.x - screenX) < 10.0f && std::abs(e.y - midValY) < 10.0f) {
+                                        hitTensionNodeIdx = (int)i; break;
+                                    }
+                                }
+                            }
+
                             if (e.mods.isRightButtonDown()) {
                                 if (hitNodeIdx != -1) {
                                     aut->lane.nodes.erase(aut->lane.nodes.begin() + hitNodeIdx);
@@ -40,10 +52,14 @@ public:
                             }
 
                             if (e.mods.isLeftButtonDown()) {
+                                if (hitTensionNodeIdx != -1) {
+                                    p.draggingAutoNode = { aut, -1, hitTensionNodeIdx };
+                                    return;
+                                }
                                 if (hitNodeIdx == -1) {
                                     float val = 1.0f - ((float)(e.y - yPos) / p.trackHeight);
                                     val = juce::jlimit(0.0f, 1.0f, val);
-                                    aut->lane.nodes.push_back({ realTime, val, 0.5f });
+                                    aut->lane.nodes.push_back({ realTime, val, 0.0f, AutomationMath::SingleCurve });
                                     
                                     std::sort(aut->lane.nodes.begin(), aut->lane.nodes.end(), [](const AutoNode& a, const AutoNode& b) { return a.x < b.x; });
                                     
@@ -55,7 +71,7 @@ public:
                                     t->commitSnapshot();
                                     p.repaint();
                                 }
-                                p.draggingAutoNode = { aut, hitNodeIdx };
+                                p.draggingAutoNode = { aut, hitNodeIdx, -1 };
                                 return;
                             }
                         }
@@ -209,10 +225,8 @@ public:
 
     void mouseDrag(const juce::MouseEvent& e, PlaylistComponent& p) override {
         // --- Dragging Automatizacion ---
-        if (p.draggingAutoNode.clip != nullptr && p.draggingAutoNode.nodeIndex != -1) {
+        if (p.draggingAutoNode.clip != nullptr) {
             auto* aut = p.draggingAutoNode.clip;
-            int idx = p.draggingAutoNode.nodeIndex;
-            
             Track* targetTrack = nullptr;
             if (p.tracksRef) {
                 for (auto* t : *p.tracksRef) {
@@ -224,30 +238,50 @@ public:
             int yPos = p.getTrackY(targetTrack);
             if (yPos == -1) return;
 
-            float realTime = p.getAbsoluteXFromMouse(e.x);
-            // Ajustar X para que no colapse brutalmente si arrastras el mouse atrás de otro nodo
-            realTime = juce::jmax(0.0f, realTime);
-            
-            float val = 1.0f - ((float)(e.y - yPos) / p.trackHeight);
-            val = juce::jlimit(0.0f, 1.0f, val);
+            if (p.draggingAutoNode.tensionNodeIndex != -1) {
+                int idx = p.draggingAutoNode.tensionNodeIndex;
+                if (idx >= 0 && idx < aut->lane.nodes.size() - 1) {
+                    AutoNode& n0 = aut->lane.nodes[idx];
+                    AutoNode& n1 = aut->lane.nodes[idx + 1];
+                    float vy = 1.0f - ((float)(e.y - yPos) / p.trackHeight);
+                    vy = juce::jlimit(0.0f, 1.0f, vy);
 
-            // Guardamos ID temporal
-            aut->lane.nodes[idx].x = realTime;
-            aut->lane.nodes[idx].value = val;
-            
-            auto currentNode = aut->lane.nodes[idx];
-            std::sort(aut->lane.nodes.begin(), aut->lane.nodes.end(), [](const AutoNode& a, const AutoNode& b) { return a.x < b.x; });
-            for (int i = 0; i < aut->lane.nodes.size(); ++i) {
-                if (std::abs(aut->lane.nodes[i].x - currentNode.x) < 0.00001f && std::abs(aut->lane.nodes[i].value - currentNode.value) < 0.00001f) {
-                    p.draggingAutoNode.nodeIndex = i;
-                    break;
+                    if (std::abs(n1.value - n0.value) > 0.001f) {
+                        float R = (vy - std::min(n0.value, n1.value)) / std::abs(n1.value - n0.value);
+                        R = juce::jlimit(0.01f, 0.99f, R);
+                        float power = std::log(R) / std::log(0.5f);
+                        n0.tension = juce::jlimit(-1.0f, 1.0f, (float)(std::log(power) / std::log(4.0f)));
+                    }
                 }
+                p.repaint();
+                targetTrack->commitSnapshot();  
+                return;
             }
 
-            p.repaint();
-            // Actualización a playback en tiempo real usando el pool concurrente (ya que Lane hace shallow copy cada loop)
-            targetTrack->commitSnapshot();  
-            return;
+            if (p.draggingAutoNode.nodeIndex != -1) {
+                int idx = p.draggingAutoNode.nodeIndex;
+                float realTime = p.getAbsoluteXFromMouse(e.x);
+                realTime = juce::jmax(0.0f, realTime);
+                
+                float val = 1.0f - ((float)(e.y - yPos) / p.trackHeight);
+                val = juce::jlimit(0.0f, 1.0f, val);
+
+                aut->lane.nodes[idx].x = realTime;
+                aut->lane.nodes[idx].value = val;
+                
+                auto currentNode = aut->lane.nodes[idx];
+                std::sort(aut->lane.nodes.begin(), aut->lane.nodes.end(), [](const AutoNode& a, const AutoNode& b) { return a.x < b.x; });
+                for (int i = 0; i < aut->lane.nodes.size(); ++i) {
+                    if (std::abs(aut->lane.nodes[i].x - currentNode.x) < 0.00001f && std::abs(aut->lane.nodes[i].value - currentNode.value) < 0.00001f) {
+                        p.draggingAutoNode.nodeIndex = i;
+                        break;
+                    }
+                }
+
+                p.repaint();
+                targetTrack->commitSnapshot();  
+                return;
+            }
         }
 
         if (p.draggingClipIndex == -1) return;

@@ -405,7 +405,7 @@ void PlaylistComponent::paint(juce::Graphics& g) {
                     if (yPos + (int)trackHeight < topOffset || yPos > getHeight()) continue;
 
                     juce::Rectangle<int> laneRect(0, yPos, getWidth(), (int)trackHeight);
-                    AutomationRenderer::drawAutomationLane(g, laneRect, aut, hZoom, (float)hS);
+                    AutomationRenderer::drawAutomationLane(g, laneRect, aut, hZoom, (float)hS, hoveredAutoClip == aut);
                 }
             }
         }
@@ -582,7 +582,29 @@ void PlaylistComponent::mouseUp(const juce::MouseEvent& e) {
     if (activeTool) activeTool->mouseUp(e, *this);
 }
 
-void PlaylistComponent::mouseMove(const juce::MouseEvent& e) { if (activeTool) activeTool->mouseMove(e, *this); }
+void PlaylistComponent::mouseMove(const juce::MouseEvent& e) {
+    AutomationClipData* newHover = nullptr;
+    if (tracksRef) {
+        for (auto* t : *tracksRef) {
+            if (!t->isShowingInChildren) continue;
+            for (auto* aut : t->automationClips) {
+                if (aut && aut->isShowing) {
+                    int yPos = getTrackY(t);
+                    if (yPos != -1 && e.y >= yPos && e.y <= yPos + trackHeight) {
+                        newHover = aut;
+                        break;
+                    }
+                }
+            }
+            if (newHover) break;
+        }
+    }
+    if (hoveredAutoClip != newHover) {
+        hoveredAutoClip = newHover;
+        repaint();
+    }
+    if (activeTool) activeTool->mouseMove(e, *this);
+}
 
 bool PlaylistComponent::isInterestedInFileDrag(const juce::StringArray&) { return true; }
 void PlaylistComponent::fileDragEnter(const juce::StringArray&, int, int) { isExternalFileDragging = true; repaint(); }

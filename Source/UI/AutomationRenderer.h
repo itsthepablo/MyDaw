@@ -4,7 +4,7 @@
 
 class AutomationRenderer {
 public:
-    static void drawAutomationLane(juce::Graphics& g, const juce::Rectangle<int>& laneRect, const AutomationClipData* aut, float hZoom, float hS) {
+    static void drawAutomationLane(juce::Graphics& g, const juce::Rectangle<int>& laneRect, const AutomationClipData* aut, float hZoom, float hS, bool isHovered = false) {
         if (!aut || !aut->isShowing) return;
 
         // Overlay translúcido sobre el track
@@ -39,6 +39,19 @@ public:
                     g.fillEllipse(screenX - 4.0f, valY - 4.0f, 8.0f, 8.0f);
                     g.setColour(aut->color.brighter());
                     g.drawEllipse(screenX - 4.0f, valY - 4.0f, 8.0f, 8.0f, 1.5f);
+                }
+            }
+
+            if (isHovered && aut->lane.nodes.size() > 1) {
+                for (size_t i = 0; i < aut->lane.nodes.size() - 1; ++i) {
+                    float midTimeX = (aut->lane.nodes[i].x + aut->lane.nodes[i+1].x) * 0.5f;
+                    float midValY = laneRect.getBottom() - (aut->lane.getValueAt(midTimeX) * laneRect.getHeight());
+                    float screenX = (midTimeX * hZoom) - hS;
+                    
+                    if (screenX >= 0 && screenX <= laneRect.getWidth()) {
+                        g.setColour(aut->color.withAlpha(0.6f));
+                        g.fillEllipse(screenX - 3.5f, midValY - 3.5f, 7.0f, 7.0f);
+                    }
                 }
             }
         }
