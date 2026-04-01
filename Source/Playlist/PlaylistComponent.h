@@ -74,6 +74,12 @@ public:
     float dragStartNoteX = 0.0f;
     float dragStartNoteWidth = 0.0f;
 
+    struct DraggingAutomationNodeInfo {
+        AutomationClipData* clip = nullptr;
+        int nodeIndex = -1;
+    };
+    DraggingAutomationNodeInfo draggingAutoNode;
+
     juce::CriticalSection* audioMutex = nullptr;
 
     const int menuBarH = 34;

@@ -9,6 +9,61 @@ public:
     void mouseDown(const juce::MouseEvent& e, PlaylistComponent& p) override {
         p.grabKeyboardFocus();
 
+        // 1. --- Hit-test para Automation Overlays ---
+        if (p.tracksRef) {
+            for (auto* t : *p.tracksRef) {
+                if (!t->isShowingInChildren) continue;
+                for (auto* aut : t->automationClips) {
+                    if (aut && aut->isShowing) {
+                        int yPos = p.getTrackY(t);
+                        if (yPos != -1 && e.y >= yPos && e.y <= yPos + p.trackHeight) {
+                            
+                            float hS = (float)p.hNavigator.getCurrentRangeStart();
+                            float realTime = p.getAbsoluteXFromMouse(e.x);
+                            
+                            int hitNodeIdx = -1;
+                            for (size_t i = 0; i < aut->lane.nodes.size(); ++i) {
+                                float screenX = (aut->lane.nodes[i].x * p.hZoom) - hS;
+                                float screenY = yPos + p.trackHeight - (aut->lane.nodes[i].value * p.trackHeight);
+                                if (std::abs(e.x - screenX) < 10.0f && std::abs(e.y - screenY) < 10.0f) {
+                                    hitNodeIdx = (int)i; break;
+                                }
+                            }
+
+                            if (e.mods.isRightButtonDown()) {
+                                if (hitNodeIdx != -1) {
+                                    aut->lane.nodes.erase(aut->lane.nodes.begin() + hitNodeIdx);
+                                    t->commitSnapshot();
+                                    p.repaint();
+                                }
+                                return;
+                            }
+
+                            if (e.mods.isLeftButtonDown()) {
+                                if (hitNodeIdx == -1) {
+                                    float val = 1.0f - ((float)(e.y - yPos) / p.trackHeight);
+                                    val = juce::jlimit(0.0f, 1.0f, val);
+                                    aut->lane.nodes.push_back({ realTime, val, 0.5f });
+                                    
+                                    std::sort(aut->lane.nodes.begin(), aut->lane.nodes.end(), [](const AutoNode& a, const AutoNode& b) { return a.x < b.x; });
+                                    
+                                    for (size_t i = 0; i < aut->lane.nodes.size(); ++i) {
+                                        if (aut->lane.nodes[i].x == realTime && aut->lane.nodes[i].value == val) {
+                                            hitNodeIdx = (int)i; break;
+                                        }
+                                    }
+                                    t->commitSnapshot();
+                                    p.repaint();
+                                }
+                                p.draggingAutoNode = { aut, hitNodeIdx };
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         int cIdx = p.getClipAt(e.x, e.y);
 
         if (cIdx != -1) {
@@ -153,6 +208,48 @@ public:
     }
 
     void mouseDrag(const juce::MouseEvent& e, PlaylistComponent& p) override {
+        // --- Dragging Automatizacion ---
+        if (p.draggingAutoNode.clip != nullptr && p.draggingAutoNode.nodeIndex != -1) {
+            auto* aut = p.draggingAutoNode.clip;
+            int idx = p.draggingAutoNode.nodeIndex;
+            
+            Track* targetTrack = nullptr;
+            if (p.tracksRef) {
+                for (auto* t : *p.tracksRef) {
+                    if (t->getId() == aut->targetTrackId) { targetTrack = t; break; }
+                }
+            }
+            if (!targetTrack) return;
+
+            int yPos = p.getTrackY(targetTrack);
+            if (yPos == -1) return;
+
+            float realTime = p.getAbsoluteXFromMouse(e.x);
+            // Ajustar X para que no colapse brutalmente si arrastras el mouse atrás de otro nodo
+            realTime = juce::jmax(0.0f, realTime);
+            
+            float val = 1.0f - ((float)(e.y - yPos) / p.trackHeight);
+            val = juce::jlimit(0.0f, 1.0f, val);
+
+            // Guardamos ID temporal
+            aut->lane.nodes[idx].x = realTime;
+            aut->lane.nodes[idx].value = val;
+            
+            auto currentNode = aut->lane.nodes[idx];
+            std::sort(aut->lane.nodes.begin(), aut->lane.nodes.end(), [](const AutoNode& a, const AutoNode& b) { return a.x < b.x; });
+            for (int i = 0; i < aut->lane.nodes.size(); ++i) {
+                if (std::abs(aut->lane.nodes[i].x - currentNode.x) < 0.00001f && std::abs(aut->lane.nodes[i].value - currentNode.value) < 0.00001f) {
+                    p.draggingAutoNode.nodeIndex = i;
+                    break;
+                }
+            }
+
+            p.repaint();
+            // Actualización a playback en tiempo real usando el pool concurrente (ya que Lane hace shallow copy cada loop)
+            targetTrack->commitSnapshot();  
+            return;
+        }
+
         if (p.draggingClipIndex == -1) return;
 
         float absX = p.getAbsoluteXFromMouse(e.x);
@@ -226,6 +323,20 @@ public:
     }
 
     void mouseUp(const juce::MouseEvent& e, PlaylistComponent& p) override {
+        // --- Drop Automatizacion ---
+        if (p.draggingAutoNode.clip != nullptr) {
+            if (p.tracksRef) {
+                for (auto* t : *p.tracksRef) {
+                    if (t->getId() == p.draggingAutoNode.clip->targetTrackId) {
+                        t->commitSnapshot();
+                        break;
+                    }
+                }
+            }
+            p.draggingAutoNode = { nullptr, -1 };
+            return;
+        }
+
         if (p.draggingClipIndex != -1) {
             auto& clip = p.clips[p.draggingClipIndex];
 

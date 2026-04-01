@@ -40,6 +40,7 @@ public:
 
     juce::OwnedArray<AudioClipData> unusedAudioPool;
     juce::OwnedArray<MidiClipData> unusedMidiPool;
+    juce::OwnedArray<AutomationClipData> automationPool;
 
     // --- NUEVO: Contenedor para CLIPPING automático ---
     struct TrackContent : public juce::Component {
@@ -182,6 +183,32 @@ public:
         } else {
             for (int i = unusedAudioPool.size() - 1; i >= 0; --i) if (unusedAudioPool[i]->name == name) unusedAudioPool.remove(i, true);
         }
+    }
+
+    AutomationClipData* createAutomation(int targetTrackId, int parameterId, const juce::String& paramName) {
+        std::unique_ptr<juce::ScopedLock> lock;
+        if (audioMutex != nullptr) lock = std::make_unique<juce::ScopedLock>(*audioMutex);
+
+        for (auto* a : automationPool) {
+            if (a->targetTrackId == targetTrackId && a->parameterId == parameterId) return a;
+        }
+
+        Track* target = nullptr;
+        for (auto* t : tracks) { if (t->getId() == targetTrackId) { target = t; break; } }
+        if (!target) return nullptr;
+
+        auto* a = new AutomationClipData();
+        a->name = target->getName() + " - " + paramName;
+        a->targetTrackId = targetTrackId;
+        a->parameterId = parameterId;
+        a->color = target->getColor();
+        a->lane.defaultValue = (parameterId == 0) ? 0.8f : 0.0f; // 0.8 is default volume, 0.0 is center pan
+        
+        automationPool.add(a);
+        target->automationClips.push_back(a);
+        target->commitSnapshot();
+        if (onActiveTrackChanged) onActiveTrackChanged(target); // Force UI refresh
+        return a;
     }
 
     void setVOffset(int newOffset) {

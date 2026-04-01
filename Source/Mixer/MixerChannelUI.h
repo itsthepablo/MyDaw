@@ -367,6 +367,13 @@ public:
         trackName.setFont(juce::Font(13.0f, juce::Font::bold));
         addAndMakeVisible(trackName);
 
+        fader.addMouseListener(this, false);
+        panKnob.addMouseListener(this, false);
+        if (!isMiniMode) {
+            panL.addMouseListener(this, false);
+            panR.addMouseListener(this, false);
+        }
+
         updateUI();
     }
 
@@ -458,8 +465,30 @@ public:
     std::function<void(Track&)> onAddVST3, onAddNativeUtility, onAddSend;
     std::function<void(Track&, int)> onOpenPlugin, onDeleteEffect, onDeleteSend;
     std::function<void(Track&, int, bool)> onBypassChanged;
+    std::function<void(Track&, int, juce::String)> onCreateAutomation;
+
+    void mouseDown(const juce::MouseEvent& e) override {
+        if (e.mods.isPopupMenu()) {
+            if (e.originalComponent == &fader) {
+                showAutomationMenu(0, "Volume");
+            }
+            else if (e.originalComponent == &panKnob || e.originalComponent == &panL || e.originalComponent == &panR) {
+                showAutomationMenu(1, "Pan");
+            }
+        }
+    }
 
 private:
+    void showAutomationMenu(int paramId, const juce::String& paramName) {
+        juce::PopupMenu m;
+        m.addItem(1, "Create Automation Clip");
+        m.showMenuAsync(juce::PopupMenu::Options(), [this, paramId, paramName](int res) {
+            if (res == 1 && onCreateAutomation) {
+                onCreateAutomation(*track, paramId, paramName);
+            }
+        });
+    }
+
     void setupButton(juce::TextButton& btn, juce::String text, juce::Colour onCol) {
         btn.setButtonText(text); btn.setClickingTogglesState(true);
         btn.setColour(juce::TextButton::buttonOnColourId, onCol);

@@ -9,19 +9,21 @@
 struct PickerItem {
     juce::String name;
     juce::Colour color;
-    bool isMidi;
+    int type; // 0 = Audio, 1 = Midi, 2 = Automation
     AudioClipData* audioRef = nullptr;
     MidiClipData* midiRef = nullptr;
+    AutomationClipData* autoRef = nullptr;
     int useCount = 0;
 
     bool operator==(const PickerItem& other) const {
-        return name == other.name && color == other.color && isMidi == other.isMidi && useCount == other.useCount;
+        return name == other.name && color == other.color && type == other.type && useCount == other.useCount;
     }
 };
 
 class PickerPanel : public juce::Component, public juce::ListBoxModel, private juce::Timer {
 public:
-    std::function<void(juce::String, bool)> onDeleteRequested;
+    std::function<void(juce::String, int)> onDeleteRequested;
+    std::function<void(AutomationClipData*)> onAutomationSelected;
 
     PickerPanel() {
         addAndMakeVisible(headerLabel);
@@ -50,16 +52,21 @@ public:
 
         // 1. Escaneamos los tracks activos (suman 1 al useCount)
         for (auto* t : trackContainer->getTracks()) {
-            for (auto* a : t->audioClips) newItems.push_back({ a->name, t->getColor(), false, a, nullptr, 1 });
-            for (auto* m : t->midiClips) newItems.push_back({ m->name, t->getColor(), true, nullptr, m, 1 });
+            for (auto* a : t->audioClips) newItems.push_back({ a->name, t->getColor(), 0, a, nullptr, nullptr, 1 });
+            for (auto* m : t->midiClips) newItems.push_back({ m->name, t->getColor(), 1, nullptr, m, nullptr, 1 });
         }
 
         // 2. Escaneamos el pool de inactivos (suman 0 al useCount)
         for (auto* a : trackContainer->unusedAudioPool) {
-            newItems.push_back({ a->name, juce::Colours::darkgrey, false, a, nullptr, 0 });
+            newItems.push_back({ a->name, juce::Colours::darkgrey, 0, a, nullptr, nullptr, 0 });
         }
         for (auto* m : trackContainer->unusedMidiPool) {
-            newItems.push_back({ m->name, m->color, true, nullptr, m, 0 });
+            newItems.push_back({ m->name, m->color, 1, nullptr, m, nullptr, 0 });
+        }
+        
+        // 3. Escaneamos automaciones 
+        for (auto* aut : trackContainer->automationPool) {
+            newItems.push_back({ aut->name, aut->color, 2, nullptr, nullptr, aut, aut->isShowing ? 1 : 0 });
         }
 
         std::vector<PickerItem> uniqueItems;
@@ -100,22 +107,40 @@ public:
         if (row < 0 || row >= items.size()) return {};
 
         auto& item = items[row];
-        juce::String type = item.isMidi ? "MIDI" : "AUDIO";
-        return "PickerDrag|" + type + "|" + item.name;
+        juce::String typeStr = item.type == 1 ? "MIDI" : (item.type == 2 ? "AUTOMATION" : "AUDIO");
+        return "PickerDrag|" + typeStr + "|" + item.name;
     }
 
     // --- NUEVO: Clic Derecho para borrado permanente ---
     void listBoxItemClicked(int row, const juce::MouseEvent& e) override {
+        if (row < 0 || row >= items.size()) return;
+        auto item = items[row];
+                
         if (e.mods.isRightButtonDown()) {
             listBox.selectRow(row);
             juce::PopupMenu m;
             m.addItem(1, "Eliminar permanentemente");
-            m.showMenuAsync(juce::PopupMenu::Options(), [this, row](int res) {
-                if (res == 1 && row >= 0 && row < items.size()) {
-                    auto item = items[row];
-                    if (onDeleteRequested) onDeleteRequested(item.name, item.isMidi);
+            m.showMenuAsync(juce::PopupMenu::Options(), [this, row, item](int res) {
+                if (res == 1) {
+                    if (onDeleteRequested) onDeleteRequested(item.name, item.type);
                 }
-                });
+            });
+        }
+        else if (e.mods.isLeftButtonDown()) {
+            if (item.type == 2 && item.autoRef && trackContainer) {
+                bool wasShowing = item.autoRef->isShowing;
+                for (auto* aut : trackContainer->automationPool) {
+                    if (aut && aut->targetTrackId == item.autoRef->targetTrackId) {
+                        aut->isShowing = false;
+                    }
+                }
+                item.autoRef->isShowing = !wasShowing;
+                trackContainer->repaint();
+                if (auto* top = getTopLevelComponent()) top->repaint();
+                
+                if (onAutomationSelected) onAutomationSelected(item.autoRef);
+                refreshList();
+            }
         }
     }
 
@@ -130,13 +155,20 @@ public:
         g.setColour(item.color.withAlpha(0.2f));
         g.fillRoundedRectangle(clipRect.toFloat(), 4.0f);
 
-        if (item.isMidi && item.midiRef != nullptr) {
+        if (item.type == 1 && item.midiRef != nullptr) {
             float miniZoom = (float)clipRect.getWidth() / std::max(10.0f, item.midiRef->width);
             float startOffset = item.midiRef->startX * miniZoom;
             MidiClipRenderer::drawMidiClip(g, *item.midiRef, clipRect, item.color, false, miniZoom, startOffset);
         }
-        else if (!item.isMidi && item.audioRef != nullptr) {
+        else if (item.type == 0 && item.audioRef != nullptr) {
             WaveformRenderer::drawWaveform(g, *item.audioRef, clipRect, item.color, WaveformViewMode::Combined);
+        }
+        else if (item.type == 2 && item.autoRef != nullptr) {
+            g.setColour(item.color.brighter());
+            float cy = clipRect.getCentreY();
+            g.drawHorizontalLine((int)cy, (float)clipRect.getX() + 5.0f, (float)clipRect.getRight() - 5.0f);
+            g.fillEllipse((float)clipRect.getX() + 5.0f, cy - 3.0f, 6.0f, 6.0f);
+            g.fillEllipse((float)clipRect.getRight() - 11.0f, cy - 3.0f, 6.0f, 6.0f);
         }
 
         g.setColour(item.color.withAlpha(0.6f));

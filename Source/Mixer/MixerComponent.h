@@ -67,6 +67,8 @@ public:
     std::function<void(Track&)> onAddSend;
     std::function<void(Track&, int)> onDeleteSend;
 
+    std::function<void(Track&, int, juce::String)> onCreateAutomation;
+
 private:
     const juce::OwnedArray<Track>* tracksRef = nullptr;
     juce::CriticalSection* audioMutex = nullptr;
