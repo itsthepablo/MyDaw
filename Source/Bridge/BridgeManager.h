@@ -18,6 +18,7 @@ struct BridgeDependencies {
     PianoRollComponent& pianoRollUI;
     MixerComponent& mixerUI;
     MixerComponent& miniMixerUI;
+    MixerChannelUI* masterChannelUI; // NUEVO - El Master Channel complejo
     EffectsPanel& effectsPanelUI;
     InstrumentPanel& instrumentPanelUI; // <-- NUEVO
     TransportBar& transportBar;

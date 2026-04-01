@@ -4,7 +4,6 @@
 #include "../../Playlist/PlaylistComponent.h"
 #include "../../PianoRoll/PianoRollComponent.h"
 #include "../../Mixer/MixerComponent.h"
-#include "../../Mixer/MasterChannelUI.h"
 #include "../../UI/BottomDock.h"
 #include "../../UI/BottomDockResizer.h"
 #include "../../UI/LeftSidebar.h"
@@ -34,7 +33,7 @@ struct LayoutDependencies {
     juce::TextButton& closePianoRollBtn;
     
     MixerComponent& mixerUI;
-    MasterChannelUI& masterChannelUI;
+    MixerChannelUI& masterChannelUI;
     
     TrackContainer& trackContainer;
     PlaylistComponent& playlistUI;

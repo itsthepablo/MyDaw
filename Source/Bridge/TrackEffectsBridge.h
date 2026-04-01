@@ -12,6 +12,7 @@ public:
         EffectsPanel& ui,
         MixerComponent& mixerUI,
         MixerComponent& miniMixerUI,
+        MixerChannelUI* masterChannelUI, // NUEVO - El Master Channel complejo
         juce::CriticalSection& audioMutex,
         double& sampleRate,
         int& blockSize,
@@ -19,10 +20,11 @@ public:
         std::function<void()> onEffectsOpened)
     {
         // --- HELPER PARA SINCRONIZAR TODAS LAS UIs ---
-        auto refreshUIs = [&ui, &mixerUI, &miniMixerUI]() {
+        auto refreshUIs = [&ui, &mixerUI, &miniMixerUI, masterChannelUI]() {
             ui.updateSlots();
             mixerUI.updateChannels();
             miniMixerUI.updateChannels();
+            if (masterChannelUI) masterChannelUI->updateUI();
         };
 
         container.onOpenEffects = [&ui, onEffectsOpened](Track& t) {
@@ -58,6 +60,7 @@ public:
         ui.onAddVST3 = addVST3Action;
         mixerUI.onAddVST3 = addVST3Action;
         miniMixerUI.onAddVST3 = addVST3Action;
+        if (masterChannelUI) masterChannelUI->onAddVST3 = addVST3Action;
 
         // --- LÓGICA COMPARTIDA NATIVO ---
         auto addNativeAction = [&audioMutex, &sampleRate, &blockSize, refreshUIs, &engine, &container](Track& t) {
@@ -79,6 +82,7 @@ public:
         ui.onAddNativeUtility = addNativeAction;
         mixerUI.onAddNativeUtility = addNativeAction;
         miniMixerUI.onAddNativeUtility = addNativeAction;
+        if (masterChannelUI) masterChannelUI->onAddNativeUtility = addNativeAction;
 
         // --- OPEN / BYPASS / DELETE ---
         auto openEffectAction = [&container](Track& t, int idx) {
@@ -89,6 +93,7 @@ public:
         ui.onOpenEffect = openEffectAction;
         mixerUI.onOpenPlugin = openEffectAction;
         miniMixerUI.onOpenPlugin = openEffectAction;
+        if (masterChannelUI) masterChannelUI->onOpenPlugin = openEffectAction;
 
         auto bypassAction = [&audioMutex, refreshUIs](Track& t, int idx, bool bypassed) {
             juce::ScopedLock sl(audioMutex);
@@ -100,6 +105,7 @@ public:
         ui.onBypassChanged = bypassAction;
         mixerUI.onBypassChanged = bypassAction;
         miniMixerUI.onBypassChanged = bypassAction;
+        if (masterChannelUI) masterChannelUI->onBypassChanged = bypassAction;
 
         auto deleteEffectAction = [&audioMutex, refreshUIs, &engine, &container](Track& t, int idx) {
             juce::ScopedLock sl(audioMutex);
@@ -112,6 +118,7 @@ public:
         ui.onDeleteEffect = deleteEffectAction;
         mixerUI.onDeleteEffect = deleteEffectAction;
         miniMixerUI.onDeleteEffect = deleteEffectAction;
+        if (masterChannelUI) masterChannelUI->onDeleteEffect = deleteEffectAction;
 
         // --- ENVÍOS ---
         auto addSendAction = [&engine, &container, refreshUIs](Track& t) {
@@ -122,6 +129,7 @@ public:
         ui.onAddSend = addSendAction;
         mixerUI.onAddSend = addSendAction;
         miniMixerUI.onAddSend = addSendAction;
+        if (masterChannelUI) masterChannelUI->onAddSend = addSendAction;
 
         auto deleteSendAction = [&engine, &container, refreshUIs](Track& t, int idx) {
             if (idx >= 0 && idx < (int)t.sends.size()) {
@@ -133,6 +141,7 @@ public:
         ui.onDeleteSend = deleteSendAction;
         mixerUI.onDeleteSend = deleteSendAction;
         miniMixerUI.onDeleteSend = deleteSendAction;
+        if (masterChannelUI) masterChannelUI->onDeleteSend = deleteSendAction;
 
         ui.onChangeSend = [&engine, &container](Track& t) {
             engine.routingMatrix.commitNewTopology(container.getTracks());

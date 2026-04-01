@@ -15,19 +15,24 @@ void UIManager::setupUI(DAWUIComponents& ui, juce::Component& parent, std::funct
     parent.addAndMakeVisible(ui.bottomDockResizer);
     parent.addAndMakeVisible(ui.bottomDock);
     parent.addAndMakeVisible(ui.mixerUI);
-    parent.addAndMakeVisible(ui.masterChannelUI);
+    // masterChannelUI se añade abajo después de ser creado
     parent.addAndMakeVisible(ui.pianoRollUI);
     parent.addAndMakeVisible(ui.closePianoRollBtn);
 
     // --- MASTER TRACK ---
     ui.masterTrackObj = std::make_unique<Track>(0, "Master", TrackType::Audio);
+    
+    // Crear el Master Channel UI real (complejo)
+    ui.masterChannelUI = std::make_unique<MixerChannelUI>(ui.masterTrackObj.get());
+    parent.addAndMakeVisible(*ui.masterChannelUI);
+
     ui.masterStrip.setMasterTrack(ui.masterTrackObj.get());
     parent.addAndMakeVisible(ui.masterStrip);
 
     ui.pianoRollUI.setVisible(false);
     ui.closePianoRollBtn.setVisible(false);
     ui.mixerUI.setVisible(false);
-    ui.masterChannelUI.setVisible(false);
+    if (ui.masterChannelUI) ui.masterChannelUI->setVisible(false);
     ui.masterStrip.setVisible(true);
 
     ui.closePianoRollBtn.setButtonText("Cerrar Piano Roll");

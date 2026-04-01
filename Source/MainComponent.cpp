@@ -162,7 +162,8 @@ void MainComponent::setupCallbacks() {
 
 void MainComponent::setupBridges() {
     BridgeManager::initializeAllBridges({
-        ui.trackContainer, ui.playlistUI, ui.pianoRollUI, ui.mixerUI, ui.miniMixerUI, ui.effectsPanelUI,
+        ui.trackContainer, ui.playlistUI, ui.pianoRollUI, ui.mixerUI, ui.miniMixerUI, 
+        ui.masterChannelUI.get(), ui.effectsPanelUI,
         ui.instrumentPanelUI, 
         ui.transportBar, ui.topMenuBar, ui.bottomDock, ui.leftSidebar, audioEngine, audioMutex,
         isBottomDockVisible, isLeftSidebarVisible,
@@ -337,7 +338,7 @@ void MainComponent::startExport() {
 void MainComponent::resized() {
     LayoutHandler::performLayout({
         getLocalBounds(), ui.topMenuBar, ui.hintPanel, ui.resourceMeter.get(), ui.transportBar,
-        ui.pianoRollUI, ui.closePianoRollBtn, ui.mixerUI, ui.masterChannelUI, ui.trackContainer, ui.playlistUI,
+        ui.pianoRollUI, ui.closePianoRollBtn, ui.mixerUI, *ui.masterChannelUI, ui.trackContainer, ui.playlistUI,
         ui.bottomDock, ui.bottomDockResizer, ui.leftSidebar, ui.sidebarResizer, ui.masterStrip,
         currentView, isPianoRollVisible, isBottomDockVisible, bottomDockHeight, isLeftSidebarVisible, leftSidebarWidth
         });

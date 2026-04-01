@@ -4,7 +4,7 @@
 #include "../Playlist/PlaylistComponent.h"
 #include "../PianoRoll/PianoRollComponent.h"
 #include "../Mixer/MixerComponent.h"
-#include "../Mixer/MasterChannelUI.h" 
+// MasterChannelUI eliminado - se usará MixerChannelUI para el Master
 #include "../Effects/EffectsPanel.h"
 #include "../Instruments/InstrumentPanel.h"
 #include "../UI/TransportBar.h"
@@ -29,8 +29,10 @@ struct DAWUIComponents {
     juce::TextButton closePianoRollBtn;
     MixerComponent mixerUI;
     MixerComponent miniMixerUI;
-    MasterChannelUI masterChannelUI{ [this] { return mixerUI.getMasterVolume(); }, 
-                                     [this](float v) { mixerUI.setMasterVolume(v); } };
+    
+    // Master Channel ahora es un MixerChannelUI completo
+    std::unique_ptr<MixerChannelUI> masterChannelUI;
+
     ChannelRackPanel rackPanelUI;
     EffectsPanel effectsPanelUI;
     InstrumentPanel instrumentPanelUI;

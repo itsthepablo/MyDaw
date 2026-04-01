@@ -18,8 +18,9 @@ void MixerComponent::timerCallback() {
     if (!isShowing()) return;
 
     if (tracksRef != nullptr) {
-        // Corregir comparación: channels ya incluye el Master (si existe)
-        const int expectedChannels = tracksRef->size() + (masterTrackPtr != nullptr ? 1 : 0);
+        // En el Mini Mixer, el Master está incluido en el scroll.
+        // En el Mixer grande, el Master es un componente externo fijo.
+        const int expectedChannels = tracksRef->size() + ((isMiniMixer && masterTrackPtr != nullptr) ? 1 : 0);
         
         if (expectedChannels != channels.size()) {
             updateChannels();
@@ -39,13 +40,19 @@ void MixerComponent::timerCallback() {
 void MixerComponent::updateChannels() {
     channels.clear();
 
-    // 1. PRIMERO EL CANAL MASTER (si existe)
-    if (masterTrackPtr != nullptr) {
+    // 1. EL MASTER SE AÑADE AQUÍ SOLO SI ES MINI MIXER
+    // (En el Mixer grande es un componente externo fijo)
+    if (isMiniMixer && masterTrackPtr != nullptr) {
         auto* masterChannel = new MixerChannelUI(masterTrackPtr, isMiniMixer);
-        // El master no suele tener sends o borrado en el mezclador, pero vinculamos los básicos
+        
+        // Vincular callbacks (igual que los otros canales)
         masterChannel->onOpenPlugin = onOpenPlugin;
         masterChannel->onDeleteEffect = onDeleteEffect;
         masterChannel->onBypassChanged = onBypassChanged;
+        masterChannel->onAddVST3 = onAddVST3;
+        masterChannel->onAddNativeUtility = onAddNativeUtility;
+        masterChannel->onAddSend = onAddSend;
+        masterChannel->onDeleteSend = onDeleteSend;
         
         channels.add(masterChannel);
         contentComp.addAndMakeVisible(masterChannel);

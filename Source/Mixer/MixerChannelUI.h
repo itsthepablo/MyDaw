@@ -10,6 +10,22 @@ public:
     MixerLookAndFeel() {
         setColour(juce::Slider::thumbColourId, juce::Colour(200, 200, 200));
         setColour(juce::Slider::trackColourId, juce::Colour(30, 30, 30));
+        setColour(juce::ScrollBar::thumbColourId, juce::Colour(60, 60, 60));
+        setColour(juce::ScrollBar::backgroundColourId, juce::Colours::transparentBlack);
+    }
+    
+    void drawScrollbarButton(juce::Graphics&, juce::ScrollBar&, int, int, int, bool, bool, bool) override {}
+    void drawScrollbar(juce::Graphics& g, juce::ScrollBar& s, int x, int y, int width, int height,
+                       bool isVertical, int thumbStart, int thumbSize, bool isMouseOver, bool isMouseDown) override {
+        juce::ignoreUnused(isMouseOver, isMouseDown);
+        auto b = juce::Rectangle<int>(x, y, width, height).toFloat().reduced(2.0f);
+        g.setColour(s.findColour(juce::ScrollBar::backgroundColourId));
+        g.fillRoundedRectangle(b, 2.0f);
+        if (thumbSize > 0) {
+            g.setColour(s.findColour(juce::ScrollBar::thumbColourId).withAlpha(isMouseOver ? 0.8f : 0.4f));
+            if (isVertical) g.fillRoundedRectangle(b.getX() + 1, (float)thumbStart, b.getWidth() - 2, (float)thumbSize, 2.0f);
+            else g.fillRoundedRectangle((float)thumbStart, b.getY() + 1, (float)thumbSize, b.getHeight() - 2, 2.0f);
+        }
     }
 
     void drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height, float sliderPos,
@@ -148,7 +164,7 @@ public:
     }
 
     void paint(juce::Graphics& g) override {
-        auto b = getLocalBounds().reduced(1);
+        auto b = getLocalBounds().reduced(2);
         bool hasPlugin = track && index < track->plugins.size();
         bool bypassed = hasPlugin && track->plugins[index]->isBypassed();
 
@@ -170,7 +186,7 @@ public:
         }
     }
 
-    void resized() override { bypassBtn.setBounds(2, 2, 16, getHeight() - 4); }
+    void resized() override { bypassBtn.setBounds(4, 4, 16, getHeight() - 8); }
 
     void mouseDown(const juce::MouseEvent& e) override {
         if (bypassBtn.getBounds().contains(e.getPosition())) return;
@@ -202,7 +218,7 @@ class SendSlot : public juce::Component {
 public:
     SendSlot(Track* t, int idx) : track(t), index(idx) {}
     void paint(juce::Graphics& g) override {
-        auto b = getLocalBounds().reduced(1);
+        auto b = getLocalBounds().reduced(2);
         bool hasSend = track && index < track->sends.size();
         g.setColour(hasSend ? juce::Colour(35, 60, 45) : juce::Colour(20, 25, 20));
         g.fillRoundedRectangle(b.toFloat(), 2.0f);
@@ -227,32 +243,75 @@ private:
 };
 
 // ==============================================================================
-// 4. CANAL PRINCIPAL DEL MIXER (Restauración de Dual Pan para modo principal)
+// 4. CANAL PRINCIPAL DEL MIXER (Raks Escroleables)
 // ==============================================================================
 class MixerChannelUI : public juce::Component {
 public:
-    MixerChannelUI(Track* t, bool miniMode = false) : track(t), meter(t), isMiniMode(miniMode) {
+    class FXRack : public juce::Component {
+    public:
+        FXRack(Track* t, MixerChannelUI* p) : track(t), parent(p) {}
+        void syncSlots() {
+            int needed = std::max(10, track->plugins.size() + 1);
+            while (slots.size() < needed) {
+                auto* s = new PluginSlot(track, slots.size());
+                s->onOpenPlugin = [this](int idx) { if (parent->onOpenPlugin) parent->onOpenPlugin(*track, idx); };
+                s->onBypassChanged = [this](int idx, bool b) { if (parent->onBypassChanged) parent->onBypassChanged(*track, idx, b); };
+                s->onAddNativeUtility = [this](int idx) { if (parent->onAddNativeUtility) parent->onAddNativeUtility(*track); };
+                s->onAddVST3 = [this](int idx) { if (parent->onAddVST3) parent->onAddVST3(*track); };
+                s->onDeletePlugin = [this](int idx) { if (parent->onDeleteEffect) parent->onDeleteEffect(*track, idx); };
+                slots.add(s);
+                addAndMakeVisible(s);
+            }
+            while (slots.size() > needed) slots.remove(slots.size() - 1);
+            for (auto* s : slots) s->syncWithModel();
+            resized();
+        }
+        void resized() override {
+            int h = 18;
+            for (int i = 0; i < slots.size(); ++i) slots[i]->setBounds(0, i * h, getWidth(), h);
+            setSize(getWidth(), slots.size() * h);
+        }
+    private:
+        Track* track; MixerChannelUI* parent; juce::OwnedArray<PluginSlot> slots;
+    };
+
+    class SendRack : public juce::Component {
+    public:
+        SendRack(Track* t, MixerChannelUI* p) : track(t), parent(p) {}
+        void syncSlots() {
+            int needed = std::max(4, (int)track->sends.size() + 1);
+            while (slots.size() < needed) {
+                auto* s = new SendSlot(track, slots.size());
+                s->onAddSend = [this] { if (parent->onAddSend) parent->onAddSend(*track); };
+                s->onDeleteSend = [this](int idx) { if (parent->onDeleteSend) parent->onDeleteSend(*track, idx); };
+                slots.add(s);
+                addAndMakeVisible(s);
+            }
+            while (slots.size() > needed) slots.remove(slots.size() - 1);
+            resized();
+        }
+        void resized() override {
+            int h = 18;
+            for (int i = 0; i < slots.size(); ++i) slots[i]->setBounds(0, i * h, getWidth(), h);
+            setSize(getWidth(), slots.size() * h);
+        }
+    private:
+        Track* track; MixerChannelUI* parent; juce::OwnedArray<SendSlot> slots;
+    };
+
+    MixerChannelUI(Track* t, bool miniMode = false) : track(t), meter(t), isMiniMode(miniMode), fxRack(t, this), sendRack(t, this) {
         setLookAndFeel(&mixerLAF);
 
-        // --- FX Rack (10 slots) ---
-        for (int i = 0; i < 10; ++i) {
-            auto* s = new PluginSlot(track, i);
-            s->onOpenPlugin = [this](int idx) { if (onOpenPlugin) onOpenPlugin(*track, idx); };
-            s->onBypassChanged = [this](int idx, bool b) { if (onBypassChanged) onBypassChanged(*track, idx, b); };
-            s->onAddNativeUtility = [this](int idx) { if (onAddNativeUtility) onAddNativeUtility(*track); };
-            s->onAddVST3 = [this](int idx) { if (onAddVST3) onAddVST3(*track); };
-            s->onDeletePlugin = [this](int idx) { if (onDeleteEffect) onDeleteEffect(*track, idx); };
-            fxSlots.add(s);
-            if (!isMiniMode) addAndMakeVisible(s);
-        }
+        if (!isMiniMode) {
+            addAndMakeVisible(fxViewport);
+            fxViewport.setViewedComponent(&fxRack);
+            fxViewport.setScrollBarsShown(true, false, true, false);
+            fxViewport.setScrollBarThickness(6);
 
-        // --- Sends Rack (4 slots) ---
-        for (int i = 0; i < 4; ++i) {
-            auto* s = new SendSlot(track, i);
-            s->onAddSend = [this] { if (onAddSend) onAddSend(*track); };
-            s->onDeleteSend = [this](int idx) { if (onDeleteSend) onDeleteSend(*track, idx); };
-            sendSlots.add(s);
-            if (!isMiniMode) addAndMakeVisible(s);
+            addAndMakeVisible(sendViewport);
+            sendViewport.setViewedComponent(&sendRack);
+            sendViewport.setScrollBarsShown(true, false, true, false);
+            sendViewport.setScrollBarThickness(6);
         }
 
         // --- Paneo (Normal) ---
@@ -334,7 +393,10 @@ public:
         soloBtn.setToggleState(track->isSoloed, juce::dontSendNotification);
         phaseBtn.setToggleState(track->isPhaseInverted, juce::dontSendNotification);
         if (trackName.getText() != track->getName()) trackName.setText(track->getName(), juce::dontSendNotification);
-        for (auto* s : fxSlots) s->syncWithModel();
+        if (!isMiniMode) {
+            fxRack.syncSlots();
+            sendRack.syncSlots();
+        }
         repaint();
     }
 
@@ -362,25 +424,22 @@ public:
                 panKnob.setBounds(topArea.withSizeKeepingCentre(45, 45));
             }
 
-            auto fxArea = b.removeFromTop(160);
-            for (auto* s : fxSlots) {
-                s->setBounds(fxArea.removeFromTop(16).reduced(1));
-                s->setVisible(true);
-            }
+            auto fxArea = b.removeFromTop(180);
+            fxViewport.setBounds(fxArea);
+            fxRack.setBounds(0, 0, fxViewport.getMaximumVisibleWidth(), fxRack.getHeight());
+
             b.removeFromTop(5);
-            auto sendArea = b.removeFromTop(60);
-            for (auto* s : sendSlots) {
-                s->setBounds(sendArea.removeFromTop(15).reduced(1));
-                s->setVisible(true);
-            }
+            auto sendArea = b.removeFromTop(72);
+            sendViewport.setBounds(sendArea);
+            sendRack.setBounds(0, 0, sendViewport.getMaximumVisibleWidth(), sendRack.getHeight());
             b.removeFromTop(5);
         }
         else {
             // MiniMode: Solo Paneo Normal, No efectos
             auto topArea = b.removeFromTop(60);
             panKnob.setBounds(topArea.withSizeKeepingCentre(45, 45));
-            for (auto* s : fxSlots) s->setVisible(false);
-            for (auto* s : sendSlots) s->setVisible(false);
+            fxViewport.setVisible(false);
+            sendViewport.setVisible(false);
         }
 
         auto btnArea = b.removeFromTop(25);
@@ -423,6 +482,10 @@ private:
     juce::TextButton panToggle;
     juce::Slider panKnob, panL, panR, fader; AdvancedMeter meter;
     juce::TextButton muteBtn, soloBtn, phaseBtn, recBtn; juce::Label trackName;
-    juce::OwnedArray<PluginSlot> fxSlots; juce::OwnedArray<SendSlot> sendSlots;
+    
+    juce::Viewport fxViewport, sendViewport;
+    FXRack fxRack;
+    SendRack sendRack;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MixerChannelUI)
 };
