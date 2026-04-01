@@ -12,6 +12,7 @@ public:
     std::function<void(int)> onPluginClick;
     std::function<void(const juce::ModifierKeys&)> onTrackSelected;
     std::function<void()> onMoveToNewFolder;
+    std::function<void(int, juce::String)> onCreateAutomation;
 
     int dragHoverMode = 0;
 
@@ -61,6 +62,9 @@ public:
             int percent = (int)(std::abs(value) * 100.0);
             return juce::String(percent) + (value < 0.0 ? "% L" : "% R");
         };
+
+        volKnob.addMouseListener(this, false);
+        panKnob.addMouseListener(this, false);
 
         addAndMakeVisible(effectsBtn);
         effectsBtn.setButtonText("Effects");
@@ -226,6 +230,16 @@ public:
 
     void mouseDown(const juce::MouseEvent& e) override {
         grabKeyboardFocus();
+        if (e.mods.isPopupMenu()) {
+            if (e.originalComponent == &volKnob) {
+                showAutomationMenu(0, "Volume");
+                return;
+            } else if (e.originalComponent == &panKnob) {
+                showAutomationMenu(1, "Pan");
+                return;
+            }
+        }
+
         if (e.mods.isLeftButtonDown() && onTrackSelected) onTrackSelected(e.mods);
         if (e.mods.isRightButtonDown()) {
             juce::PopupMenu m;
@@ -271,6 +285,16 @@ public:
 
     Track& track;
 private:
+    void showAutomationMenu(int paramId, const juce::String& paramName) {
+        juce::PopupMenu m;
+        m.addItem(1, "Create Automation Clip");
+        m.showMenuAsync(juce::PopupMenu::Options(), [this, paramId, paramName](int res) {
+            if (res == 1 && onCreateAutomation) {
+                onCreateAutomation(paramId, paramName);
+            }
+        });
+    }
+
     juce::Label nameLabel; juce::TextButton muteBtn, soloBtn; FloatingValueSlider volKnob, panKnob;
     juce::TextButton fxButton, prButton, inlineBtn, effectsBtn, folderBtn, compactBtn;
     juce::OwnedArray<juce::TextButton> pluginButtons; LevelMeter levelMeter;

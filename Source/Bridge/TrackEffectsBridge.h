@@ -143,6 +143,13 @@ public:
         miniMixerUI.onDeleteSend = deleteSendAction;
         if (masterChannelUI) masterChannelUI->onDeleteSend = deleteSendAction;
 
+        auto createAutoAction = [&container](Track& t, int paramId, juce::String paramName) {
+            container.createAutomation(t.getId(), paramId, paramName);
+        };
+        mixerUI.onCreateAutomation = createAutoAction;
+        miniMixerUI.onCreateAutomation = createAutoAction;
+        if (masterChannelUI) masterChannelUI->onCreateAutomation = createAutoAction;
+
         ui.onChangeSend = [&engine, &container](Track& t) {
             engine.routingMatrix.commitNewTopology(container.getTracks());
         };

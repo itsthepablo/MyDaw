@@ -51,6 +51,7 @@ void MixerComponent::updateChannels() {
         masterChannel->onAddNativeUtility = onAddNativeUtility;
         masterChannel->onAddSend = onAddSend;
         masterChannel->onDeleteSend = onDeleteSend;
+        masterChannel->onCreateAutomation = onCreateAutomation;
         
         channels.add(masterChannel);
         contentComp.addAndMakeVisible(masterChannel);
@@ -66,6 +67,7 @@ void MixerComponent::updateChannels() {
             channel->onBypassChanged = onBypassChanged;
             channel->onAddSend = onAddSend;
             channel->onDeleteSend = onDeleteSend;
+            channel->onCreateAutomation = onCreateAutomation;
 
             channels.add(channel);
             contentComp.addAndMakeVisible(channel);

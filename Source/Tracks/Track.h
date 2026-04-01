@@ -168,6 +168,15 @@ struct MidiClipData {
     AutoLane autoFilter;
 };
 
+struct AutomationClipData {
+    juce::String name;
+    int targetTrackId = -1;
+    int parameterId = 0; // 0 = Volume, 1 = Pan
+    AutoLane lane;
+    juce::Colour color;
+    bool isShowing = false;
+};
+
 // ============================================================
 // DOUBLE BUFFERING (SNAPSHOTS) — Thread-Safe Audio Access
 // ============================================================
@@ -188,6 +197,11 @@ struct MidiNoteSnapshot {
     int   width = 0;
 };
 
+struct AutomationClipSnapshot {
+    int parameterId = 0;
+    AutoLane lane;
+};
+
 struct MidiClipSnapshot {
     float startX  = 0.0f;
     float width   = 320.0f;
@@ -200,6 +214,7 @@ struct TrackSnapshot {
     std::vector<AudioClipSnapshot> audioClips;
     std::vector<MidiClipSnapshot>  midiClips;
     std::vector<MidiNoteSnapshot>  notes; 
+    std::vector<AutomationClipSnapshot> automations;
 };
 
 // ============================================================
@@ -267,6 +282,7 @@ public:
 
     juce::OwnedArray<AudioClipData> audioClips;
     juce::OwnedArray<MidiClipData> midiClips;
+    std::vector<AutomationClipData*> automationClips; // Referencias a la pool global
 
     int parentId = -1;
     int folderDepth = 0;
@@ -375,6 +391,15 @@ public:
         snap->notes.reserve(notes.size());
         for (const auto& n : notes) {
             snap->notes.push_back({ n.pitch, n.x, n.width });
+        }
+
+        snap->automations.reserve(automationClips.size());
+        for (auto* a : automationClips) {
+            if (!a) continue;
+            AutomationClipSnapshot as;
+            as.parameterId = a->parameterId;
+            as.lane = a->lane;      // Copia por valor segura en real-time
+            snap->automations.push_back(std::move(as));
         }
 
         auto* old = snapshot.exchange(snap, std::memory_order_acq_rel);
