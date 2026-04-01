@@ -160,4 +160,37 @@ public:
         }
         return -1;
     }
+
+    static void drawMidiSummary(juce::Graphics& g,
+        const MidiClipData& clipData,
+        juce::Rectangle<int> area,
+        float hZoom,
+        float hS,
+        int minP,
+        int maxP)
+    {
+        if (clipData.notes.empty()) return;
+
+        const int height = area.getHeight();
+        if (height <= 0) return;
+
+        // Utilizamos el rango global pasado como parámetro para alineación vertical correcta
+        int pitchRange = std::max(1, maxP - minP);
+
+        // COLOR BLANCO CON 80% DE OPACIDAD
+        g.setColour(juce::Colours::white.withAlpha(0.8f));
+
+        for (const auto& note : clipData.notes) {
+            float normalizedY = 1.0f - ((float)(note.pitch - minP) / (float)pitchRange);
+            float noteY = (float)area.getY() + (normalizedY * (height - 4.0f)) + 2.0f;
+
+            int noteScreenX = (int)(note.x * hZoom) - (int)hS;
+            int noteScreenW = std::max(2, (int)(note.width * hZoom));
+
+            // Solo renderizar si es visible horizontalmente
+            if (noteScreenX + noteScreenW > 0 && noteScreenX < (area.getX() + area.getWidth())) {
+                g.fillRect((float)noteScreenX, noteY, (float)noteScreenW, 3.0f);
+            }
+        }
+    }
 };

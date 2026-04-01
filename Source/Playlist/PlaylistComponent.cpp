@@ -289,10 +289,29 @@ void PlaylistComponent::paint(juce::Graphics& g) {
 
                 if (descendantIds.empty()) continue;
 
+                // 1. Calcular rango global de notas para la carpeta (Alineación Vertical)
+                int folderMinP = 127, folderMaxP = 0;
+                bool folderHasMidi = false;
+                for (const auto& clip : clips) {
+                    if (clip.linkedMidi == nullptr) continue;
+                    if (std::find(descendantIds.begin(), descendantIds.end(), clip.trackPtr->getId()) != descendantIds.end()) {
+                        folderHasMidi = true;
+                        for (const auto& n : clip.linkedMidi->notes) {
+                            folderMinP = std::min(folderMinP, n.pitch);
+                            folderMaxP = std::max(folderMaxP, n.pitch);
+                        }
+                    }
+                }
+                if (folderHasMidi) {
+                    folderMinP = std::max(0, folderMinP - 2);
+                    folderMaxP = std::min(127, folderMaxP + 2);
+                    if (folderMaxP - folderMinP < 12) folderMaxP = std::min(127, folderMinP + 12);
+                }
+
                 // 2. Dibujar resúmenes de clips que pertenezcan a esos descendientes
                 juce::Rectangle<int> summaryArea(0, yPos + 20, getWidth(), (int)trackHeight - 24);
                 for (const auto& clip : clips) {
-                    if (clip.linkedAudio == nullptr) continue;
+                    if (clip.linkedAudio == nullptr && clip.linkedMidi == nullptr) continue;
 
                     bool isChild = std::find(descendantIds.begin(), descendantIds.end(), clip.trackPtr->getId()) != descendantIds.end();
                     if (isChild) {
@@ -302,7 +321,13 @@ void PlaylistComponent::paint(juce::Graphics& g) {
                         // Solo renderizar si el clip es visible horizontalmente
                         if (xPos + wPos > 0 && xPos < getWidth()) {
                             juce::Rectangle<int> clipSummaryRect(xPos, summaryArea.getY(), wPos, summaryArea.getHeight());
-                            WaveformRenderer::drawWaveformSummary(g, *clip.linkedAudio, clipSummaryRect, t->getColor(), hZoom);
+                            
+                            if (clip.linkedAudio != nullptr) {
+                                WaveformRenderer::drawWaveformSummary(g, *clip.linkedAudio, clipSummaryRect, t->getColor(), hZoom);
+                            }
+                            else if (clip.linkedMidi != nullptr) {
+                                MidiClipRenderer::drawMidiSummary(g, *clip.linkedMidi, clipSummaryRect, (float)hZoom, (float)hS, folderMinP, folderMaxP);
+                            }
                         }
                     }
                 }
