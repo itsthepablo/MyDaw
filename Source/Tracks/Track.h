@@ -168,15 +168,6 @@ struct MidiClipData {
     AutoLane autoFilter;
 };
 
-struct AutomationClipData {
-    juce::String name;
-    int targetTrackId = -1;
-    int parameterId = 0; // 0 = Volume, 1 = Pan
-    AutoLane lane;
-    juce::Colour color;
-    bool isShowing = false;
-};
-
 // ============================================================
 // DOUBLE BUFFERING (SNAPSHOTS) — Thread-Safe Audio Access
 // ============================================================
@@ -195,11 +186,6 @@ struct MidiNoteSnapshot {
     int   pitch = 0;
     int   x     = 0;
     int   width = 0;
-};
-
-struct AutomationClipSnapshot {
-    int parameterId = 0;
-    AutoLane lane;
 };
 
 struct MidiClipSnapshot {

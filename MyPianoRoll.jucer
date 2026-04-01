@@ -5,6 +5,10 @@
               companyCopyright="Two Levels Audio" version="1.0.0">
   <MAINGROUP id="OgOeCb" name="FatPuppy Studio">
     <GROUP id="{832B9725-4498-E7CC-3428-6D1D4B31D6DB}" name="Source">
+      <GROUP id="{5084A00A-956A-36A1-615F-4F83AADCFCE7}" name="Data">
+        <FILE id="XkBcIL" name="AutomationData.h" compile="0" resource="0"
+              file="Source/Data/AutomationData.h"/>
+      </GROUP>
       <GROUP id="{9BE8723D-5C5A-42B2-938A-BE8BB236FD35}" name="Instruments">
         <FILE id="DH4AH2" name="InstrumentPanel.cpp" compile="1" resource="0"
               file="Source/Instruments/InstrumentPanel.cpp"/>
@@ -25,8 +29,6 @@
         <FILE id="ghMFvY" name="UtilityPlugin.h" compile="0" resource="0" file="Source/Native_Plugins/UtilityPlugin.h"/>
       </GROUP>
       <GROUP id="{721FC522-4CF1-05D4-BC36-D97CDC4B59FC}" name="UI">
-        <FILE id="U89Tfp" name="SidechainPicker.h" compile="0" resource="0"
-              file="Source/UI/SidechainPicker.h"/>
         <GROUP id="{370703D0-1732-1E2E-EE22-515A559A3353}" name="OfflineRenderer">
           <FILE id="HQ3qTp" name="OfflineRenderer.cpp" compile="1" resource="0"
                 file="Source/UI/OfflineRenderer/OfflineRenderer.cpp"/>
@@ -74,6 +76,10 @@
           <FILE id="DNLFnt" name="ToolbarButtons.h" compile="0" resource="0"
                 file="Source/UI/Buttons/ToolbarButtons.h"/>
         </GROUP>
+        <FILE id="vxUryM" name="AutomationRenderer.h" compile="0" resource="0"
+              file="Source/UI/AutomationRenderer.h"/>
+        <FILE id="U89Tfp" name="SidechainPicker.h" compile="0" resource="0"
+              file="Source/UI/SidechainPicker.h"/>
         <FILE id="BvdwDj" name="UIManager.cpp" compile="1" resource="0" file="Source/UI/UIManager.cpp"/>
         <FILE id="bmzdqo" name="UIManager.h" compile="0" resource="0" file="Source/UI/UIManager.h"/>
         <FILE id="eosDxo" name="SplashWindow.h" compile="0" resource="0" file="Source/UI/SplashWindow.h"/>
