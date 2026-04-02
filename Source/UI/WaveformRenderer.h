@@ -52,6 +52,35 @@ public:
 
         if (drawStartX >= drawEndX) return;
 
+        // --- HELPER PATH RENDERER PARA ALTA FIDELIDAD SIN PIXELAR ---
+        auto drawEnvPath = [&](float yOffset, float renderHeight, auto&& peakFunc) {
+            juce::Path p;
+            bool first = true;
+            std::vector<float> bottomYs;
+            int numPoints = drawEndX - drawStartX;
+            if (numPoints <= 0) return;
+            bottomYs.reserve(numPoints);
+
+            for (int x = drawStartX; x < drawEndX; ++x) {
+                AudioPeak peak = peakFunc(x);
+                float topY = yOffset - (juce::jlimit(-1.0f, 1.0f, peak.maxPos) * renderHeight);
+                float bottomY = yOffset - (juce::jlimit(-1.0f, 1.0f, peak.minNeg) * renderHeight);
+                
+                if (bottomY - topY < 1.0f) bottomY = topY + 1.0f;
+
+                bottomYs.push_back(bottomY);
+                if (first) { p.startNewSubPath(area.getX() + x, topY); first = false; }
+                else { p.lineTo(area.getX() + x, topY); }
+            }
+            if (!first) {
+                for (int i = numPoints - 1; i >= 0; --i) {
+                    p.lineTo(area.getX() + drawStartX + i, bottomYs[i]);
+                }
+                p.closeSubPath();
+                g.fillPath(p);
+            }
+        };
+
         // --- MICRO MODE (SAMPLE-ACCURATE) ---
         if (samplesPerPixel <= 1.0f && clipData.fileBuffer.getNumSamples() > 0 && viewMode != WaveformViewMode::Spectrogram) {
             auto drawMicroChannel = [&](int channel, float offsetY, float renderHeight, juce::Colour color, bool isMid, bool isSide) {
@@ -87,7 +116,7 @@ public:
                 }
 
                 g.setColour(color);
-                g.strokePath(path, juce::PathStrokeType(1.5f));
+                g.strokePath(path, juce::PathStrokeType(2.5f, juce::PathStrokeType::mitered, juce::PathStrokeType::rounded));
 
                 if (pixelsPerSample > 8.0f) {
                     g.setColour(outlineColor.brighter(0.5f));
@@ -136,12 +165,13 @@ public:
                 const int maxSamples = clipData.fileBuffer.getNumSamples();
 
                 g.setColour(color);
-
-                for (int x = drawStartX; x < drawEndX; ++x) {
+                
+                auto peakFunc = [&](int x) -> AudioPeak {
                     int startSample = std::max(0, sampleOffset + (int)(x * samplesPerPixel));
                     int endSample = std::min(maxSamples - 1, sampleOffset + (int)((x + 1) * samplesPerPixel));
+                    AudioPeak pk; pk.maxPos = 0; pk.minNeg = 0;
                     
-                    if (startSample > endSample) continue;
+                    if (startSample > endSample) return pk;
 
                     float pMax = -1.0f;
                     float pMin = 1.0f;
@@ -158,13 +188,12 @@ public:
                         pMin = std::min(pMin, val);
                     }
 
-                    if (pMax < pMin) continue;
+                    if (pMax < pMin) { pMax = 0; pMin = 0; }
+                    pk.maxPos = pMax; pk.minNeg = pMin;
+                    return pk;
+                };
 
-                    float topY = offsetY - (juce::jlimit(-1.0f, 1.0f, pMax) * renderHeight);
-                    float bottomY = offsetY - (juce::jlimit(-1.0f, 1.0f, pMin) * renderHeight);
-
-                    g.fillRect((float)(area.getX() + x), topY, 1.0f, std::max(1.0f, bottomY - topY));
-                }
+                drawEnvPath(offsetY, renderHeight, peakFunc);
             };
 
             if (viewMode == WaveformViewMode::SeparateLR && isStereo) {
@@ -235,22 +264,9 @@ public:
             g.setColour(juce::Colours::black.withAlpha(0.2f));
             g.drawHorizontalLine((int)(area.getY() + halfHeight), (float)area.getX(), (float)(area.getX() + width));
 
-            for (int x = drawStartX; x < drawEndX; ++x) {
-                AudioPeak peakL = getPeakRange(cacheL, x);
-                AudioPeak peakR = getPeakRange(cacheR, x);
-                const int currentX = area.getX() + x;
-
-                float topYL = midYL - (juce::jlimit(-1.0f, 1.0f, peakL.maxPos) * quarterHeight);
-                float bottomYL = midYL - (juce::jlimit(-1.0f, 1.0f, peakL.minNeg) * quarterHeight);
-
-                g.setColour(fillColor);
-                g.fillRect((float)currentX, topYL, 1.0f, std::max(1.0f, bottomYL - topYL));
-
-                float topYR = midYR - (juce::jlimit(-1.0f, 1.0f, peakR.maxPos) * quarterHeight);
-                float bottomYR = midYR - (juce::jlimit(-1.0f, 1.0f, peakR.minNeg) * quarterHeight);
-
-                g.fillRect((float)currentX, topYR, 1.0f, std::max(1.0f, bottomYR - topYR));
-            }
+            g.setColour(fillColor);
+            drawEnvPath(midYL, quarterHeight, [&](int x) { return getPeakRange(cacheL, x); });
+            drawEnvPath(midYR, quarterHeight, [&](int x) { return getPeakRange(cacheR, x); });
         }
         // --- MACRO MODE (MID / SIDE) ---
         else if (viewMode == WaveformViewMode::MidSide && isStereo) {
@@ -263,29 +279,17 @@ public:
             g.setColour(juce::Colours::black.withAlpha(0.2f));
             g.drawHorizontalLine((int)(area.getY() + halfHeight), (float)area.getX(), (float)(area.getX() + width));
 
-            for (int x = drawStartX; x < drawEndX; ++x) {
-                AudioPeak peakMid = getPeakRange(cacheMid, x);
-                AudioPeak peakSide = getPeakRange(cacheSide, x);
-                const int currentX = area.getX() + x;
-
-                float topYMid = midYL - (juce::jlimit(-1.0f, 1.0f, peakMid.maxPos) * quarterHeight);
-                float bottomYMid = midYL - (juce::jlimit(-1.0f, 1.0f, peakMid.minNeg) * quarterHeight);
-
-                g.setColour(fillColor);
-                g.fillRect((float)currentX, topYMid, 1.0f, std::max(1.0f, bottomYMid - topYMid));
-
-                float topYSide = midYR - (juce::jlimit(-1.0f, 1.0f, peakSide.maxPos) * quarterHeight);
-                float bottomYSide = midYR - (juce::jlimit(-1.0f, 1.0f, peakSide.minNeg) * quarterHeight);
-
-                g.fillRect((float)currentX, topYSide, 1.0f, std::max(1.0f, bottomYSide - topYSide));
-            }
+            g.setColour(fillColor);
+            drawEnvPath(midYL, quarterHeight, [&](int x) { return getPeakRange(cacheMid, x); });
+            drawEnvPath(midYR, quarterHeight, [&](int x) { return getPeakRange(cacheSide, x); });
         }
         // --- MACRO MODE (CLÁSICA COMBINADA) ---
         else {
             const float midY = (float)area.getY() + (float)height / 2.0f;
             const float halfHeight = (float)height / 2.0f;
 
-            for (int x = drawStartX; x < drawEndX; ++x) {
+            g.setColour(fillColor);
+            drawEnvPath(midY, halfHeight, [&](int x) {
                 AudioPeak peakL = getPeakRange(cacheL, x);
                 AudioPeak peak = peakL;
                 if (!cacheR.empty()) {
@@ -293,13 +297,8 @@ public:
                     peak.maxPos = std::max(peakL.maxPos, peakR.maxPos);
                     peak.minNeg = std::min(peakL.minNeg, peakR.minNeg);
                 }
-
-                float topY = midY - (juce::jlimit(-1.0f, 1.0f, peak.maxPos) * halfHeight);
-                float bottomY = midY - (juce::jlimit(-1.0f, 1.0f, peak.minNeg) * halfHeight);
-
-                g.setColour(fillColor);
-                g.fillRect((float)(area.getX() + x), topY, 1.0f, std::max(1.0f, bottomY - topY));
-            }
+                return peak;
+            });
         }
     }
 
