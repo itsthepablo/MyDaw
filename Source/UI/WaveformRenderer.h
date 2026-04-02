@@ -61,20 +61,22 @@ public:
             if (numPoints <= 0) return;
             bottomYs.reserve(numPoints);
 
-            for (int x = drawStartX; x < drawEndX; ++x) {
-                AudioPeak peak = peakFunc(x);
+            // Usar float para xf evita el jitter clasico de sub-pixel al variar el zoom
+            for (float xf = (float)drawStartX; xf < (float)drawEndX; xf += 1.0f) {
+                int xi = (int)xf;
+                AudioPeak peak = peakFunc(xi);
                 float topY = yOffset - (juce::jlimit(-1.0f, 1.0f, peak.maxPos) * renderHeight);
                 float bottomY = yOffset - (juce::jlimit(-1.0f, 1.0f, peak.minNeg) * renderHeight);
                 
                 if (bottomY - topY < 1.0f) bottomY = topY + 1.0f;
 
                 bottomYs.push_back(bottomY);
-                if (first) { p.startNewSubPath(area.getX() + x, topY); first = false; }
-                else { p.lineTo(area.getX() + x, topY); }
+                if (first) { p.startNewSubPath((float)area.getX() + xf, topY); first = false; }
+                else { p.lineTo((float)area.getX() + xf, topY); }
             }
             if (!first) {
                 for (int i = numPoints - 1; i >= 0; --i) {
-                    p.lineTo(area.getX() + drawStartX + i, bottomYs[i]);
+                    p.lineTo((float)area.getX() + drawStartX + i, bottomYs[i]);
                 }
                 p.closeSubPath();
                 g.fillPath(p);
@@ -116,7 +118,7 @@ public:
                 }
 
                 g.setColour(color);
-                g.strokePath(path, juce::PathStrokeType(2.5f, juce::PathStrokeType::mitered, juce::PathStrokeType::rounded));
+                g.strokePath(path, juce::PathStrokeType(1.5f));
 
                 if (pixelsPerSample > 8.0f) {
                     g.setColour(outlineColor.brighter(0.5f));
@@ -157,8 +159,44 @@ public:
             return;
         }
 
-        // --- MID MODE (TRANSICIONAL < 256 / FILEBUFFER NATIVO) ---
-        else if (samplesPerPixel <= 256.0f && clipData.fileBuffer.getNumSamples() > 0 && viewMode != WaveformViewMode::Spectrogram) {
+        // --- SPECTROGRAM VIEW ---
+        if (viewMode == WaveformViewMode::Spectrogram) {
+            if (!clipData.spectrogramImage.isNull()) {
+                 float imgPPP = originalWidthPx > 0 ? ((float)clipData.spectrogramImage.getWidth() / originalWidthPx) : 1.0f;
+                 int srcX = (int)((clipData.offsetX + drawStartX) * (float)hZoom * imgPPP);
+                 int srcW = (int)((drawEndX - drawStartX) * imgPPP);
+                 if (srcW > 0 && srcX >= 0)
+                     g.drawImage(clipData.spectrogramImage, area.getX() + drawStartX, area.getY(), drawEndX - drawStartX, area.getHeight(), srcX, 0, srcW, clipData.spectrogramImage.getHeight());
+            }
+            return;
+        }
+
+        // --- THUMBNAIL MODE: estable para spp >= 64 (kicks, clips largos, zoom normal) ---
+        if (clipData.thumbnail != nullptr && samplesPerPixel >= 64.0f && viewMode != WaveformViewMode::MidSide) {
+            const float nsF = (float)clipData.fileBuffer.getNumSamples();
+            const float soF = (baseW > 0.0f && nsF > 0.0f) ? (clipData.offsetX * nsF / baseW) : 0.0f;
+            const double t0 = (double)(soF + (float)drawStartX * samplesPerPixel) / clipData.sourceSampleRate;
+            const double t1 = (double)(soF + (float)drawEndX   * samplesPerPixel) / clipData.sourceSampleRate;
+            const int dX = area.getX() + drawStartX, dW = drawEndX - drawStartX;
+            if (dW > 0) {
+                g.setColour(fillColor);
+                if (viewMode == WaveformViewMode::SeparateLR && isStereo) {
+                    const int hH = height / 2;
+                    g.setColour(juce::Colours::black.withAlpha(0.2f));
+                    g.drawHorizontalLine(area.getY() + hH, (float)area.getX(), (float)(area.getX() + width));
+                    g.setColour(fillColor);
+                    clipData.thumbnail->drawChannel(g, juce::Rectangle<int>(dX, area.getY(), dW, hH), t0, t1, 0, 1.0f);
+                    g.setColour(fillColor);
+                    clipData.thumbnail->drawChannel(g, juce::Rectangle<int>(dX, area.getY() + hH, dW, height - hH), t0, t1, 1, 1.0f);
+                } else {
+                    clipData.thumbnail->drawChannel(g, juce::Rectangle<int>(dX, area.getY(), dW, height), t0, t1, 0, 1.0f);
+                }
+            }
+            return;
+        }
+
+        // --- MID MODE LEGACY (fallback: spp < 64, MidSide, o sin thumbnail) ---
+        if (samplesPerPixel <= 2048.0f && clipData.fileBuffer.getNumSamples() > 0) {
             auto drawRectChannel = [&](int channel, float offsetY, float renderHeight, juce::Colour color, bool isMid, bool isSide) {
                 const float* readL = clipData.fileBuffer.getReadPointer(0);
                 const float* readR = isStereo ? clipData.fileBuffer.getReadPointer(1) : nullptr;
@@ -217,22 +255,7 @@ public:
             return;
         }
 
-        // --- SPECTROGRAM VIEW ---
-        if (viewMode == WaveformViewMode::Spectrogram) {
-            if (!clipData.spectrogramImage.isNull()) {
-                 float imgPointsPerPixel = originalWidthPx > 0 ? ((float)clipData.spectrogramImage.getWidth() / originalWidthPx) : 1.0f;
-                 int srcX = (int)((clipData.offsetX + drawStartX) * (float)hZoom * imgPointsPerPixel);
-                 int srcW = (int)((drawEndX - drawStartX) * imgPointsPerPixel);
-                 
-                 if (srcW > 0 && srcX >= 0) {
-                     g.drawImage(clipData.spectrogramImage, 
-                                 area.getX() + drawStartX, area.getY(), drawEndX - drawStartX, area.getHeight(),
-                                 srcX, 0, srcW, clipData.spectrogramImage.getHeight());
-                 }
-            }
-            return;
-        }
-
+        // --- MACRO LEGACY (MidSide sin thumbnail, o spp > 2048 sin thumbnail) ---
         auto getPeakRange = [&](const std::vector<AudioPeak>& cache, int x) -> AudioPeak {
             float startIdxF = cacheOffset + x * pointsPerPixel;
             float endIdxF = startIdxF + pointsPerPixel;

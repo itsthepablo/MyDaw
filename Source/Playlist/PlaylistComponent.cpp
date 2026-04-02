@@ -247,7 +247,7 @@ void PlaylistComponent::paint(juce::Graphics& g) {
     double endLineSearch = std::min(getTimelineLength(), endTime);
 
     for (double i = startLineSearch; i <= endLineSearch; i += currentDrawSnap) {
-        int dx = (int)(i * hZoom) - (int)hS;
+        int dx = (int)(i * hZoom - hS);
 
         if (std::fmod(i, 320.0) == 0.0) g.setColour(juce::Colours::black);
         else if (std::fmod(i, 80.0) == 0.0) g.setColour(juce::Colours::black);
@@ -316,7 +316,7 @@ void PlaylistComponent::paint(juce::Graphics& g) {
 
                     bool isChild = std::find(descendantIds.begin(), descendantIds.end(), clip.trackPtr->getId()) != descendantIds.end();
                     if (isChild) {
-                        int xPos = (int)(clip.startX * hZoom) - (int)hS;
+                        int xPos = (int)(clip.startX * hZoom - (double)hS);
                         int wPos = (int)(clip.width * hZoom);
                         
                         // Solo renderizar si el clip es visible horizontalmente
@@ -349,9 +349,9 @@ void PlaylistComponent::paint(juce::Graphics& g) {
         // Culling vertical correcto: omitimos si el clip completo está por encima o por debajo de la ventana
         if (clipBottom < topOffset || clipTop > getHeight()) continue;
 
-        int xPos = (int)(clip.startX * hZoom) - (int)hS;
-        int wPos = (int)(clip.width * hZoom);
-        juce::Rectangle<int> clipRect(xPos, yPos + 2, wPos - 1, (int)trackHeight - 4);
+        float exactXPos = (float)(clip.startX * hZoom - (double)hS);
+        float exactWPos = (float)(clip.width * hZoom);
+        juce::Rectangle<float> clipRectF(exactXPos, (float)(yPos + 2), exactWPos - 1.0f, (float)((int)trackHeight - 4));
 
         juce::Colour trackColor = clip.trackPtr->getColor();
 
@@ -361,17 +361,16 @@ void PlaylistComponent::paint(juce::Graphics& g) {
 
         // 1. Fondo completo del clip (muy oscuro)
         g.setColour(trackColor.darker(0.8f).withAlpha(1.0f));
-        g.fillRoundedRectangle(clipRect.toFloat(), 5.0f);
+        g.fillRoundedRectangle(clipRectF, 5.0f);
 
         // 2. Cabecera superior (Header) solo para el texto sin oscurecer base
-        juce::Rectangle<int> headerRect = clipRect.withHeight(18); // 18px de altura fija
+        juce::Rectangle<float> headerRectF = clipRectF.withHeight(18.0f);
         g.setColour(trackColor.darker(0.8f).withAlpha(1.0f));
-        g.fillRoundedRectangle(headerRect.toFloat(), 5.0f);
-        if (headerRect.getHeight() > 5) g.fillRect(headerRect.withTop(headerRect.getBottom() - 5).toFloat()); // Quitar curvas inferiores
+        g.fillRoundedRectangle(headerRectF, 5.0f);
+        if (headerRectF.getHeight() > 5.0f) g.fillRect(headerRectF.withTop(headerRectF.getBottom() - 5.0f));
 
         // 3. Renderizar Onda o MIDI debajo del header
-        juce::Rectangle<int> innerArea = clipRect;
-        innerArea.removeFromTop(18); // Se corre la zona de renderizado
+        juce::Rectangle<int> innerArea = clipRectF.withTrimmedTop(18.0f).toNearestInt();
 
         if (clip.linkedAudio != nullptr) {
             WaveformRenderer::drawWaveform(g, *clip.linkedAudio, innerArea, trackColor, clip.trackPtr->getWaveformViewMode(), hZoom);
@@ -382,14 +381,14 @@ void PlaylistComponent::paint(juce::Graphics& g) {
 
         // 4. Escribir texto en su cabecera exclusiva
         g.setColour(juce::Colours::white);
-        g.drawText(" " + clip.name, headerRect.reduced(3, 0), juce::Justification::centredLeft, true);
+        g.drawText(" " + clip.name, headerRectF.reduced(3.0f, 0.0f).toNearestInt(), juce::Justification::centredLeft, true);
 
         g.setOpacity(1.0f);
 
         // Contorno de selección multi
         if (std::find(selectedClipIndices.begin(), selectedClipIndices.end(), i) != selectedClipIndices.end()) {
             g.setColour(juce::Colours::yellow);
-            g.drawRoundedRectangle(clipRect.toFloat(), 5.0f, 1.5f);
+            g.drawRoundedRectangle(clipRectF, 5.0f, 1.5f);
         }
     }
 
@@ -427,7 +426,7 @@ void PlaylistComponent::paint(juce::Graphics& g) {
     else if (pixelsPerMeasure < 120.0) measureMod = 2;
 
     for (double i = 0; i <= getTimelineLength(); i += 80.0) {
-        int dx = (int)(i * hZoom) - (int)hS;
+        int dx = (int)(i * hZoom - hS);
         if (dx < 0 || dx > getWidth()) continue;
 
         if (std::fmod(i, 320.0) == 0.0) {

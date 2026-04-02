@@ -48,7 +48,8 @@ struct AudioClipData {
     std::vector<AudioPeak> cachedPeaksMid;
     std::vector<AudioPeak> cachedPeaksSide;
     
-    juce::Image spectrogramImage; 
+    juce::Image spectrogramImage;
+    std::unique_ptr<juce::AudioThumbnail> thumbnail; // renderizado estable sin temblor al hacer zoom
 
     void generateCache() {
         const int samplesPerPoint = 256;
@@ -209,7 +210,8 @@ class Track {
 public:
     Track(int id, juce::String n, TrackType t) : trackId(id), name(n), type(t) {
         color = juce::Colour(juce::Random::getSystemRandom().nextFloat(), 0.6f, 0.8f, 1.0f);
-        if (t == TrackType::Folder) color = juce::Colour(60, 65, 75); // Color por defecto de carpeta
+        if (t == TrackType::Folder) color = juce::Colour(60, 65, 75);
+        thumbnailFormatManager.registerBasicFormats();
     }
 
     ~Track() {
@@ -331,6 +333,14 @@ public:
             reader->read(&clip->fileBuffer, 0, (int)reader->lengthInSamples, 0, true, true);
 
             clip->generateCache();
+
+            // Generar AudioThumbnail para renderizado estable (sin temblor al hacer zoom)
+            clip->thumbnail = std::make_unique<juce::AudioThumbnail>(64, thumbnailFormatManager, thumbnailCache);
+            clip->thumbnail->reset(clip->fileBuffer.getNumChannels(),
+                                   clip->sourceSampleRate,
+                                   (juce::int64)clip->fileBuffer.getNumSamples());
+            clip->thumbnail->addBlock(0, clip->fileBuffer, 0, clip->fileBuffer.getNumSamples());
+
             audioClips.add(clip);
             commitSnapshot();
             return clip;
@@ -411,6 +421,10 @@ private:
     float postGain = 1.0f;
 
     juce::StringArray pluginNames;
+
+    // AudioThumbnail para renderizado estable de waveform
+    juce::AudioFormatManager thumbnailFormatManager;
+    juce::AudioThumbnailCache thumbnailCache { 10 };
 
     WaveformViewMode waveformViewMode = WaveformViewMode::Combined;
 };
