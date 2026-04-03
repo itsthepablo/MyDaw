@@ -6,9 +6,9 @@
 #include <algorithm>
 
 /**
- * WaveformRenderer: Motor de renderizado "Pixel-Perfect" para formas de onda.
- * Implementa una jerarquía de Mip-Maps (LODs) para garantizar fluidez y nitidez
- * total en cualquier nivel de zoom, eliminando el aliasing y el temblor visual.
+ * WaveformRenderer: Motor de renderizado de Grado Comercial.
+ * Implementa Mip-mapping de Datos (Interpolación Lineal entre LODs).
+ * Erradica el jitter mediante Estabilización de Picos (Coordenadas Sub-píxel).
  */
 class WaveformRenderer {
 public:
@@ -21,9 +21,6 @@ public:
         double clipStartSamples,
         double viewStartSamples)
     {
-        const int width = area.getWidth();
-        const int height = area.getHeight();
-
         if (!clipData.isLoaded.load(std::memory_order_relaxed)) {
             g.setColour(baseColor.brighter(0.5f));
             g.setFont(14.0f);
@@ -31,250 +28,205 @@ public:
             return;
         }
 
-        if (width <= 0 || height <= 0) return;
-
-        bool isStereo = clipData.fileBuffer.getNumChannels() > 1;
-        const juce::Colour fillColor = baseColor.brighter(0.1f).withAlpha(1.0f);
-        
-        // --- Cálculo de Escala de Alta Precisión ---
-        // samplesPerPixel = (Muestras Totales) / (Ancho Total del clip en píxeles con el zoom actual)
-        float baseW = clipData.originalWidth <= 0 ? clipData.width : clipData.originalWidth;
-        const double samplesPerPixel = (double)clipData.fileBuffer.getNumSamples() / (double)(baseW * hZoom);
-        
-        // El offset de muestra para el píxel x=0 del área de dibujo
-        // Se basa en la diferencia entre el inicio del clip y el inicio de la vista
-        const double sampleOffset = (viewStartSamples - clipStartSamples) + (clipData.offsetX * hZoom * samplesPerPixel);
-
-        // --- VISIBILITY CULLING ---
-        juce::Rectangle<int> clipBounds = g.getClipBounds();
-        int drawStartX = std::max(0, clipBounds.getX() - area.getX());
-        int drawEndX = std::min(width, clipBounds.getRight() - area.getX());
-        if (drawStartX >= drawEndX) return;
-
-        // --- MODO MICRO (Zoom extremo: nivel de muestra) ---
-        if (samplesPerPixel <= 1.0 && viewMode != WaveformViewMode::Spectrogram) {
-            drawMicroMode(g, clipData, area, drawStartX, drawEndX, sampleOffset, samplesPerPixel, fillColor, viewMode, isStereo);
-            return;
-        }
-
-        // --- MODO ESPECTROGRAMA ---
-        if (viewMode == WaveformViewMode::Spectrogram) {
-            if (!clipData.spectrogramImage.isNull()) {
-                 const double totalW = (double)baseW * hZoom;
-                 float imgPPP = totalW > 0 ? ((float)clipData.spectrogramImage.getWidth() / (float)totalW) : 1.0f;
-                 int srcX = (int)((clipData.offsetX * hZoom + (double)drawStartX) * (double)imgPPP);
-                 int srcW = (int)((double)(drawEndX - drawStartX) * (double)imgPPP);
-                 if (srcW > 0 && srcX >= 0)
-                     g.drawImage(clipData.spectrogramImage, area.getX() + drawStartX, area.getY(), drawEndX - drawStartX, area.getHeight(), srcX, 0, srcW, clipData.spectrogramImage.getHeight());
-            }
-            return;
-        }
-
-        // --- MODO MACRO (Pixel-Perfect con LODs y Blending) ---
-        g.setColour(fillColor);
-        const double midY = (double)area.getY() + (double)height / 2.0;
-        const double halfH = (double)height / 2.0;
-
-        for (int x = drawStartX; x < drawEndX; ++x) {
-            const double s0 = sampleOffset + (double)x * samplesPerPixel;
-            const double s1 = s0 + (double)samplesPerPixel;
-            
-            AudioPeak peak;
-
-            // --- LÓGICA DE BLENDING (54 a 126 spp) ---
-            if (samplesPerPixel >= 54.0 && samplesPerPixel <= 126.0) {
-                float factor = (float)((samplesPerPixel - 54.0) / (126.0 - 54.0));
-                
-                // Pico desde muestras crudas (Modo Micro)
-                AudioPeak microPeak = getPeakFromSamples(clipData.fileBuffer, s0, s1, isStereo, viewMode);
-                // Pico desde LOD 0 (256)
-                AudioPeak lod0Peak = getPeakFromLODInRange(clipData.cachedPeaksL, clipData.cachedPeaksR, s0, s1, 256.0, isStereo, viewMode);
-                
-                peak.maxPos = microPeak.maxPos + factor * (lod0Peak.maxPos - microPeak.maxPos);
-                peak.minNeg = microPeak.minNeg + factor * (lod0Peak.minNeg - microPeak.minNeg);
-            }
-            // --- LÓGICA DE LODs ( > 126 spp) ---
-            else if (samplesPerPixel > 126.0) {
-                if (samplesPerPixel > 4096.0) {
-                    peak = getPeakFromLODInRange(clipData.lod2PeaksL, clipData.lod2PeaksR, s0, s1, 4096.0, isStereo, viewMode);
-                }
-                else if (samplesPerPixel > 1024.0) {
-                    peak = getPeakFromLODInRange(clipData.lod1PeaksL, clipData.lod1PeaksR, s0, s1, 1024.0, isStereo, viewMode);
-                }
-                else {
-                    peak = getPeakFromLODInRange(clipData.cachedPeaksL, clipData.cachedPeaksR, s0, s1, 256.0, isStereo, viewMode);
-                }
-            }
-            // --- LÓGICA DE MUESTRAS PURAS ( < 54 spp) ---
-            else {
-                peak = getPeakFromSamples(clipData.fileBuffer, s0, s1, isStereo, viewMode);
-            }
-
-            double yTop = midY - (double)(peak.maxPos * (float)halfH * 0.95f);
-            double yBottom = midY - (double)(peak.minNeg * (float)halfH * 0.95f);
-            
-            if (yBottom - yTop < 1.0) yBottom = yTop + 1.0;
-
-            g.drawVerticalLine(area.getX() + x, (float)yTop, (float)yBottom);
-        }
-    }
-
-    static void drawWaveformSummary(juce::Graphics& g,
-        const AudioClipData& clipData,
-        juce::Rectangle<int> area,
-        double hZoom,
-        double clipStartUnits,
-        double viewStartUnits)
-    {
-        if (clipData.lod2PeaksL.empty()) return;
-
         const int width = area.getWidth();
         const int height = area.getHeight();
         if (width <= 0 || height <= 0) return;
 
-        // --- Cálculo de Escala de Alta Precisión ---
+        // Blindaje de Seguridad (Safety Shield)
+        if (std::isnan(hZoom) || hZoom <= 0.00000001) return;
+
         float baseW = clipData.originalWidth <= 0 ? clipData.width : clipData.originalWidth;
         const double samplesPerUnit = (double)clipData.fileBuffer.getNumSamples() / (double)baseW;
         const double samplesPerPixel = samplesPerUnit / hZoom;
+
+        if (std::isnan(samplesPerPixel) || samplesPerPixel <= 0.0) return;
+
+        const double pixelsPerSample = 1.0 / samplesPerPixel;
+        const double visibleStartS = viewStartSamples - clipStartSamples + (clipData.offsetX * samplesPerUnit);
+        const double visibleEndS = visibleStartS + (double)width * samplesPerPixel;
+
+        // --- MODO ESPECTROGRAMA ---
+        if (viewMode == WaveformViewMode::Spectrogram) {
+            drawSpectrogram(g, clipData, area, hZoom, pixelsPerSample, visibleStartS, baseW);
+            return;
+        }
+
+        // --- RENDERIZADO DE FORMA DE ONDA TRANSICIONAL (ZERO JITTER) ---
+        g.setColour(baseColor.brighter(0.1f));
         
-        // El resumen (minimapa) suele dibujarse desde el inicio del clip (offsetX=0 habitual)
-        // pero respetamos el offsetX si existe.
-        const double sampleOffset = (viewStartUnits - clipStartUnits + clipData.offsetX) * samplesPerUnit;
-
-        const float midY = (float)area.getY() + (float)height / 2.0f;
-        const float halfH = (float)height * 0.45f; 
-
-        g.setColour(juce::Colours::white.withAlpha(0.8f)); 
-
-        for (int x = 0; x < width; ++x) {
-            double s0 = sampleOffset + (double)x * samplesPerPixel;
-            double s1 = s0 + samplesPerPixel;
-            AudioPeak peak = getPeakFromLODInRange(clipData.lod2PeaksL, clipData.lod2PeaksR, s0, s1, 4096.0, true, WaveformViewMode::Combined);
-
-            g.drawVerticalLine(area.getX() + x, midY - (peak.maxPos * halfH), midY - (peak.minNeg * halfH));
+        if (viewMode == WaveformViewMode::SeparateLR && clipData.fileBuffer.getNumChannels() > 1) {
+            float h = (float)height / 2.0f;
+            renderSeamlessLayer(g, clipData, area.withHeight((int)h), visibleStartS, visibleEndS, pixelsPerSample, samplesPerPixel, WaveformViewMode::SeparateLR, 0); // Left
+            renderSeamlessLayer(g, clipData, area.withY(area.getY() + (int)h).withHeight((int)h), visibleStartS, visibleEndS, pixelsPerSample, samplesPerPixel, WaveformViewMode::SeparateLR, 1); // Right
+        } else {
+            renderSeamlessLayer(g, clipData, area, visibleStartS, visibleEndS, pixelsPerSample, samplesPerPixel, viewMode, 0);
         }
     }
 
 private:
-    static AudioPeak getPeakFromLODInRange(const std::vector<AudioPeak>& lodL,
-        const std::vector<AudioPeak>& lodR,
-        double s0, double s1,
-        double samplesPerPoint,
-        bool isStereo,
-        WaveformViewMode viewMode)
-    {
-        int idx0 = (int)std::floor(s0 / samplesPerPoint);
-        int idx1 = (int)std::ceil(s1 / samplesPerPoint);
-        
-        AudioPeak result = { 0.0f, 0.0f };
-        int size = (int)lodL.size();
-
-        if (idx0 >= size) return result;
-        idx0 = std::max(0, idx0);
-        idx1 = std::min(size, idx1);
-
-        for (int i = idx0; i < idx1; ++i) {
-            const auto& pL = lodL[i];
-            result.maxPos = std::max(result.maxPos, pL.maxPos);
-            result.minNeg = std::min(result.minNeg, pL.minNeg);
-
-            if (isStereo && viewMode == WaveformViewMode::Combined) {
-                const auto& pR = lodR[i];
-                result.maxPos = std::max(result.maxPos, pR.maxPos);
-                result.minNeg = std::min(result.minNeg, pR.minNeg);
-            }
-        }
-        return result;
+    static double calculateLODLevel(double spp) {
+        if (spp <= 1.0) return -1.0; 
+        if (spp <= 256.0) return (std::log(spp) / std::log(256.0)) - 1.0; 
+        return std::log(spp / 256.0) / std::log(4.0);
     }
 
-    static AudioPeak getPeakFromSamples(const juce::AudioBuffer<float>& buffer,
-        double s0, double s1,
-        bool isStereo,
-        WaveformViewMode viewMode)
-    {
-        AudioPeak result = { 0.0f, 0.0f };
-        int numSamples = buffer.getNumSamples();
-        int start = (int)std::floor(s0);
-        int end = (int)std::ceil(s1);
+    /**
+     * getBlendedPeak: Preservación íntegra de la lógica de transición.
+     */
+    static AudioPeak getBlendedPeak(const AudioClipData& clipData, double s, int level, WaveformViewMode mode, int chanIdx) {
+        if (level < -1) level = -1;
+        if (level > 3) level = 3;
 
-        if (start >= numSamples) return result;
-        start = std::max(0, start);
-        end = std::min(numSamples, end);
+        auto selectData = [&](int lvl) -> const std::vector<AudioPeak>* {
+            if (lvl < 0) return nullptr;
+            bool useMS = (mode == WaveformViewMode::MidSide);
+            if (lvl == 0) return useMS ? ((chanIdx == 0) ? &clipData.cachedPeaksMid : &clipData.cachedPeaksSide) : ((chanIdx == 0) ? &clipData.cachedPeaksL : &clipData.cachedPeaksR);
+            if (lvl == 1) return useMS ? ((chanIdx == 0) ? &clipData.lod1PeaksMid : &clipData.lod1PeaksSide) : ((chanIdx == 0) ? &clipData.lod1PeaksL : &clipData.lod1PeaksR);
+            if (lvl == 2) return useMS ? ((chanIdx == 0) ? &clipData.lod2PeaksMid : &clipData.lod2PeaksSide) : ((chanIdx == 0) ? &clipData.lod2PeaksL : &clipData.lod2PeaksR);
+            return useMS ? ((chanIdx == 0) ? &clipData.lod3PeaksMid : &clipData.lod3PeaksSide) : ((chanIdx == 0) ? &clipData.lod3PeaksL : &clipData.lod3PeaksR);
+        };
 
-        const float* lData = buffer.getReadPointer(0);
-        const float* rData = isStereo ? buffer.getReadPointer(1) : nullptr;
+        auto sampleVec = [&](const std::vector<AudioPeak>* vec, double sppLOD) -> AudioPeak {
+            if (!vec || vec->empty()) return { 0.0f, 0.0f };
+            double idx = s / sppLOD;
+            int i0 = (int)std::floor(idx);
+            int i1 = i0 + 1;
+            float frac = (float)(idx - i0);
+            i0 = std::max(0, std::min((int)vec->size() - 1, i0));
+            i1 = std::max(0, std::min((int)vec->size() - 1, i1));
+            return { (*vec)[i0].maxPos * (1.0f - frac) + (*vec)[i1].maxPos * frac, (*vec)[i0].minNeg * (1.0f - frac) + (*vec)[i1].minNeg * frac };
+        };
 
-        for (int s = start; s < end; ++s) {
-            float l = lData[s];
-            result.maxPos = std::max(result.maxPos, l);
-            result.minNeg = std::min(result.minNeg, l);
-
-            if (isStereo && viewMode == WaveformViewMode::Combined) {
-                float r = rData[s];
-                result.maxPos = std::max(result.maxPos, r);
-                result.minNeg = std::min(result.minNeg, r);
+        if (level < 0) {
+            int n = clipData.fileBuffer.getNumSamples();
+            int i0 = (int)std::floor(s), i1 = i0 + 1;
+            float frac = (float)(s - i0);
+            i0 = std::max(0, std::min(n - 1, i0)); i1 = std::max(0, std::min(n - 1, i1));
+            auto* dataL = clipData.fileBuffer.getReadPointer(0);
+            auto* dataR = (clipData.fileBuffer.getNumChannels() > 1) ? clipData.fileBuffer.getReadPointer(1) : dataL;
+            auto getV = [&](const float* data) { return data[i0] * (1.0f - frac) + data[i1] * frac; };
+            if (mode == WaveformViewMode::MidSide) {
+                float v = (chanIdx == 0) ? (getV(dataL) + getV(dataR)) * 0.5f : (getV(dataL) - getV(dataR)) * 0.5f;
+                return { v, v };
             }
+            float val = (chanIdx == 0) ? getV(dataL) : getV(dataR);
+            return { val, val };
         }
-        return result;
+        return sampleVec(selectData(level), (level == 0) ? 256.0 : (level == 1) ? 1024.0 : (level == 2) ? 4096.0 : 16384.0);
     }
 
-    static void drawMicroMode(juce::Graphics& g, const AudioClipData& clipData, juce::Rectangle<int> area,
-        int drawStartX, int drawEndX, double sampleOffset, double spp, juce::Colour color, WaveformViewMode viewMode, bool isStereo)
+    /**
+     * renderSeamlessLayer: RECONSTRUCCIÓN ZERO JITTER.
+     * Utiliza Bucle basado en Picos + Coordenadas Sub-píxel.
+     */
+    static void renderSeamlessLayer(juce::Graphics& g, const AudioClipData& clipData, juce::Rectangle<int> area,
+        double startSample, double endSample, double pixelsPerSample, double spp, WaveformViewMode mode, int chanIdx)
     {
-        const float* lData = clipData.fileBuffer.getReadPointer(0);
-        const float* rData = isStereo ? clipData.fileBuffer.getReadPointer(1) : nullptr;
-        const int numSamples = clipData.fileBuffer.getNumSamples();
         const float midY = (float)area.getY() + (float)area.getHeight() / 2.0f;
         const float halfH = (float)area.getHeight() / 2.0f;
+        const bool isStereo = clipData.fileBuffer.getNumChannels() > 1;
 
-        g.setColour(color);
+        double lodVal = calculateLODLevel(spp);
+        int levelFine = (int)std::floor(lodVal);
+        int levelCoarse = levelFine + 1;
+        float alpha = (float)(lodVal - levelFine);
+
+        // Mapeo Rígido al LOD Fino para evitar Jitter de Remuestreo
+        double sppLOD = (levelFine < 0) ? 1.0 : (levelFine == 0) ? 256.0 : (levelFine == 1) ? 1024.0 : (levelFine == 2) ? 4096.0 : 16384.0;
+        
+        long long idxStart = (long long)std::floor(startSample / sppLOD) - 1;
+        long long idxEnd = (long long)std::ceil(endSample / sppLOD) + 1;
+        
+        // Safety Limit
+        if (idxEnd - idxStart > 30000) idxEnd = idxStart + 30000;
+
         juce::Path p;
         bool first = true;
 
-        for (int x = drawStartX; x < drawEndX; ++x) {
-            double sPos = sampleOffset + ((double)x * spp);
-            int idx = (int)sPos;
-            
-            if (idx >= 0 && idx < numSamples) {
-                // Interpolación lineal simple para suavizar el zoom extremo (FL Studio Style)
-                float val = lData[idx];
-                if (idx + 1 < numSamples) {
-                    float nextVal = lData[idx + 1];
-                    double fract = sPos - (double)idx;
-                    val = (float)(val + fract * (nextVal - val));
-                }
+        // BUCLE BASADO EN PICOS (ZERO JITTER)
+        for (long long i = idxStart; i < idxEnd; ++i) {
+            double s = (double)i * sppLOD;
+            AudioPeak pFine = getBlendedPeak(clipData, s, levelFine, mode, chanIdx);
+            AudioPeak pCoarse = getBlendedPeak(clipData, s, levelCoarse, mode, chanIdx);
 
-                if (isStereo && viewMode == WaveformViewMode::Combined) {
-                    float rVal = rData[idx];
-                    if (idx + 1 < numSamples) {
-                        float nextRVal = rData[idx + 1];
-                        double fract = sPos - (double)idx;
-                        rVal = (float)(rVal + fract * (nextRVal - rVal));
-                    }
-                    val = (std::abs(val) > std::abs(rVal)) ? val : rVal;
-                }
+            float maxV = pFine.maxPos * (1.0f - alpha) + pCoarse.maxPos * alpha;
+            if (isStereo && mode == WaveformViewMode::Combined) {
+                AudioPeak pFineR = getBlendedPeak(clipData, s, levelFine, mode, 1);
+                AudioPeak pCoarseR = getBlendedPeak(clipData, s, levelCoarse, mode, 1);
+                maxV = std::max(maxV, pFineR.maxPos * (1.0f - alpha) + pCoarseR.maxPos * alpha);
+            }
 
-                float y = midY - (val * halfH * 0.9f);
-                if (first) { p.startNewSubPath((float)area.getX() + x, y); first = false; }
-                else p.lineTo((float)area.getX() + x, y);
+            // Coordenada horizontal RÍGIDA de sub-píxel (Anti-Aliasing de JUCE)
+            float px = (float)((s - startSample) * pixelsPerSample) + (float)area.getX();
+            float pyTop = midY - (maxV * halfH * 0.95f);
+            if (first) { p.startNewSubPath(px, pyTop); first = false; }
+            else p.lineTo(px, pyTop);
+        }
+
+        for (long long i = idxEnd - 1; i >= idxStart; --i) {
+            double s = (double)i * sppLOD;
+            AudioPeak pFine = getBlendedPeak(clipData, s, levelFine, mode, chanIdx);
+            AudioPeak pCoarse = getBlendedPeak(clipData, s, levelCoarse, mode, chanIdx);
+            float minV = pFine.minNeg * (1.0f - alpha) + pCoarse.minNeg * alpha;
+            if (isStereo && mode == WaveformViewMode::Combined) {
+                AudioPeak pFineR = getBlendedPeak(clipData, s, levelFine, mode, 1);
+                AudioPeak pCoarseR = getBlendedPeak(clipData, s, levelCoarse, mode, 1);
+                minV = std::min(minV, pFineR.minNeg * (1.0f - alpha) + pCoarseR.minNeg * alpha);
+            }
+            float px = (float)((s - startSample) * pixelsPerSample) + (float)area.getX();
+            float pyBottom = midY - (minV * halfH * 0.95f);
+            p.lineTo(px, pyBottom);
+        }
+
+        // 3. Motor Híbrido: Bifurcación Visual Macro/Micro (Élite)
+        if (spp >= 4.0) {
+            p.closeSubPath();
+            g.fillPath(p);
+        } else {
+            // Alta Fidelidad en Zoom Micro: La onda se convierte en una "Cuerda de Sonido" visible.
+            g.strokePath(p, juce::PathStrokeType(1.5f));
+        }
+
+        // Overlay MicroPuntos
+        if (spp < 8.0) {
+            float pointAlpha = std::max(0.0f, (float)(2.0 - spp) / 2.0f);
+            if (pointAlpha > 0.1f) {
+                g.setOpacity(pointAlpha);
+                for (long long i = idxStart; i < idxEnd; ++i) {
+                    if (pixelsPerSample < 1.0) continue; 
+                    double s = (double)i * sppLOD;
+                    AudioPeak pr = getBlendedPeak(clipData, s, -1, mode, chanIdx);
+                    float px = (float)((s - startSample) * pixelsPerSample) + (float)area.getX();
+                    float py = midY - (pr.maxPos * halfH * 0.95f);
+                    g.fillEllipse(px - 1.5f, py - 1.5f, 3.0f, 3.0f);
+                }
             }
         }
-        g.strokePath(p, juce::PathStrokeType(1.5f));
+    }
 
-        // Dibujar bolitas en los puntos reales si el zoom es absurdamente alto
-        if (spp < 0.1) {
-            g.setColour(color.withAlpha(0.6f));
-            for (int x = drawStartX; x < drawEndX; ++x) {
-                double sPos = sampleOffset + ((double)x * spp);
-                if (std::abs(sPos - std::round(sPos)) < (spp * 0.5)) {
-                    int idx = (int)std::round(sPos);
-                    if (idx >= 0 && idx < numSamples) {
-                        float val = lData[idx];
-                        float y = midY - (val * halfH * 0.9f);
-                        g.fillEllipse((float)area.getX() + x - 2.5f, y - 2.5f, 5.0f, 5.0f);
-                    }
-                }
-            }
-        }
+    static void drawSpectrogram(juce::Graphics& g, const AudioClipData& clipData, juce::Rectangle<int> area, 
+        double hZoom, double pps, double startSample, float baseW) 
+    {
+        if (clipData.spectrogramImage.isNull()) return;
+        const double totalW = (double)baseW * hZoom;
+        float imgPPP = (float)clipData.spectrogramImage.getWidth() / (float)totalW;
+        int srcX = (int)std::floor(startSample * (pps * imgPPP));
+        int srcW = (int)std::ceil((double)area.getWidth() * (pps * imgPPP));
+        if (srcW > 0 && srcX >= 0)
+            g.drawImage(clipData.spectrogramImage, area.getX(), area.getY(), area.getWidth(), area.getHeight(), srcX, 0, srcW, clipData.spectrogramImage.getHeight());
+    }
+
+public:
+    static void drawWaveformSummary(juce::Graphics& g, const AudioClipData& clipData, juce::Rectangle<int> area, 
+        double hZoom, double clipStartUnits, double viewStartUnits) 
+    {
+        if (clipData.lod2PeaksL.empty() || hZoom <= 0.0) return;
+        float baseW = clipData.originalWidth <= 0 ? clipData.width : clipData.originalWidth;
+        const double samplesPerUnit = (double)clipData.fileBuffer.getNumSamples() / (double)baseW;
+        const double samplesPerPixel = samplesPerUnit / hZoom;
+        const double pixelsPerSample = 1.0 / std::max(0.0000001, samplesPerPixel);
+        const double startSample = (viewStartUnits - clipStartUnits + clipData.offsetX) * samplesPerUnit;
+        g.setOpacity(0.8f);
+        renderSeamlessLayer(g, clipData, area, startSample, startSample + area.getWidth() * samplesPerPixel, pixelsPerSample, samplesPerPixel, WaveformViewMode::Combined, 0);
     }
 };
