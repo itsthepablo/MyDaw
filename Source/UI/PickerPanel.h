@@ -161,7 +161,8 @@ public:
             MidiClipRenderer::drawMidiClip(g, *item.midiRef, clipRect, item.color, false, miniZoom, startOffset);
         }
         else if (item.type == 0 && item.audioRef != nullptr) {
-            WaveformRenderer::drawWaveform(g, *item.audioRef, clipRect, item.color, WaveformViewMode::Combined);
+            double miniZoom = (double)clipRect.getWidth() / std::max(0.1, (double)item.audioRef->width);
+            WaveformRenderer::drawWaveform(g, *item.audioRef, clipRect, item.color, WaveformViewMode::Combined, miniZoom, 0.0, 0.0);
         }
         else if (item.type == 2 && item.autoRef != nullptr) {
             g.setColour(item.color.brighter());

@@ -205,6 +205,7 @@
               file="Source/Playlist/PlaylistDropHandler.h"/>
       </GROUP>
       <GROUP id="{F98E9492-EAA4-A856-6CC6-2352DAB93A59}" name="Tracks">
+        <FILE id="i43p2y" name="AudioClipData.h" compile="0" resource="0" file="Source/Tracks/AudioClipData.h"/>
         <FILE id="LJbzpQ" name="MasterTrackStrip.cpp" compile="1" resource="0"
               file="Source/Tracks/MasterTrackStrip.cpp"/>
         <FILE id="JPlinE" name="MasterTrackStrip.h" compile="0" resource="0"

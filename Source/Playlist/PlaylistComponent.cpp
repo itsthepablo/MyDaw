@@ -324,7 +324,9 @@ void PlaylistComponent::paint(juce::Graphics& g) {
                             juce::Rectangle<int> clipSummaryRect(xPos, summaryArea.getY(), wPos, summaryArea.getHeight());
                             
                             if (clip.linkedAudio != nullptr) {
-                                WaveformRenderer::drawWaveformSummary(g, *clip.linkedAudio, clipSummaryRect, t->getColor(), hZoom);
+                                double clipUnits = (double)clip.startX;
+                                double viewUnits = (double)hS / hZoom;
+                                WaveformRenderer::drawWaveformSummary(g, *clip.linkedAudio, clipSummaryRect, hZoom, clipUnits, viewUnits);
                             }
                             else if (clip.linkedMidi != nullptr) {
                                 MidiClipRenderer::drawMidiSummary(g, *clip.linkedMidi, clipSummaryRect, (float)hZoom, (float)hS, folderMinP, folderMaxP);
@@ -373,7 +375,9 @@ void PlaylistComponent::paint(juce::Graphics& g) {
         juce::Rectangle<int> innerArea = clipRectF.withTrimmedTop(18.0f).toNearestInt();
 
         if (clip.linkedAudio != nullptr) {
-            WaveformRenderer::drawWaveform(g, *clip.linkedAudio, innerArea, trackColor, clip.trackPtr->getWaveformViewMode(), hZoom);
+            double clipUnits = (double)clip.startX;
+            double viewUnits = (double)hS / hZoom;
+            WaveformRenderer::drawWaveform(g, *clip.linkedAudio, innerArea, trackColor, clip.trackPtr->getWaveformViewMode(), hZoom, clipUnits, viewUnits);
         }
         if (clip.linkedMidi != nullptr) {
             MidiClipRenderer::drawMidiClip(g, *clip.linkedMidi, innerArea, trackColor, clip.trackPtr->isInlineEditingActive, hZoom, hS);
