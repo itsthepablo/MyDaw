@@ -1,4 +1,5 @@
 #include "PlaylistComponent.h"
+#include "../Theme/CustomTheme.h"
 #include "../UI/AutomationRenderer.h"
 #include "../UI/MidiClipRenderer.h"
 #include "../UI/WaveformRenderer.h"
@@ -256,7 +257,11 @@ bool PlaylistComponent::keyPressed(const juce::KeyPress &key,
 }
 
 void PlaylistComponent::paint(juce::Graphics &g) {
-  g.fillAll(juce::Colour(25, 27, 30));
+    if (auto* theme = dynamic_cast<CustomTheme*>(&getLookAndFeel())) {
+        g.fillAll(theme->getSkinColor("PLAYLIST_BG", juce::Colour(25, 27, 30)));
+    } else {
+        g.fillAll(juce::Colour(25, 27, 30));
+    }
   float hS = (float)hNavigator.getCurrentRangeStart();
   float vS = (float)vBar.getCurrentRangeStart();
 
@@ -300,7 +305,11 @@ void PlaylistComponent::paint(juce::Graphics &g) {
       int xPos = (int)(blockAbsX * hZoom) - (int)hS;
       int wPos = (int)(std::ceil(blockLengthPx * hZoom));
 
-      g.setColour(juce::Colour(32, 34, 38)); // Gris ligeramente más iluminado
+      if (auto* theme = dynamic_cast<CustomTheme*>(&getLookAndFeel())) {
+          g.setColour(theme->getSkinColor("PLAYLIST_BG_ALT", juce::Colour(32, 34, 38)));
+      } else {
+          g.setColour(juce::Colour(32, 34, 38));
+      }
       g.fillRect(xPos, topOffset, wPos, viewAreaH);
     }
   }

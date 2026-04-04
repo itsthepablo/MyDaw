@@ -41,6 +41,83 @@ public:
     }
 
 private:
+    struct ColorRow;
+    inline static juce::Colour lastCopiedColor = juce::Colours::transparentBlack;
+
+    struct ColorRow : public juce::Component, public juce::ChangeListener
+    {
+        ColorRow(juce::String n, juce::Colour c, std::function<void(juce::Colour)> onUpdate)
+            : name(n), currentColor(c), onColorUpdate(onUpdate)
+        {
+            addAndMakeVisible(label);
+            label.setText(name, juce::dontSendNotification);
+            label.setColour(juce::Label::textColourId, juce::Colours::white.withAlpha(0.7f));
+            
+            addAndMakeVisible(colorButton);
+            colorButton.setAlpha(0.0f); // Invisible button but still clickable
+            colorButton.onClick = [this] {
+                auto* selector = new juce::ColourSelector();
+                selector->setName(name);
+                selector->setCurrentColour(currentColor);
+                selector->addChangeListener(this);
+                selector->setSize(400, 400);
+
+                juce::CallOutBox::launchAsynchronously(std::unique_ptr<juce::Component>(selector), 
+                                                       colorButton.getScreenBounds(), nullptr);
+            };
+
+            addAndMakeVisible(copyBtn);
+            copyBtn.setButtonText("C");
+            copyBtn.setTooltip("Copy Color");
+            copyBtn.onClick = [this] { lastCopiedColor = currentColor; };
+
+            addAndMakeVisible(pasteBtn);
+            pasteBtn.setButtonText("P");
+            pasteBtn.setTooltip("Paste Color");
+            pasteBtn.onClick = [this] { 
+                if (!lastCopiedColor.isTransparent()) {
+                    currentColor = lastCopiedColor;
+                    if (onColorUpdate) onColorUpdate(currentColor);
+                    repaint();
+                }
+            };
+        }
+
+        void changeListenerCallback(juce::ChangeBroadcaster* source) override
+        {
+            if (auto* selector = dynamic_cast<juce::ColourSelector*>(source))
+            {
+                currentColor = selector->getCurrentColour();
+                repaint();
+                if (onColorUpdate) onColorUpdate(currentColor);
+            }
+        }
+
+        void paint(juce::Graphics& g) override
+        {
+            g.setColour(currentColor);
+            g.fillRoundedRectangle(colorButton.getBounds().toFloat(), 4.0f);
+            g.setColour(juce::Colours::white.withAlpha(0.3f));
+            g.drawRoundedRectangle(colorButton.getBounds().toFloat(), 4.0f, 1.0f);
+        }
+
+        void resized() override
+        {
+            auto area = getLocalBounds();
+            colorButton.setBounds(area.removeFromRight(60).reduced(5));
+            pasteBtn.setBounds(area.removeFromRight(25).reduced(2));
+            copyBtn.setBounds(area.removeFromRight(25).reduced(2));
+            label.setBounds(area.reduced(5));
+        }
+
+        juce::String name;
+        juce::Colour currentColor;
+        std::function<void(juce::Colour)> onColorUpdate;
+        juce::Label label;
+        juce::TextButton colorButton;
+        juce::TextButton copyBtn, pasteBtn;
+    };
+
     void refreshList()
     {
         colorRows.clear();
@@ -79,60 +156,6 @@ private:
             refreshList();
         }
     }
-
-    struct ColorRow : public juce::Component, public juce::ChangeListener
-    {
-        ColorRow(juce::String n, juce::Colour c, std::function<void(juce::Colour)> onUpdate)
-            : name(n), currentColor(c), onColorUpdate(onUpdate)
-        {
-            addAndMakeVisible(label);
-            label.setText(name, juce::dontSendNotification);
-            label.setColour(juce::Label::textColourId, juce::Colours::white.withAlpha(0.7f));
-            
-            addAndMakeVisible(colorButton);
-            colorButton.onClick = [this] {
-                auto* selector = new juce::ColourSelector();
-                selector->setName(name);
-                selector->setCurrentColour(currentColor);
-                selector->addChangeListener(this);
-                selector->setSize(400, 400);
-
-                juce::CallOutBox::launchAsynchronously(std::unique_ptr<juce::Component>(selector), 
-                                                       colorButton.getScreenBounds(), nullptr);
-            };
-        }
-
-        void changeListenerCallback(juce::ChangeBroadcaster* source) override
-        {
-            if (auto* selector = dynamic_cast<juce::ColourSelector*>(source))
-            {
-                currentColor = selector->getCurrentColour();
-                repaint();
-                if (onColorUpdate) onColorUpdate(currentColor);
-            }
-        }
-
-        void paint(juce::Graphics& g) override
-        {
-            g.setColour(currentColor);
-            g.fillRoundedRectangle(colorButton.getBounds().toFloat(), 4.0f);
-            g.setColour(juce::Colours::white.withAlpha(0.3f));
-            g.drawRoundedRectangle(colorButton.getBounds().toFloat(), 4.0f, 1.0f);
-        }
-
-        void resized() override
-        {
-            auto area = getLocalBounds();
-            colorButton.setBounds(area.removeFromRight(60).reduced(5));
-            label.setBounds(area.reduced(5));
-        }
-
-        juce::String name;
-        juce::Colour currentColor;
-        std::function<void(juce::Colour)> onColorUpdate;
-        juce::Label label;
-        juce::TextButton colorButton;
-    };
 
     juce::Viewport viewport;
     juce::Component listContainer;

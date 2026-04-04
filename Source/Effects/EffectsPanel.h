@@ -19,6 +19,8 @@ public:
 
     void paint(juce::Graphics& g) override;
     void resized() override;
+    void updateStyles();
+    void lookAndFeelChanged() override { updateStyles(); repaint(); }
 
     Track* getActiveTrack() const { return activeTrack; }
 

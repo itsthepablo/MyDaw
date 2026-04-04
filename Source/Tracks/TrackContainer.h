@@ -1,5 +1,6 @@
 #pragma once
 #include <JuceHeader.h>
+#include "../Theme/CustomTheme.h"
 #include "Track.h"
 #include "TrackControlPanel.h"
 #include "MasterTrackStrip.h"
@@ -10,7 +11,11 @@
 struct TrackHeaderBackground : public juce::Component {
     TrackHeaderBackground() { setOpaque(true); }
     void paint(juce::Graphics& g) override {
-        g.fillAll(juce::Colour(25, 27, 30));
+        if (auto* theme = dynamic_cast<CustomTheme*>(&getLookAndFeel())) {
+            g.fillAll(theme->getSkinColor("TRACKS_BG", juce::Colour(25, 27, 30)));
+        } else {
+            g.fillAll(juce::Colour(25, 27, 30));
+        }
     }
 };
 
@@ -348,7 +353,13 @@ public:
         resized();
     }
 
-    void paint(juce::Graphics& g) override { g.fillAll(juce::Colour(25, 27, 30)); }
+    void paint(juce::Graphics& g) override { 
+        if (auto* theme = dynamic_cast<CustomTheme*>(&getLookAndFeel())) {
+            g.fillAll(theme->getSkinColor("TRACKS_BG", juce::Colour(25, 27, 30)));
+        } else {
+            g.fillAll(juce::Colour(25, 27, 30));
+        }
+    }
     void paintOverChildren(juce::Graphics& g) override {
         if (draggedPanelForGhost != nullptr && !ghostSnapshot.isNull()) {
             g.setOpacity(0.6f); g.drawImageAt(ghostSnapshot, 0, ghostY);
@@ -372,6 +383,20 @@ public:
         }
         addMidiBtn.setBounds(5, 5, 80, 25); addAudioBtn.setBounds(90, 5, 80, 25);
         headerBg.toBack(); addMidiBtn.toFront(false); addAudioBtn.toFront(false);
+    }
+
+    void updateStyles() {
+        if (auto* theme = dynamic_cast<CustomTheme*>(&getLookAndFeel())) {
+            auto bg = theme->getSkinColor("TRACKS_BG", juce::Colour(25, 27, 30));
+            addMidiBtn.setColour(juce::TextButton::buttonColourId, bg.brighter(0.1f));
+            addAudioBtn.setColour(juce::TextButton::buttonColourId, bg.brighter(0.1f));
+        }
+    }
+
+    void lookAndFeelChanged() override {
+        updateStyles();
+        headerBg.repaint();
+        repaint();
     }
 
     void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override {

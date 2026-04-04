@@ -1,5 +1,6 @@
 #pragma once
 #include <JuceHeader.h>
+#include "../Theme/CustomTheme.h"
 
 class FileBrowserPanel : public juce::Component, public juce::ComboBox::Listener {
 public:
@@ -73,9 +74,26 @@ public:
     }
 
     void paint(juce::Graphics& g) override {
-        g.fillAll(juce::Colour(20, 22, 25));
+        if (auto* theme = dynamic_cast<CustomTheme*>(&getLookAndFeel())) {
+            g.fillAll(theme->getSkinColor("BROWSER_BG", juce::Colour(20, 22, 25)));
+        } else {
+            g.fillAll(juce::Colour(20, 22, 25));
+        }
         g.setColour(juce::Colours::black.withAlpha(0.5f));
         g.drawVerticalLine(getWidth() - 1, 0, (float)getHeight());
+    }
+
+    void lookAndFeelChanged() override {
+        updateStyles();
+        repaint();
+    }
+
+    void updateStyles() {
+        if (auto* theme = dynamic_cast<CustomTheme*>(&getLookAndFeel())) {
+            auto bg = theme->getSkinColor("BROWSER_BG", juce::Colour(20, 22, 25));
+            if (fileTree)
+                fileTree->setColour(juce::FileTreeComponent::backgroundColourId, bg);
+        }
     }
 
     void resized() override {
@@ -86,7 +104,8 @@ public:
         driveSelector.setBounds(area.removeFromTop(25).reduced(5, 0));
         area.removeFromTop(5);
 
-        fileTree->setBounds(area);
+        if (fileTree)
+            fileTree->setBounds(area);
     }
 
 private:

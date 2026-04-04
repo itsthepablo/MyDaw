@@ -39,6 +39,14 @@ public:
         addAndMakeVisible(btnTools);
         addAndMakeVisible(btnHelp);
 
+        btnFile.setTriggeredOnMouseDown(true);
+        btnEdit.setTriggeredOnMouseDown(true);
+        btnCreate.setTriggeredOnMouseDown(true);
+        btnView.setTriggeredOnMouseDown(true);
+        btnOptions.setTriggeredOnMouseDown(true);
+        btnTools.setTriggeredOnMouseDown(true);
+        btnHelp.setTriggeredOnMouseDown(true);
+
         btnFile.onClick = [this] { showDropdownMenu("FILE", btnFile); };
         btnEdit.onClick = [this] { showDropdownMenu("EDIT", btnEdit); };
         btnCreate.onClick = [this] { showDropdownMenu("CREATE", btnCreate); };
@@ -121,7 +129,7 @@ public:
 
         closeBtn.onClick = [this] { juce::JUCEApplication::getInstance()->systemRequestedQuit(); };
 
-        startTimerHz(30);
+        startTimerHz(15);
     }
 
     ~TopMenuBar() override {
@@ -194,6 +202,32 @@ public:
             });
     }
 
+    void updateStyles() {
+        if (auto* theme = dynamic_cast<CustomTheme*>(&getLookAndFeel())) {
+            auto bg = theme->getSkinColor("TOP_BAR_BG", juce::Colour(20, 22, 25));
+            auto accent = theme->getSkinColor("ACCENT_COLOR", juce::Colours::orange);
+            
+            // Botones de modo
+            viewToggleBtn.setColour(juce::TextButton::buttonColourId, bg.brighter(0.1f));
+            metronomeBtn.setColour(juce::TextButton::buttonOnColourId, accent);
+            
+            // Botones de panel
+            pickerBtn.setColour(juce::TextButton::buttonColourId, bg.brighter(0.1f));
+            filesBtn.setColour(juce::TextButton::buttonColourId, bg.brighter(0.1f));
+            mixerBtn.setColour(juce::TextButton::buttonColourId, bg.brighter(0.1f));
+            rackBtn.setColour(juce::TextButton::buttonColourId, bg.brighter(0.1f));
+            fxBtn.setColour(juce::TextButton::buttonColourId, bg.brighter(0.1f));
+
+            // Actualizar el tema del menú popup
+            customMenuTheme.setColour(juce::PopupMenu::highlightedBackgroundColourId, accent);
+        }
+    }
+
+    void lookAndFeelChanged() override {
+        updateStyles();
+        repaint();
+    }
+
     void paint(juce::Graphics& g) override {
         if (auto* theme = dynamic_cast<CustomTheme*>(&getLookAndFeel())) {
             g.fillAll(theme->getSkinColor("TOP_BAR_BG", juce::Colour(20, 22, 25)));
@@ -259,6 +293,22 @@ private:
             setColour(juce::PopupMenu::textColourId, juce::Colours::white);
             setColour(juce::PopupMenu::highlightedBackgroundColourId, juce::Colour(200, 130, 30));
             setColour(juce::PopupMenu::highlightedTextColourId, juce::Colours::white);
+        }
+
+        juce::Font getPopupMenuFont() override {
+            return juce::Font(juce::Font::getDefaultSansSerifFontName(), 14.0f, juce::Font::plain);
+        }
+
+        void drawPopupMenuBackground(juce::Graphics& g, int width, int height) override {
+            g.fillAll(findColour(juce::PopupMenu::backgroundColourId));
+            g.setColour(juce::Colours::white.withAlpha(0.1f));
+            g.drawRect(0, 0, width, height, 1);
+        }
+
+        void getIdealPopupMenuItemSize(const juce::String& text, bool isSeparator,
+                                        int standardMenuItemHeight, int& w, int& h) override {
+            h = 32; // Altura fija para evitar cálculos lentos
+            w = juce::Font(14.0f).getStringWidth(text) + 40;
         }
     };
     DarkMenuTheme customMenuTheme;

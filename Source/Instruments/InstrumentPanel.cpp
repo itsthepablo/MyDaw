@@ -1,4 +1,5 @@
 #include "InstrumentPanel.h"
+#include "../Theme/CustomTheme.h"
 
 InstrumentPanel::InstrumentPanel() {
     addAndMakeVisible(addInstrumentBtn);
@@ -60,7 +61,11 @@ void InstrumentPanel::updateInstrumentView() {
 }
 
 void InstrumentPanel::paint(juce::Graphics& g) {
-    g.fillAll(juce::Colour(30, 33, 36)); // Fondo principal un poco m�s oscuro
+    if (auto* theme = dynamic_cast<CustomTheme*>(&getLookAndFeel())) {
+        g.fillAll(theme->getSkinColor("INSTRUMENT_BG", juce::Colour(30, 33, 36)));
+    } else {
+        g.fillAll(juce::Colour(30, 33, 36));
+    }
 
     if (activeTrack == nullptr) {
         g.setColour(juce::Colours::white.withAlpha(0.3f));
@@ -68,12 +73,12 @@ void InstrumentPanel::paint(juce::Graphics& g) {
         g.drawText("SELECCIONA UNA PISTA MIDI", getLocalBounds(), juce::Justification::centred, true);
     }
     else {
-        // Etiqueta sutil en la esquina superior izquierda
         g.setColour(juce::Colours::white.withAlpha(0.5f));
         g.setFont(juce::Font(12.0f, juce::Font::bold));
         g.drawText("INSTRUMENT CHAIN: " + activeTrack->getName(), 15, 10, 300, 20, juce::Justification::centredLeft);
     }
 }
+
 
 void InstrumentPanel::resized() {
     if (activeTrack != nullptr) {

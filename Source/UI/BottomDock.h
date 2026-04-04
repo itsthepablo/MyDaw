@@ -1,5 +1,6 @@
 #pragma once
 #include <JuceHeader.h>
+#include "../Theme/CustomTheme.h"
 #include "ChannelRackPanel.h"
 #include "../Effects/EffectsPanel.h"
 #include "../Instruments/InstrumentPanel.h"
@@ -14,6 +15,7 @@ public:
     BottomDock(ChannelRackPanel& rack, EffectsPanel& fx, InstrumentPanel& inst, MixerComponent& mixer)
         : rackPanel(rack), effectsPanel(fx), instrumentPanel(inst), miniMixer(mixer)
     {
+        updateStyles();
         addAndMakeVisible(rackPanel);
         addAndMakeVisible(effectsPanel);
         addAndMakeVisible(instrumentPanel);
@@ -61,6 +63,22 @@ public:
         showTab(EffectsTab);
     }
 
+    void updateStyles() {
+        if (auto* theme = dynamic_cast<CustomTheme*>(&getLookAndFeel())) {
+            auto bg = theme->getSkinColor("DOCK_BG", juce::Colour(25, 27, 30));
+            rackTabBtn.setColour(juce::TextButton::buttonColourId, bg);
+            effectsTabBtn.setColour(juce::TextButton::buttonColourId, bg);
+            instrumentTabBtn.setColour(juce::TextButton::buttonColourId, bg);
+            mixerTabBtn.setColour(juce::TextButton::buttonColourId, bg);
+            closeBtn.setColour(juce::TextButton::buttonColourId, bg);
+        }
+    }
+
+    void lookAndFeelChanged() override {
+        updateStyles();
+        repaint();
+    }
+
     void showTab(Tab tab) {
         currentTab = tab;
         rackPanel.setVisible(tab == RackTab);
@@ -96,7 +114,11 @@ public:
     }
 
     void paint(juce::Graphics& g) override {
-        g.setColour(juce::Colour(20, 22, 25));
+        if (auto* theme = dynamic_cast<CustomTheme*>(&getLookAndFeel())) {
+            g.setColour(theme->getSkinColor("DOCK_BG", juce::Colour(20, 22, 25)));
+        } else {
+            g.setColour(juce::Colour(20, 22, 25));
+        }
         g.fillRect(0, 0, getWidth(), 25);
     }
 

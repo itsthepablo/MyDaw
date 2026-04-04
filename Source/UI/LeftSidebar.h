@@ -2,6 +2,7 @@
 #include <JuceHeader.h>
 #include "PickerPanel.h"
 #include "FileBrowserPanel.h" 
+#include "../Theme/CustomTheme.h"
 
 class LeftSidebar : public juce::Component {
 public:
@@ -12,6 +13,7 @@ public:
     LeftSidebar(PickerPanel& picker, FileBrowserPanel& files)
         : pickerPanel(picker), filesPanel(files)
     {
+        updateStyles();
         addAndMakeVisible(pickerPanel);
         addAndMakeVisible(filesPanel);
 
@@ -39,6 +41,20 @@ public:
         closeBtn.onClick = [this] { if (onClose) onClose(); };
 
         showTab(FilesTab);
+    }
+
+    void updateStyles() {
+        if (auto* theme = dynamic_cast<CustomTheme*>(&getLookAndFeel())) {
+            auto bg = theme->getSkinColor("SIDEBAR_BG", juce::Colour(25, 27, 30));
+            pickerTabBtn.setColour(juce::TextButton::buttonColourId, bg);
+            filesTabBtn.setColour(juce::TextButton::buttonColourId, bg);
+            closeBtn.setColour(juce::TextButton::buttonColourId, bg);
+        }
+    }
+
+    void lookAndFeelChanged() override {
+        updateStyles();
+        repaint();
     }
 
     void showTab(Tab tab) {

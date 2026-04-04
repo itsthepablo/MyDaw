@@ -94,19 +94,44 @@ juce::Colour CustomTheme::getSkinColor(const juce::String& colorName, juce::Colo
 void CustomTheme::setSkinColor(const juce::String& name, juce::Colour color, bool shouldSave)
 {
     skinColors[name] = color;
+
+    // --- LOGICA DE UNIFICACION (Master Keys) ---
+    if (name == "UNIFIED_MAIN_BG") {
+        skinColors["WINDOW_BG"] = color;
+        skinColors["TOP_BAR_BG"] = color;
+        skinColors["MIXER_BG"] = color;
+        skinColors["PICKER_BG"] = color;
+        skinColors["TRACKS_BG"] = color;
+        skinColors["EFFECTS_BG"] = color;
+        skinColors["CHANNEL_RACK_BG"] = color;
+        skinColors["BROWSER_BG"] = color;
+        skinColors["INSTRUMENT_BG"] = color;
+        skinColors["DOCK_BG"] = color;
+        skinColors["PLAYLIST_BAR_BG"] = color;
+    }
+
     if (shouldSave) saveThemeToFile();
     
-    // Notificar a los oyentes que el tema ha cambiado
+    // Notificar a los oyentes que el tema ha cambiado (vía ChangeBroadcaster)
     sendChangeMessage();
+    
+    // Notificar a todos los componentes de la UI (vía LookAndFeelChange)
+    for (int i = 0; i < juce::Desktop::getInstance().getNumComponents(); ++i)
+        if (auto* c = juce::Desktop::getInstance().getComponent(i))
+            c->sendLookAndFeelChange();
 }
 
 juce::StringArray CustomTheme::getColorKeys() const
 {
     static const char* keys[] = {
+        "UNIFIED_MAIN_BG", // Master Key
         "WINDOW_BG", "TOP_BAR_BG", "SIDEBAR_BG", "DOCK_BG", 
-        "PLAYLIST_BG", "MIXER_BG", "PIANOROLL_BG", "ACCENT_COLOR", "TEXT_COLOR"
+        "PLAYLIST_BG", "MIXER_BG", "PIANOROLL_BG", "ACCENT_COLOR", "TEXT_COLOR",
+        "PICKER_BG", "TRACKS_BG", "EFFECTS_BG", "CHANNEL_RACK_BG",
+        "PLAYLIST_BAR_BG", "PLAYLIST_BG_ALT", "BROWSER_BG", "INSTRUMENT_BG",
+        "PLAYLIST_BTN_BG"
     };
-    return juce::StringArray(keys, 9);
+    return juce::StringArray(keys, 19);
 }
 
 void CustomTheme::saveThemeToFile()
@@ -148,6 +173,10 @@ void CustomTheme::loadThemeFromFile()
         skinColors["PLAYLIST_BG"] = juce::Colour(30, 32, 35);
         skinColors["MIXER_BG"] = juce::Colour(30, 32, 35);
         skinColors["PIANOROLL_BG"] = juce::Colour(30, 32, 35);
+        skinColors["PICKER_BG"] = juce::Colour(30, 32, 35);
+        skinColors["TRACKS_BG"] = juce::Colour(25, 27, 30);
+        skinColors["EFFECTS_BG"] = juce::Colour(30, 32, 35);
+        skinColors["CHANNEL_RACK_BG"] = juce::Colour(30, 32, 35);
         skinColors["ACCENT_COLOR"] = juce::Colours::orange;
         skinColors["TEXT_COLOR"] = juce::Colours::white;
     }

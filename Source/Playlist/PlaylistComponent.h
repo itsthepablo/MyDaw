@@ -131,6 +131,7 @@ public:
 
     void paint(juce::Graphics& g) override;
     void resized() override;
+    void lookAndFeelChanged() override { repaint(); }
     void drawMinimap(juce::Graphics& g, juce::Rectangle<int> bounds);
 
     void mouseDown(const juce::MouseEvent& e) override;

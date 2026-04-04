@@ -1,4 +1,5 @@
 #include "PlaylistMenuBar.h"
+#include "../../Theme/CustomTheme.h"
 
 PlaylistMenuBar::PlaylistMenuBar()
 {
@@ -10,10 +11,7 @@ PlaylistMenuBar::PlaylistMenuBar()
     addAndMakeVisible(btnEraser);
     addAndMakeVisible(btnMute);
 
-    btnPointer.setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
-    btnScissor.setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
-    btnEraser.setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
-    btnMute.setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
+    handleThemeChange();
 
     btnUndo.onClick = [this] { if (onUndo) onUndo(); };
     btnRedo.onClick = [this] { if (onRedo) onRedo(); };
@@ -47,7 +45,11 @@ PlaylistMenuBar::~PlaylistMenuBar() {}
 
 void PlaylistMenuBar::paint(juce::Graphics& g)
 {
-    g.fillAll(juce::Colour(35, 37, 40)); 
+    if (auto* theme = dynamic_cast<CustomTheme*>(&getLookAndFeel())) {
+        g.fillAll(theme->getSkinColor("PLAYLIST_BAR_BG", juce::Colour(35, 37, 40)));
+    } else {
+        g.fillAll(juce::Colour(35, 37, 40));
+    }
     g.setColour(juce::Colours::black.withAlpha(0.5f));
     g.drawHorizontalLine(getHeight() - 1, 0.0f, (float)getWidth());
 }
@@ -73,4 +75,24 @@ void PlaylistMenuBar::resized()
     // Undo/Redo
     btnUndo.setBounds(area.removeFromLeft(56).reduced(2));
     btnRedo.setBounds(area.removeFromLeft(56).reduced(2));
+}
+
+void PlaylistMenuBar::lookAndFeelChanged()
+{
+    handleThemeChange();
+    repaint();
+}
+
+void PlaylistMenuBar::handleThemeChange()
+{
+    if (auto* theme = dynamic_cast<CustomTheme*>(&getLookAndFeel()))
+    {
+        auto btnCol = theme->getSkinColor("PLAYLIST_BTN_BG", juce::Colours::darkgrey);
+        btnUndo.setColour(juce::TextButton::buttonColourId, btnCol);
+        btnRedo.setColour(juce::TextButton::buttonColourId, btnCol);
+        btnPointer.setColour(juce::TextButton::buttonColourId, btnCol);
+        btnScissor.setColour(juce::TextButton::buttonColourId, btnCol);
+        btnEraser.setColour(juce::TextButton::buttonColourId, btnCol);
+        btnMute.setColour(juce::TextButton::buttonColourId, btnCol);
+    }
 }

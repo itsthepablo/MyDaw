@@ -1,5 +1,6 @@
 #include "EffectsPanel.h"
 #include "EffectDevice.h"
+#include "../Theme/CustomTheme.h"
 
 EffectsPanel::EffectsPanel() {
 
@@ -132,14 +133,35 @@ void EffectsPanel::updateSlots() {
     repaint();
 }
 
+void EffectsPanel::updateStyles() {
+    if (auto* theme = dynamic_cast<CustomTheme*>(&getLookAndFeel())) {
+        auto bg = theme->getSkinColor("EFFECTS_BG", juce::Colour(40, 43, 48));
+        bypassAllBtn.setColour(juce::TextButton::buttonColourId, bg.brighter(0.1f));
+        addEffectBtn.setColour(juce::TextButton::buttonColourId, bg.brighter(0.1f));
+        addSendBtn.setColour(juce::TextButton::buttonColourId, bg.brighter(0.1f));
+        
+        // También actualizar la GainStation si es necesario
+        loudnessMeter.repaint();
+    }
+}
+
 void EffectsPanel::paint(juce::Graphics& g) {
-    g.fillAll(juce::Colour(40, 43, 48)); 
+    if (auto* theme = dynamic_cast<CustomTheme*>(&getLookAndFeel())) {
+        g.fillAll(theme->getSkinColor("EFFECTS_BG", juce::Colour(40, 43, 48)));
+    } else {
+        g.fillAll(juce::Colour(40, 43, 48));
+    }
 
     int trackInfoWidth = 110;
     int gainStationWidth = isGainStationExpanded ? 180 : 0;
     int totalLeftWidth = trackInfoWidth + gainStationWidth; 
 
-    g.setColour(juce::Colour(30, 33, 36));
+    if (auto* theme = dynamic_cast<CustomTheme*>(&getLookAndFeel())) {
+        g.setColour(theme->getSkinColor("EFFECTS_BG", juce::Colour(40, 43, 48)).darker(0.1f));
+    } else {
+        g.setColour(juce::Colour(30, 33, 36));
+    }
+    
     g.fillRect(0, 0, totalLeftWidth, getHeight());
     g.setColour(juce::Colours::black.withAlpha(0.5f));
     g.drawVerticalLine(totalLeftWidth, 0.0f, (float)getHeight());

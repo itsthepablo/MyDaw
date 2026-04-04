@@ -1,5 +1,6 @@
 #pragma once
 #include <JuceHeader.h>
+#include "../Theme/CustomTheme.h"
 #include "../Tracks/TrackContainer.h"
 #include "MidiClipRenderer.h"   
 #include "WaveformRenderer.h"   
@@ -34,7 +35,11 @@ public:
 
         addAndMakeVisible(listBox);
         listBox.setModel(this);
-        listBox.setColour(juce::ListBox::backgroundColourId, juce::Colour(20, 22, 25));
+        
+        if (auto* theme = dynamic_cast<CustomTheme*>(&getLookAndFeel()))
+            listBox.setColour(juce::ListBox::backgroundColourId, theme->getSkinColor("PICKER_BG", juce::Colour(20, 22, 25)));
+        else
+            listBox.setColour(juce::ListBox::backgroundColourId, juce::Colour(20, 22, 25));
 
         listBox.setRowHeight(45);
 
@@ -194,14 +199,20 @@ public:
             g.setColour(juce::Colours::lawngreen.withAlpha(0.3f));
             g.fillEllipse(dotRect.expanded(3.0f));
         }
-        else {
-            g.setColour(juce::Colours::darkgrey.withAlpha(0.5f));
-            g.fillEllipse(dotRect);
-        }
+    }
+
+    void lookAndFeelChanged() override {
+        if (auto* theme = dynamic_cast<CustomTheme*>(&getLookAndFeel()))
+            listBox.setColour(juce::ListBox::backgroundColourId, theme->getSkinColor("PICKER_BG", juce::Colour(20, 22, 25)));
+        repaint();
     }
 
     void paint(juce::Graphics& g) override {
-        g.fillAll(juce::Colour(20, 22, 25));
+        if (auto* theme = dynamic_cast<CustomTheme*>(&getLookAndFeel()))
+            g.fillAll(theme->getSkinColor("PICKER_BG", juce::Colour(20, 22, 25)));
+        else
+            g.fillAll(juce::Colour(20, 22, 25));
+
         g.setColour(juce::Colours::black.withAlpha(0.5f));
         g.drawVerticalLine(getWidth() - 1, 0, (float)getHeight());
     }

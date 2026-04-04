@@ -1,7 +1,8 @@
 #pragma once
 #include <JuceHeader.h>
 #include <vector>
-#include "Knobs/FLKnobLookAndFeel.h" // <-- RUTA CORREGIDA APUNTANDO A TU NUEVA CARPETA
+#include "../Theme/CustomTheme.h"
+#include "Knobs/FLKnobLookAndFeel.h"
 
 // ==============================================================================
 // 1. ESTRUCTURA DE DATOS GLOBAL (Desconectada de las Pistas)
@@ -90,7 +91,12 @@ public:
     }
 
     void paint(juce::Graphics& g) override {
-        g.fillAll(juce::Colour(45, 48, 52));
+        if (auto* theme = dynamic_cast<CustomTheme*>(&getLookAndFeel())) {
+            g.fillAll(theme->getSkinColor("CHANNEL_RACK_BG", juce::Colour(30, 32, 35)).brighter(0.1f));
+        } else {
+            g.fillAll(juce::Colour(45, 48, 52));
+        }
+        
         g.setColour(juce::Colour(30, 32, 35));
         g.drawHorizontalLine(getHeight() - 1, 0, (float)getWidth());
 
@@ -107,6 +113,10 @@ public:
         g.setColour(juce::Colours::white);
         g.setFont(juce::Font(13.0f, juce::Font::bold));
         g.drawText(channel.name, nameBounds.reduced(8, 0), juce::Justification::centredLeft, true);
+    }
+
+    void lookAndFeelChanged() override {
+        repaint();
     }
 
     void resized() override {
@@ -172,7 +182,15 @@ public:
     }
 
     void paint(juce::Graphics& g) override {
-        g.fillAll(juce::Colour(30, 32, 35));
+        if (auto* theme = dynamic_cast<CustomTheme*>(&getLookAndFeel())) {
+            g.fillAll(theme->getSkinColor("CHANNEL_RACK_BG", juce::Colour(30, 32, 35)));
+        } else {
+            g.fillAll(juce::Colour(30, 32, 35));
+        }
+    }
+
+    void lookAndFeelChanged() override {
+        repaint();
     }
 
     void resized() override {

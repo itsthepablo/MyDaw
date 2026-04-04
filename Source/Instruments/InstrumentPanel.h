@@ -10,6 +10,7 @@ public:
 
     void paint(juce::Graphics& g) override;
     void resized() override;
+    void lookAndFeelChanged() override { repaint(); }
 
     void setTrack(Track* t);
     void updateInstrumentView();

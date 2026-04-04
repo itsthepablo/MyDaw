@@ -1,4 +1,5 @@
 #include "MixerComponent.h"
+#include "../Theme/CustomTheme.h"
 #include <memory>
 
 MixerComponent::MixerComponent() {
@@ -77,7 +78,11 @@ void MixerComponent::updateChannels() {
 }
 
 void MixerComponent::paint(juce::Graphics& g) {
-    g.fillAll(juce::Colour(25, 28, 31));
+    if (auto* theme = dynamic_cast<CustomTheme*>(&getLookAndFeel())) {
+        g.fillAll(theme->getSkinColor("MIXER_BG", juce::Colour(25, 28, 31)));
+    } else {
+        g.fillAll(juce::Colour(25, 28, 31));
+    }
 }
 
 void MixerComponent::resized() {
