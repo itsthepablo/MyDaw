@@ -46,6 +46,7 @@ public:
 
     const juce::OwnedArray<Track>* tracksRef = nullptr;
     TrackContainer* trackContainer = nullptr;
+    Track* masterTrackPtr = nullptr;
 
     void setTrackContainer(TrackContainer* tc) {
         trackContainer = tc;
@@ -98,6 +99,7 @@ public:
     }
 
     void setExternalMutex(juce::CriticalSection* mutex) { audioMutex = mutex; }
+    void setMasterTrack(Track* mt) { masterTrackPtr = mt; }
     void addMidiClipToView(Track* targetTrack, MidiClipData* newClip);
     void addAudioClipToView(Track* targetTrack, AudioClipData* newClip);
     void updateScrollBars();

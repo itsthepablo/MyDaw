@@ -11,7 +11,7 @@
 #include <cmath>
 #include <atomic>
 
-enum class TrackType { MIDI, Audio, Folder };
+enum class TrackType { MIDI, Audio, Folder, Loudness };
 enum class WaveformViewMode { Combined, SeparateLR, MidSide, Spectrogram }; 
 enum class SendRouting { Stereo, Mid, Side }; 
 
@@ -70,6 +70,38 @@ struct MidiClipSnapshot {
     std::vector<MidiNoteSnapshot> notes;
 };
 
+// ============================================================
+// LOUDNESS HISTORY — Almacenamiento de la curva para la pista
+// ============================================================
+struct LoudnessPoint {
+    double samplePos = 0.0;
+    float shortTermLUFS = -70.0f;
+};
+
+struct LoudnessHistory {
+    std::vector<LoudnessPoint> points;
+    float referenceLUFS = -23.0f;
+    bool isActive = true;
+
+    void clear() { points.clear(); }
+    
+    // Añadir punto con ordenación por tiempo (para permitir sobreescritura)
+    void addPoint(double pos, float val) {
+        // Encontrar si ya existe un punto cerca (precisión de 1 pixel)
+        for (auto& p : points) {
+            if (std::abs(p.samplePos - pos) < 1.0) { 
+                p.shortTermLUFS = val;
+                return;
+            }
+        }
+        points.push_back({ pos, val });
+        std::sort(points.begin(), points.end(), [](const auto& a, const auto& b) {
+            return a.samplePos < b.samplePos;
+        });
+    }
+};
+
+// ============================================================
 struct TrackSnapshot {
     std::vector<AudioClipSnapshot> audioClips;
     std::vector<MidiClipSnapshot>  midiClips;
@@ -204,6 +236,10 @@ public:
     SimpleLoudness preLoudness;
     SimpleLoudness postLoudness;
     bool isAnalyzersPrepared = false;
+
+    // --- LOUDNESS TRACK SPECIFIC ---
+    LoudnessHistory loudnessHistory;
+    std::atomic<bool> isLoudnessRecording { true };
 
     AudioClipData* loadAndAddAudioClip(const juce::File& file, float startX)
     {

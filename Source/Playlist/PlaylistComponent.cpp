@@ -5,12 +5,14 @@
 #include "../UI/WaveformRenderer.h"
 #include "PlaylistActionHandler.h"
 #include "PlaylistDropHandler.h"
+#include "../UI/Playlist/LoudnessRenderer.h"
 #include "Tools/EraserTool.h"
 #include "Tools/MuteTool.h"
 #include "Tools/PointerTool.h"
 #include "Tools/ScissorTool.h"
 #include <algorithm>
 #include <cmath>
+#include <unordered_map>
 
 
 PlaylistComponent::PlaylistComponent() {
@@ -71,6 +73,18 @@ void PlaylistComponent::timerCallback() {
     float newPos = getPlaybackPosition();
     if (playheadAbsPos != newPos) {
       playheadAbsPos = newPos;
+
+      // --- RECORD LOUDNESS HISTORY ---
+      if (tracksRef && this->masterTrackPtr && !isDraggingTimeline) {
+          for (auto* t : *tracksRef) {
+              if (t->getType() == TrackType::Loudness && t->isLoudnessRecording) {
+                  float lufs = masterTrackPtr->postLoudness.getShortTerm();
+                  // Suponemos 44100 de sample rate base para el posicionamiento
+                  double samplePos = (double)playheadAbsPos; 
+                  t->loudnessHistory.addPoint(samplePos, lufs);
+              }
+          }
+      }
       repaint();
     }
   }
@@ -530,14 +544,26 @@ void PlaylistComponent::paint(juce::Graphics &g) {
     g.drawText(" " + clip.name, headerRectF.reduced(3.0f, 0.0f).toNearestInt(),
                juce::Justification::centredLeft, true);
 
-    g.setOpacity(1.0f);
-
-    // Contorno de selección multi
     if (std::find(selectedClipIndices.begin(), selectedClipIndices.end(), i) !=
         selectedClipIndices.end()) {
       g.setColour(juce::Colours::yellow);
       g.drawRoundedRectangle(clipRectF, 5.0f, 1.5f);
     }
+
+    g.setOpacity(1.0f);
+  }
+
+  // --- NUEVO: RENDERIZADO DE PISTAS DE LOUDNESS ---
+  if (tracksRef) {
+      for (auto* t : *tracksRef) {
+          if (t->getType() == TrackType::Loudness) {
+              int yPos = trackYCache.count(t) ? trackYCache[t] : -1;
+              if (yPos == -1) continue;
+
+              juce::Rectangle<float> loudnessArea(0.0f, (float)(yPos + 2), (float)getWidth(), (float)(trackHeight - 4));
+              LoudnessRenderer::drawLoudnessTrack(g, loudnessArea, t, (float)hZoom, (float)hS);
+          }
+      }
   }
 
   // --- NUEVO: RENDERIZADO DE AUTOMATION OVERLAYS (ABLETON STYLE) ---

@@ -56,6 +56,35 @@ void MainComponent::setupCallbacks() {
         audioEngine.metronome.setEnabled(ui.topMenuBar.metronomeBtn.getToggleState());
         };
 
+    ui.topMenuBar.onToggleLoudnessTrack = [this](bool visible) {
+        Track* loudnessTrack = nullptr;
+        for (auto* t : ui.trackContainer.getTracks()) {
+            if (t->getType() == TrackType::Loudness) {
+                loudnessTrack = t;
+                break;
+            }
+        }
+
+        if (visible) {
+            if (loudnessTrack == nullptr) {
+                loudnessTrack = ui.trackContainer.addTrack(TrackType::Loudness);
+                loudnessTrack->setColor(juce::Colours::orange);
+            }
+            loudnessTrack->isShowingInChildren = true;
+        } else {
+            if (loudnessTrack != nullptr) {
+                loudnessTrack->isShowingInChildren = false;
+            }
+        }
+        
+        ui.trackContainer.recalculateFolderHierarchy();
+        ui.trackContainer.resized();
+        ui.trackContainer.repaint();
+        ui.playlistUI.updateScrollBars();
+        ui.playlistUI.repaint();
+    };
+
+    ui.topMenuBar.onNewTrackRequested = [this](TrackType type) { ui.trackContainer.addTrack(type); };
     ui.playlistUI.onNewTrackRequested = [this](TrackType type) { ui.trackContainer.addTrack(type); };
 
     ui.playlistUI.onVerticalScroll = [this](int scrollPos) {
@@ -182,6 +211,7 @@ void MainComponent::setupCallbacks() {
 }
 
 void MainComponent::setupBridges() {
+    ui.playlistUI.setMasterTrack(ui.masterTrackObj.get());
     BridgeManager::initializeAllBridges({
         ui.trackContainer, ui.playlistUI, ui.pianoRollUI, ui.mixerUI, ui.miniMixerUI, 
         ui.masterChannelUI.get(), ui.effectsPanelUI,

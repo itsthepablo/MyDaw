@@ -113,6 +113,7 @@ public:
         if (type == TrackType::MIDI) defaultName = "Inst ";
         else if (type == TrackType::Audio) defaultName = "Audio ";
         else if (type == TrackType::Folder) defaultName = "Folder ";
+        else if (type == TrackType::Loudness) defaultName = "Loudness ";
 
         auto* t = new Track(id, defaultName + juce::String(id), type);
         tracks.add(t);
@@ -158,6 +159,13 @@ public:
         if (onTracksReordered) onTracksReordered();
         if (onTrackAdded) onTrackAdded();
         return t;
+    }
+
+    Track* getMasterTrack() {
+        for (auto* t : tracks) {
+            if (t->getName().containsIgnoreCase("Master")) return t;
+        }
+        return nullptr;
     }
 
     void removeTrack(int index) {

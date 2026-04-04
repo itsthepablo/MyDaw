@@ -27,8 +27,10 @@ public:
     std::function<void()> onExportRequested; 
     std::function<void()> onThemeManagerRequested; // --- NUEVA FUNCIÓN: Abrir Theme Manager ---
     std::function<double()> requestPlaybackTimeInSeconds;
+    std::function<void(bool)> onToggleLoudnessTrack; 
 
     std::function<void()> onTogglePicker, onToggleFiles, onToggleMixer, onToggleRack, onToggleFx;
+    std::function<void(TrackType)> onNewTrackRequested;
 
     TopMenuBar() {
         addAndMakeVisible(btnFile);
@@ -181,6 +183,15 @@ public:
             menu.addItem(5, "Exportar Audio (WAV)...", true, false);
             // --------------------------------------
         }
+        else if (menuName == "CREATE") {
+            menu.addItem(100, "Inst (MIDI) Track", true, false);
+            menu.addItem(101, "Audio Track", true, false);
+            menu.addItem(102, "Folder Track", true, false);
+            menu.addItem(103, "Loudness Track", true, false);
+        }
+        else if (menuName == "VIEW") {
+            menu.addItem(20, "Loudness Track", true, isLoudnessTrackVisible);
+        }
         else if (menuName == "TOOLS") {
             menu.addItem(10, "Theme Manager", true, false);
         }
@@ -190,6 +201,11 @@ public:
 
         menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&targetButton),
             [this](int result) {
+                if (result == 100 && onNewTrackRequested) onNewTrackRequested(TrackType::MIDI);
+                if (result == 101 && onNewTrackRequested) onNewTrackRequested(TrackType::Audio);
+                if (result == 102 && onNewTrackRequested) onNewTrackRequested(TrackType::Folder);
+                if (result == 103 && onNewTrackRequested) onNewTrackRequested(TrackType::Loudness);
+
                 if (result == 3 && onSaveRequested) {
                     onSaveRequested();
                 }
@@ -199,8 +215,17 @@ public:
                 if (result == 10 && onThemeManagerRequested) {
                     onThemeManagerRequested();
                 }
+                if (result == 20 && onToggleLoudnessTrack) {
+                    isLoudnessTrackVisible = !isLoudnessTrackVisible;
+                    onToggleLoudnessTrack(isLoudnessTrackVisible);
+                }
             });
     }
+
+    void setLoudnessTrackVisible(bool visible) { isLoudnessTrackVisible = visible; }
+
+private:
+    bool isLoudnessTrackVisible = false;
 
     void updateStyles() {
         if (auto* theme = dynamic_cast<CustomTheme*>(&getLookAndFeel())) {

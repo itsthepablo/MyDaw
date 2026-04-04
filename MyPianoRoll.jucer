@@ -29,6 +29,10 @@
         <FILE id="ghMFvY" name="UtilityPlugin.h" compile="0" resource="0" file="Source/Native_Plugins/UtilityPlugin.h"/>
       </GROUP>
       <GROUP id="{721FC522-4CF1-05D4-BC36-D97CDC4B59FC}" name="UI">
+        <GROUP id="{6D660262-129A-F82F-7410-493E0F46A50D}" name="Playlist">
+          <FILE id="TfaWko" name="LoudnessRenderer.h" compile="0" resource="0"
+                file="Source/UI/Playlist/LoudnessRenderer.h"/>
+        </GROUP>
         <GROUP id="{370703D0-1732-1E2E-EE22-515A559A3353}" name="OfflineRenderer">
           <FILE id="HQ3qTp" name="OfflineRenderer.cpp" compile="1" resource="0"
                 file="Source/UI/OfflineRenderer/OfflineRenderer.cpp"/>

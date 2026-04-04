@@ -99,6 +99,39 @@ public:
             addAndMakeVisible(fxButton); fxButton.setButtonText("+ VSTi");
             fxButton.onClick = [this] { if (onInstrumentClick) onInstrumentClick(); };
         }
+        else if (track.getType() == TrackType::Loudness) {
+            addAndMakeVisible(clearHistoryBtn);
+            clearHistoryBtn.setButtonText("CLEAR");
+            clearHistoryBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(80, 40, 40));
+            clearHistoryBtn.onClick = [this] { track.loudnessHistory.clear(); if (onWaveformViewChanged) onWaveformViewChanged(); };
+
+            addAndMakeVisible(recToggleBtn);
+            recToggleBtn.setButtonText("REC");
+            recToggleBtn.setClickingTogglesState(true);
+            recToggleBtn.setToggleState(track.isLoudnessRecording, juce::dontSendNotification);
+            recToggleBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colours::red);
+            recToggleBtn.onClick = [this] { track.isLoudnessRecording = recToggleBtn.getToggleState(); };
+
+            addAndMakeVisible(targetLufsCombo);
+            targetLufsCombo.addItem("-23 LUFS (Broad)", 1);
+            targetLufsCombo.addItem("-14 LUFS (Stream)", 2);
+            targetLufsCombo.addItem("-5 LUFS (Loud)", 3);
+            
+            // Set initial selection based on track reference
+            if (track.loudnessHistory.referenceLUFS == -23.0f) targetLufsCombo.setSelectedId(1, juce::dontSendNotification);
+            else if (track.loudnessHistory.referenceLUFS == -14.0f) targetLufsCombo.setSelectedId(2, juce::dontSendNotification);
+            else if (track.loudnessHistory.referenceLUFS == -5.0f) targetLufsCombo.setSelectedId(3, juce::dontSendNotification);
+            else targetLufsCombo.setText(juce::String((int)track.loudnessHistory.referenceLUFS) + " LUFS", juce::dontSendNotification);
+
+            targetLufsCombo.onChange = [this] {
+                int id = targetLufsCombo.getSelectedId();
+                if (id == 1) track.loudnessHistory.referenceLUFS = -23.0f;
+                else if (id == 2) track.loudnessHistory.referenceLUFS = -14.0f;
+                else if (id == 3) track.loudnessHistory.referenceLUFS = -5.0f;
+                repaint();
+                if (onWaveformViewChanged) onWaveformViewChanged();
+            };
+        }
 
         addAndMakeVisible(levelMeter);
         startTimerHz(30);
@@ -213,7 +246,14 @@ public:
         }
 
         auto botRow = leftCol.removeFromTop(18);
-        effectsBtn.setBounds(botRow.reduced(2, 0));
+        if (track.getType() == TrackType::Loudness) {
+            recToggleBtn.setBounds(botRow.removeFromLeft(botRow.getWidth() / 2).reduced(1));
+            clearHistoryBtn.setBounds(botRow.reduced(1));
+            leftCol.removeFromTop(4);
+            targetLufsCombo.setBounds(leftCol.removeFromTop(20).reduced(1));
+        } else {
+            effectsBtn.setBounds(botRow.reduced(2, 0));
+        }
 
         auto meterArea = contentArea.removeFromRight(12);
         levelMeter.setBounds(meterArea.reduced(0, 2));
@@ -279,7 +319,8 @@ public:
         if (e.originalComponent == &volKnob || e.originalComponent == &panKnob || 
             e.originalComponent == &muteBtn || e.originalComponent == &soloBtn ||
             e.originalComponent == &fxButton || e.originalComponent == &prButton ||
-            e.originalComponent == &inlineBtn || e.originalComponent == &effectsBtn)
+            e.originalComponent == &inlineBtn || e.originalComponent == &effectsBtn ||
+            e.originalComponent == &targetLufsCombo)
             return;
 
         if (auto* dc = juce::DragAndDropContainer::findParentDragContainerFor(this)) {
@@ -306,6 +347,8 @@ private:
 
     juce::Label nameLabel; juce::TextButton muteBtn, soloBtn; FloatingValueSlider volKnob, panKnob;
     juce::TextButton fxButton, prButton, inlineBtn, effectsBtn, folderBtn, compactBtn;
+    juce::TextButton clearHistoryBtn, recToggleBtn;
+    juce::ComboBox targetLufsCombo;
     juce::OwnedArray<juce::TextButton> pluginButtons; LevelMeter levelMeter;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TrackControlPanel)
 };
