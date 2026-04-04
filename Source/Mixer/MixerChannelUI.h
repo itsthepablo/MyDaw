@@ -1,6 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include "../Tracks/Track.h"
+#include "../UI/LevelMeter.h"
 
 // ==============================================================================
 // 1. LOOK AND FEEL PROFESIONAL PARA EL MIXER
@@ -90,54 +91,7 @@ public:
 };
 
 // ==============================================================================
-// 2. VÚMETRO ESTÉREO AVANZADO
-// ==============================================================================
-class AdvancedMeter : public juce::Component, public juce::Timer {
-public:
-    AdvancedMeter(Track* t) : track(t) { startTimerHz(30); }
-    void timerCallback() override { if (isShowing()) repaint(); }
-
-    void paint(juce::Graphics& g) override {
-        auto b = getLocalBounds().toFloat();
-        g.setColour(juce::Colour(10, 10, 10));
-        g.fillRoundedRectangle(b, 2.0f);
-
-        if (!track) return;
-
-        float l = track->currentPeakLevelL;
-        float r = track->currentPeakLevelR;
-
-        if (l > maxL) { maxL = l; ticksSincePeakL = 0; }
-        else { if (++ticksSincePeakL > 30) maxL *= 0.95f; }
-        if (r > maxR) { maxR = r; ticksSincePeakR = 0; }
-        else { if (++ticksSincePeakR > 30) maxR *= 0.95f; }
-
-        drawBar(g, b.removeFromLeft(b.getWidth() * 0.48f), l, maxL);
-        b.removeFromLeft(b.getWidth() * 0.04f);
-        drawBar(g, b, r, maxR);
-    }
-
-private:
-    void drawBar(juce::Graphics& g, juce::Rectangle<float> area, float level, float peak) {
-        float h = area.getHeight();
-        float levelY = juce::jmap(juce::Decibels::gainToDecibels(level), -60.0f, 6.0f, h, 0.0f);
-        float peakY = juce::jmap(juce::Decibels::gainToDecibels(peak), -60.0f, 6.0f, h, 0.0f);
-        levelY = juce::jlimit(0.0f, h, levelY);
-        peakY = juce::jlimit(0.0f, h, peakY);
-
-        juce::ColourGradient grad(juce::Colours::red, area.getX(), area.getY(), juce::Colours::limegreen, area.getX(), area.getBottom(), false);
-        grad.addColour(0.2, juce::Colours::yellow);
-        g.setGradientFill(grad);
-        g.fillRect(area.withTop(levelY));
-
-        g.setColour(juce::Colours::white);
-        g.fillRect(area.getX(), peakY, area.getWidth(), 1.5f);
-    }
-
-    Track* track;
-    float maxL = 0, maxR = 0;
-    int ticksSincePeakL = 0, ticksSincePeakR = 0;
-};
+// [AdvancedMeter removed - Unified LevelMeter.h is now used]
 
 // ==============================================================================
 // 3. SLOTS DE EFECTOS Y ENVÍOS INTERACTIVOS (Componentes auxiliares)
@@ -509,7 +463,7 @@ private:
 
     bool isMiniMode; Track* track; MixerLookAndFeel mixerLAF;
     juce::TextButton panToggle;
-    juce::Slider panKnob, panL, panR, fader; AdvancedMeter meter;
+    juce::Slider panKnob, panL, panR, fader; LevelMeter meter;
     juce::TextButton muteBtn, soloBtn, phaseBtn, recBtn; juce::Label trackName;
     
     juce::Viewport fxViewport, sendViewport;

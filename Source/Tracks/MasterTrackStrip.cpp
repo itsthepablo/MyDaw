@@ -68,17 +68,18 @@ MasterTrackStrip::MasterTrackStrip()
     volSlider.addMouseListener(this, false);
     levelMeter.addMouseListener(this, false);
 
-    startTimerHz(30);
+    levelMeter.addMouseListener(this, false);
 }
 
 MasterTrackStrip::~MasterTrackStrip()
 {
-    stopTimer();
 }
 
 void MasterTrackStrip::setMasterTrack(Track* t)
 {
     masterTrack = t;
+    levelMeter.setTrack(t);
+    
     if (masterTrack != nullptr) {
         volSlider.setValue(masterTrack->getVolume(), juce::dontSendNotification);
         panKnob.setValue(masterTrack->getBalance(), juce::dontSendNotification);
@@ -92,11 +93,7 @@ Track* MasterTrackStrip::getMasterTrack() const
     return masterTrack;
 }
 
-void MasterTrackStrip::timerCallback()
-{
-    if (masterTrack != nullptr)
-        levelMeter.setLevel(masterTrack->currentPeakLevelL, masterTrack->currentPeakLevelR);
-}
+// timerCallback eliminado - LevelMeter se auto-actualiza
 
 void MasterTrackStrip::paint(juce::Graphics& g)
 {

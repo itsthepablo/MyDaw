@@ -274,8 +274,8 @@ public:
         pdcWritePtr = 0;
     }
 
-    float currentPeakLevelL = 0.0f;
-    float currentPeakLevelR = 0.0f;
+    std::atomic<float> currentPeakLevelL { 0.0f };
+    std::atomic<float> currentPeakLevelR { 0.0f };
 
     SimpleLoudness preLoudness;
     SimpleLoudness postLoudness;

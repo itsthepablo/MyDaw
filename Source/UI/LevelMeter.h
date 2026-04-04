@@ -1,40 +1,76 @@
 #pragma once
 #include <JuceHeader.h>
 #include "Knobs/FloatingValueBox.h"
+#include "../Tracks/Track.h"
 
-// ==============================================================================
-// MEDIDOR DE NIVEL ESTÉREO PRINCIPAL
-// ==============================================================================
-// AÑADIDO: public juce::SettableTooltipClient para que acepte la función setTooltip()
-class LevelMeter : public juce::Component, public juce::SettableTooltipClient {
+/**
+ * LevelMeter — Componente Unificado Hi-Fi
+ * Rediseñado con miembros al inicio para asegurar la resolución de nombres del compilador.
+ */
+class LevelMeter : public juce::Component, 
+                   public juce::SettableTooltipClient,
+                   private juce::Timer 
+{
+private:
+    // --- MIEMBROS DE DATOS (Mover al inicio evita errores de resolución C++) ---
+    Track* track = nullptr;
+    float dispL = 0.0f, dispR = 0.0f;
+    float peakL = 0.0f, peakR = 0.0f;
+    int holdL = 0, holdR = 0;
+    bool isClipping = false;
+    bool isMouseOverMeter = false;
+    bool isHorizontal = false;
+    float absoluteMaxPeakL = 0.0f;
+    float absoluteMaxPeakR = 0.0f;
+    FloatingValueBox valueBox;
+
 public:
-    LevelMeter() {
+    LevelMeter(Track* t = nullptr) : track(t) 
+    {
         setOpaque(false);
+        if (track != nullptr) startTimerHz(30);
     }
 
-    ~LevelMeter() override {
+    ~LevelMeter() override 
+    {
+        stopTimer();
         valueBox.removeFromDesktop();
     }
 
-    void setLevel(float left, float right) {
+    void setTrack(Track* t) 
+    {
+        track = t;
+        if (track != nullptr) startTimerHz(30);
+        else stopTimer();
+    }
+
+    // Interfaz manual
+    void setLevel(float left, float right) 
+    {
         if (left >= 1.0f || right >= 1.0f) isClipping = true;
 
         if (left > absoluteMaxPeakL) absoluteMaxPeakL = left;
         if (right > absoluteMaxPeakR) absoluteMaxPeakR = right;
 
-        dispL = left > dispL ? left : juce::jmax(0.0f, dispL - 0.04f);
-        dispR = right > dispR ? right : juce::jmax(0.0f, dispR - 0.04f);
+        const float decayFactor = 0.94f; 
+        dispL = left > dispL ? left : juce::jmax(0.0f, dispL * decayFactor);
+        dispR = right > dispR ? right : juce::jmax(0.0f, dispR * decayFactor);
 
-        if (left >= peakL) { peakL = left; holdL = 30; }
-        else if (holdL > 0) { holdL--; }
-        else { peakL = juce::jmax(0.0f, peakL - 0.01f); }
+        auto updatePeak = [&](float current, float& peak, int& hold) {
+            if (current >= peak) {
+                peak = current;
+                hold = 32;
+            } else if (hold > 0) {
+                hold--;
+            } else {
+                peak = juce::jmax(0.0f, peak * 0.98f);
+            }
+        };
 
-        if (right >= peakR) { peakR = right; holdR = 30; }
-        else if (holdR > 0) { holdR--; }
-        else { peakR = juce::jmax(0.0f, peakR - 0.01f); }
+        updatePeak(left, peakL, holdL);
+        updatePeak(right, peakR, holdR);
 
         if (isMouseOverMeter) updateValueBoxText();
-
         repaint();
     }
 
@@ -43,15 +79,10 @@ public:
     void mouseEnter(const juce::MouseEvent&) override {
         isMouseOverMeter = true;
         updateValueBoxText();
-
         valueBox.addToDesktop(juce::ComponentPeer::windowIsTemporary | juce::ComponentPeer::windowIgnoresMouseClicks);
         valueBox.setSize(48, 20);
         positionValueBox();
         valueBox.setVisible(true);
-    }
-
-    void mouseMove(const juce::MouseEvent&) override {
-        // Estático: no sigue al ratón
     }
 
     void mouseExit(const juce::MouseEvent&) override {
@@ -69,112 +100,102 @@ public:
 
     void paint(juce::Graphics& g) override {
         auto bounds = getLocalBounds().toFloat();
-        
+        const float floorDB = -80.0f;
+
         if (!isHorizontal) {
             auto clipArea = bounds.removeFromTop(4.0f);
-            g.setColour(isClipping ? juce::Colours::red : juce::Colour(40, 42, 45));
-            g.fillRect(clipArea.reduced(0.0f, 0.5f));
+            g.setColour(isClipping ? juce::Colours::red : juce::Colour(35, 37, 40));
+            g.fillRect(clipArea.reduced(0.5f, 0.5f));
 
-            bounds.removeFromTop(1.0f);
-            g.setColour(juce::Colour(15, 17, 20));
-            g.fillRect(bounds);
+            bounds.removeFromTop(2.0f);
+            g.setColour(juce::Colour(10, 12, 14));
+            g.fillRoundedRectangle(bounds, 2.0f);
 
-            float h = bounds.getHeight();
             auto drawBar = [&](float currentVol, float maxPeak, juce::Rectangle<float> area) {
-                float db = juce::Decibels::gainToDecibels(currentVol, -60.0f);
-                float prop = juce::jlimit(0.0f, 1.0f, juce::jmap(db, -60.0f, 0.0f, 0.0f, 1.0f));
-                float peakDb = juce::Decibels::gainToDecibels(maxPeak, -60.0f);
-                float peakProp = juce::jlimit(0.0f, 1.0f, juce::jmap(peakDb, -60.0f, 0.0f, 0.0f, 1.0f));
-                int barY = area.getBottom() - (int)(prop * h);
-                int barHeight = (int)(prop * h);
-                juce::ColourGradient gradient(juce::Colours::limegreen, area.getBottomLeft(),
-                    juce::Colours::red, area.getTopLeft(), false);
-                gradient.addColour(0.8, juce::Colours::yellow);
+                float db = juce::Decibels::gainToDecibels(currentVol, floorDB);
+                float prop = juce::jlimit(0.0f, 1.0f, juce::jmap(db, floorDB, 0.0f, 0.0f, 1.0f));
+                
+                float peakDb = juce::Decibels::gainToDecibels(maxPeak, floorDB);
+                float peakProp = juce::jlimit(0.0f, 1.0f, juce::jmap(peakDb, floorDB, 0.0f, 0.0f, 1.0f));
+
+                juce::ColourGradient gradient(juce::Colours::limegreen.withBrightness(0.6f), area.getBottomLeft(),
+                                             juce::Colours::red, area.getTopLeft(), false);
+                gradient.addColour(0.75, juce::Colours::orange);
+                gradient.addColour(0.5, juce::Colours::limegreen);
+                
                 g.setGradientFill(gradient);
-                if (barHeight > 0) g.fillRect(area.getX(), (float)barY, area.getWidth(), (float)barHeight);
-                if (peakProp > 0.0f) {
-                    int py = area.getBottom() - (int)(peakProp * h);
-                    g.setColour(juce::Colours::white);
-                    g.fillRect(area.getX(), (float)py, area.getWidth(), 1.0f);
+                float barHeight = prop * area.getHeight();
+                if (barHeight > 0.5f) g.fillRect(area.withTop(area.getBottom() - barHeight));
+
+                if (peakProp > 0.05f) {
+                    float py = area.getBottom() - (peakProp * area.getHeight());
+                    g.setColour(juce::Colours::white.withAlpha(0.6f));
+                    g.fillRect(area.getX(), py, area.getWidth(), 1.0f);
                 }
             };
+
             float halfW = bounds.getWidth() / 2.0f;
-            drawBar(dispL, peakL, bounds.withWidth(halfW - 0.5f));
-            drawBar(dispR, peakR, bounds.withTrimmedLeft(halfW + 0.5f));
+            drawBar(dispL, peakL, bounds.removeFromLeft(halfW).reduced(1.0f, 0.0f));
+            drawBar(dispR, peakR, bounds.reduced(1.0f, 0.0f));
         } else {
             auto clipArea = bounds.removeFromRight(4.0f);
-            g.setColour(isClipping ? juce::Colours::red : juce::Colour(40, 42, 45));
-            g.fillRect(clipArea.reduced(0.5f, 0.0f));
+            g.setColour(isClipping ? juce::Colours::red : juce::Colour(35, 37, 40));
+            g.fillRect(clipArea.reduced(0.5f, 0.5f));
 
-            bounds.removeFromRight(1.0f);
-            g.setColour(juce::Colour(15, 17, 20));
-            g.fillRect(bounds);
+            bounds.removeFromRight(2.0f);
+            g.setColour(juce::Colour(10, 12, 14));
+            g.fillRoundedRectangle(bounds, 2.0f);
 
-            float w = bounds.getWidth();
             auto drawHorizontalBar = [&](float currentVol, float maxPeak, juce::Rectangle<float> area) {
-                float db = juce::Decibels::gainToDecibels(currentVol, -60.0f);
-                float prop = juce::jlimit(0.0f, 1.0f, juce::jmap(db, -60.0f, 0.0f, 0.0f, 1.0f));
-                float peakDb = juce::Decibels::gainToDecibels(maxPeak, -60.0f);
-                float peakProp = juce::jlimit(0.0f, 1.0f, juce::jmap(peakDb, -60.0f, 0.0f, 0.0f, 1.0f));
-                int barWidth = (int)(prop * w);
+                float db = juce::Decibels::gainToDecibels(currentVol, floorDB);
+                float prop = juce::jlimit(0.0f, 1.0f, juce::jmap(db, floorDB, 0.0f, 0.0f, 1.0f));
                 
-                juce::ColourGradient gradient(juce::Colours::limegreen, area.getTopLeft(),
-                    juce::Colours::red, area.getTopRight(), false);
-                gradient.addColour(0.8, juce::Colours::yellow);
+                float peakDb = juce::Decibels::gainToDecibels(maxPeak, floorDB);
+                float peakProp = juce::jlimit(0.0f, 1.0f, juce::jmap(peakDb, floorDB, 0.0f, 0.0f, 1.0f));
+
+                juce::ColourGradient gradient(juce::Colours::limegreen.withBrightness(0.6f), area.getTopLeft(),
+                                             juce::Colours::red, area.getTopRight(), false);
+                gradient.addColour(0.75, juce::Colours::orange);
                 g.setGradientFill(gradient);
-                if (barWidth > 0) g.fillRect(area.getX(), area.getY(), (float)barWidth, area.getHeight());
-                if (peakProp > 0.0f) {
-                    int px = area.getX() + (int)(peakProp * w);
-                    g.setColour(juce::Colours::white);
-                    g.fillRect((float)px, area.getY(), 1.0f, area.getHeight());
+
+                float barWidth = prop * area.getWidth();
+                if (barWidth > 0.5f) g.fillRect(area.withWidth(barWidth));
+
+                if (peakProp > 0.05f) {
+                    float px = area.getX() + (peakProp * area.getWidth());
+                    g.setColour(juce::Colours::white.withAlpha(0.6f));
+                    g.fillRect(px, area.getY(), 1.0f, area.getHeight());
                 }
             };
+
             float halfH = bounds.getHeight() / 2.0f;
-            drawHorizontalBar(dispL, peakL, bounds.withHeight(halfH - 0.5f));
-            drawHorizontalBar(dispR, peakR, bounds.withTrimmedTop(halfH + 0.5f));
+            drawHorizontalBar(dispL, peakL, bounds.removeFromTop(halfH).reduced(0.0f, 1.0f));
+            drawHorizontalBar(dispR, peakR, bounds.reduced(0.0f, 1.0f));
         }
     }
 
 private:
+    void timerCallback() override {
+        if (track != nullptr) {
+            float l = track->currentPeakLevelL.load(std::memory_order_relaxed);
+            float r = track->currentPeakLevelR.load(std::memory_order_relaxed);
+            setLevel(l, r);
+        }
+    }
+
     void updateValueBoxText() {
         float maxAbsPeak = juce::jmax(absoluteMaxPeakL, absoluteMaxPeakR);
         float maxAbsDb = juce::Decibels::gainToDecibels(maxAbsPeak, -100.0f);
-
-        juce::String textToShow;
-        if (maxAbsDb <= -100.0f) {
-            textToShow = "-inf";
-        }
-        else {
-            juce::String prefix = maxAbsDb > 0.0f ? "+" : "";
-            textToShow = prefix + juce::String(maxAbsDb, 1);
-        }
-
+        juce::String textToShow = (maxAbsDb <= -99.0f) ? "-inf" : ((maxAbsDb > 0.0f ? "+" : "") + juce::String(maxAbsDb, 1));
         valueBox.setText(textToShow);
         valueBox.setBorderColor(isClipping ? juce::Colours::red : juce::Colour(200, 130, 30));
     }
 
     void positionValueBox() {
-        int w = 48;
-        int h = 20;
+        int w = 48, h = 20;
         auto screenPos = getScreenPosition();
-
-        int x = screenPos.getX() - w - 8;
-        int y = screenPos.getY() + (getHeight() / 2) - (h / 2);
-
-        valueBox.setTopLeftPosition(x, y);
+        valueBox.setTopLeftPosition(screenPos.getX() - w - 8, screenPos.getY() + (getHeight() / 2) - (h / 2));
     }
-
-    float dispL = 0.0f, dispR = 0.0f;
-    float peakL = 0.0f, peakR = 0.0f;
-    int holdL = 0, holdR = 0;
-
-    bool isClipping = false;
-    bool isMouseOverMeter = false;
-    float absoluteMaxPeakL = 0.0f;
-    float absoluteMaxPeakR = 0.0f;
-    bool isHorizontal = false;
-
-    FloatingValueBox valueBox;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LevelMeter)
 };

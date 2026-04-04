@@ -10,8 +10,7 @@
 // Rediseñado para ser un sidebar vertical a la derecha.
 // Incluye Paneo (top), Mute/Solo/FX y un Slider de Volumen sobre el Medidor.
 // ==============================================================================
-class MasterTrackStrip : public juce::Component,
-    public juce::Timer
+class MasterTrackStrip : public juce::Component
 {
 public:
     // Callbacks hacia MainComponent
@@ -26,7 +25,7 @@ public:
     void setSelected(bool selected) { isSelected = selected; repaint(); }
     bool getSelected() const { return isSelected; }
 
-    void timerCallback() override;
+    // Eliminado timerCallback - LevelMeter se auto-actualiza
     void paint(juce::Graphics& g) override;
     void resized() override;
     void mouseDown(const juce::MouseEvent& e) override;
