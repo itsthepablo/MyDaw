@@ -5,6 +5,7 @@
 #include "WindowControlButton.h"
 #include "BpmDragControl.h"
 #include "RecordButton.h"
+#include "../../Theme/CustomTheme.h"
 
 class TopMenuBar : public juce::Component, public juce::Timer {
 public:
@@ -23,7 +24,8 @@ public:
     juce::TextButton fxBtn{ "Effects" };
 
     std::function<void()> onSaveRequested;
-    std::function<void()> onExportRequested; // --- INYECCIÓN 1: Callback de exportación ---
+    std::function<void()> onExportRequested; 
+    std::function<void()> onThemeManagerRequested; // --- NUEVA FUNCIÓN: Abrir Theme Manager ---
     std::function<double()> requestPlaybackTimeInSeconds;
 
     std::function<void()> onTogglePicker, onToggleFiles, onToggleMixer, onToggleRack, onToggleFx;
@@ -171,6 +173,9 @@ public:
             menu.addItem(5, "Exportar Audio (WAV)...", true, false);
             // --------------------------------------
         }
+        else if (menuName == "TOOLS") {
+            menu.addItem(10, "Theme Manager", true, false);
+        }
         else {
             menu.addItem(1, "Vacio por ahora...", false, false);
         }
@@ -180,16 +185,21 @@ public:
                 if (result == 3 && onSaveRequested) {
                     onSaveRequested();
                 }
-                // --- INYECCIÓN 3: Disparador ---
                 if (result == 5 && onExportRequested) {
                     onExportRequested();
                 }
-                // -------------------------------
+                if (result == 10 && onThemeManagerRequested) {
+                    onThemeManagerRequested();
+                }
             });
     }
 
     void paint(juce::Graphics& g) override {
-        g.fillAll(juce::Colour(20, 22, 25));
+        if (auto* theme = dynamic_cast<CustomTheme*>(&getLookAndFeel())) {
+            g.fillAll(theme->getSkinColor("TOP_BAR_BG", juce::Colour(20, 22, 25)));
+        } else {
+            g.fillAll(juce::Colour(20, 22, 25));
+        }
     }
 
     void resized() override {

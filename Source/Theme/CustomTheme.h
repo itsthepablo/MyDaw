@@ -9,7 +9,7 @@ public:
     void setTooltip(const juce::String&) override {}
 };
 
-class CustomTheme : public juce::LookAndFeel_V4
+class CustomTheme : public juce::LookAndFeel_V4, public juce::ChangeBroadcaster
 {
 public:
     CustomTheme();
@@ -26,6 +26,13 @@ public:
     void loadSkinFromFolder(const juce::File& skinFolder);
 
     juce::Colour getSkinColor(const juce::String& colorName, juce::Colour fallbackColor);
+    void setSkinColor(const juce::String& name, juce::Colour color, bool shouldSave = false);
+    
+    // Lista de todas las claves disponibles (para el UI Manager)
+    juce::StringArray getColorKeys() const;
+
+    void saveThemeToFile();
+    void loadThemeFromFile();
 
     void drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height, float sliderPos,
         const float rotaryStartAngle, const float rotaryEndAngle, juce::Slider& slider) override;

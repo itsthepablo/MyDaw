@@ -219,6 +219,10 @@
       <GROUP id="{9F2E0E2B-DA67-CB81-440A-F014789C271E}" name="Theme">
         <FILE id="vwtk4p" name="CustomTheme.cpp" compile="1" resource="0" file="Source/Theme/CustomTheme.cpp"/>
         <FILE id="dQKlMy" name="CustomTheme.h" compile="0" resource="0" file="Source/Theme/CustomTheme.h"/>
+        <FILE id="e5hg7f" name="ThemeManagerPanel.h" compile="0" resource="0"
+              file="Source/Theme/ThemeManagerPanel.h"/>
+        <FILE id="QQ5Z6K" name="ThemeManagerWindow.h" compile="0" resource="0"
+              file="Source/Theme/ThemeManagerWindow.h"/>
       </GROUP>
       <GROUP id="{5D7F3195-8788-684A-8936-46852730F3E5}" name="PluginHost">
         <FILE id="vKHiGS" name="VSTHost.cpp" compile="1" resource="0" file="Source/PluginHost/VSTHost.cpp"/>

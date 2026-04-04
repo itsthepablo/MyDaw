@@ -155,6 +155,9 @@ void OfflineRenderer::startRender(const juce::File& outputFile, double sampleRat
     currentState = ViewState::Rendering;
     updateVisibility();
 
+    // Notificar al motor para que se prepare (Rule #18)
+    if (onPrepareEngine) onPrepareEngine(targetSampleRate);
+
     startTimerHz(30);
     startThread(juce::Thread::Priority::highest);
 }

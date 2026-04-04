@@ -11,6 +11,7 @@
 #include "Engine/Core/AudioEngine.h"
 #include "Bridge/BridgeManager.h"
 #include "UI/Commands/DAWCommandHandler.h"
+#include "Theme/ThemeManagerWindow.h" // NUEVO: Ventana de temas
 
 class MainComponent : public juce::AudioAppComponent,
     public juce::ApplicationCommandTarget,
@@ -68,6 +69,7 @@ private:
     bool prePianoRollBottomDock = true;
 
     std::unique_ptr<juce::FileChooser> fileChooser;
+    std::unique_ptr<ThemeManagerWindow> themeWindow; // NUEVO: Instancia persistente
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

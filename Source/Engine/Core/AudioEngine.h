@@ -39,7 +39,6 @@ public:
     RoutingMatrix routingMatrix;
     AudioThreadPool threadPool;
 
-    std::atomic<float> masterVolume{ 1.0f };
 
     // --- INYECCIÓN 1: Captura de Sample Rate para exportación ---
     double currentSampleRate = 44100.0;
@@ -70,6 +69,16 @@ public:
                     if (p != nullptr && p->isLoaded())
                         p->reset();
                 }
+            }
+        }
+
+        if (masterTrack) {
+            masterTrack->audioBuffer.clear();
+            masterTrack->pdcBuffer.clear();
+            masterTrack->pdcWritePtr = 0;
+            for (auto* p : masterTrack->plugins) {
+                if (p != nullptr && p->isLoaded())
+                    p->reset();
             }
         }
     }
@@ -222,8 +231,6 @@ public:
         SafetyProcessors::applyNaNKiller(*bufferToFill.buffer,
             bufferToFill.startSample, bufferToFill.numSamples);
 
-        float mv = masterVolume.load(std::memory_order_relaxed);
-        bufferToFill.buffer->applyGain(bufferToFill.startSample, bufferToFill.numSamples, mv);
 
         // Anti-click (De-zipper) en seek
         if (clock.justSeeked) {

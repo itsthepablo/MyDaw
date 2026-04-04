@@ -11,47 +11,60 @@ public:
     // ============================================================
     static void applyGainAndPan(Track* track, int numSamples, int hardwareOutChannels) noexcept
     {
-        // PHASE INVERSION — manejado en GainStationDSP::processPreFX (pre-fader)
+        if (track->isMuted) {
+            track->audioBuffer.clear();
+            return;
+        }
 
-        // 2. VOLUME & PAN PREP
-        float v = track->getVolume();
-        if (track->isMuted) v = 0.0f;
-
-        // --- Paneo y Ganancia ---
         if (hardwareOutChannels >= 2 && track->audioBuffer.getNumChannels() >= 2) 
         {
+            float* lData = track->audioBuffer.getWritePointer(0);
+            float* rData = track->audioBuffer.getWritePointer(1);
+
             if (track->panningModeDual.load(std::memory_order_relaxed)) 
             {
-                float pL = track->panL.load(std::memory_order_relaxed);
-                float pR = track->panR.load(std::memory_order_relaxed);
+                // DUAL PANNING - Linear Balance (0dB Unity) + Smoothed (Rule #18)
+                const float pL = track->panL.load(std::memory_order_relaxed);
+                const float pR = track->panR.load(std::memory_order_relaxed);
 
-                float* lData = track->audioBuffer.getWritePointer(0);
-                float* rData = track->audioBuffer.getWritePointer(1);
+                // Mapeamos de [-1, 1] a [0, 1] (0 = Hard Left, 1 = Hard Right)
+                const float posL = (pL + 1.0f) * 0.5f;
+                const float posR = (pR + 1.0f) * 0.5f;
 
                 for (int i = 0; i < numSamples; ++i) {
-                    float inL = lData[i];
-                    float inR = rData[i];
+                    const float smoothV = track->volumeSmoother.getNextValue();
+                    const float inL = lData[i];
+                    const float inR = rData[i];
 
-                    // Mapeamos de [-1, 1] a [0, 1] (0 = Hard Left, 1 = Hard Right)
-                    float posL = (pL + 1.0f) * 0.5f;
-                    float posR = (pR + 1.0f) * 0.5f;
-
-                    // El canal Izquierdo de entrada se posiciona según pL
-                    // El canal Derecho de entrada se posiciona según pR
-                    lData[i] = (inL * (1.0f - posL) + inR * (1.0f - posR)) * v;
-                    rData[i] = (inL * posL          + inR * posR)          * v;
+                    // Cada entrada (L y R) se posiciona linealmente según sus knobs
+                    lData[i] = (inL * (1.0f - posL) + inR * (1.0f - posR)) * smoothV;
+                    rData[i] = (inL * posL          + inR * posR)          * smoothV;
                 }
+                track->panSmoother.skip(numSamples);
             }
             else 
             {
-                float pan = track->getBalance();
-                track->audioBuffer.applyGain(0, 0, numSamples, v * juce::jmin(1.0f, 1.0f - pan));
-                track->audioBuffer.applyGain(1, 0, numSamples, v * juce::jmin(1.0f, 1.0f + pan));
+                // STANDARD PANNING - Linear Balance (0dB Unity) + Smoothed (Commercial Grade)
+                for (int i = 0; i < numSamples; ++i) {
+                    const float v = track->volumeSmoother.getNextValue();
+                    const float pan = track->panSmoother.getNextValue();
+
+                    // Ley de Balance Lineal: 0dB en el centro, 0dB en los extremos.
+                    const float gainL = juce::jmin(1.0f, 1.0f - pan);
+                    const float gainR = juce::jmin(1.0f, 1.0f + pan);
+                    
+                    lData[i] *= gainL * v;
+                    rData[i] *= gainR * v;
+                }
             }
         } 
         else if (track->audioBuffer.getNumChannels() == 1) 
         {
-            track->audioBuffer.applyGain(0, 0, numSamples, v);
+            float* data = track->audioBuffer.getWritePointer(0);
+            for (int i = 0; i < numSamples; ++i)
+                data[i] *= track->volumeSmoother.getNextValue();
+            
+            track->panSmoother.skip(numSamples);
         }
 
         // 3. VU-METER Update (Post-Fader / Post-Pan)

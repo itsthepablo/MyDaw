@@ -85,6 +85,12 @@ public:
         color = juce::Colour(juce::Random::getSystemRandom().nextFloat(), 0.6f, 0.8f, 1.0f);
         if (t == TrackType::Folder) color = juce::Colour(60, 65, 75);
         thumbnailFormatManager.registerBasicFormats();
+
+        // Inicialización segura de faders para evitar silencio (Rule #18)
+        volumeSmoother.reset(44100.0, 0.05);
+        volumeSmoother.setCurrentAndTargetValue(1.0f);
+        panSmoother.reset(44100.0, 0.05);
+        panSmoother.setCurrentAndTargetValue(balance);
     }
 
     ~Track() {
@@ -100,9 +106,24 @@ public:
     void setColor(juce::Colour c) { color = c; }
 
     float getVolume() const { return volume; }
-    void setVolume(float v) { volume = v; }
+    void setVolume(float v) { 
+        volume = v; 
+        volumeSmoother.setTargetValue(v);
+    }
     float getBalance() const { return balance; }
-    void setBalance(float b) { balance = b; }
+    void setBalance(float b) { 
+        balance = b; 
+        panSmoother.setTargetValue(b);
+    }
+
+    void prepare(double sampleRate, int samplesPerBlock)
+    {
+        volumeSmoother.reset(sampleRate, 0.05); // 50ms ramp for professional feel
+        volumeSmoother.setCurrentAndTargetValue(volume);
+
+        panSmoother.reset(sampleRate, 0.05);
+        panSmoother.setCurrentAndTargetValue(balance);
+    }
 
     WaveformViewMode getWaveformViewMode() const { return waveformViewMode; }
     void setWaveformViewMode(WaveformViewMode mode) { waveformViewMode = mode; }
@@ -287,8 +308,13 @@ private:
     juce::String name;
     TrackType type;
     juce::Colour color;
-    float volume = 0.8f;
+    float volume = 1.0f;
     float balance = 0.0f;
+
+public:
+    juce::LinearSmoothedValue<float> volumeSmoother;
+    juce::LinearSmoothedValue<float> panSmoother;
+private:
 
     float preGain = 1.0f;
     float postGain = 1.0f;

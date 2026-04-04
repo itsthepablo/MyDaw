@@ -38,6 +38,18 @@ void MainComponent::setupCallbacks() {
     ui.topMenuBar.viewToggleBtn.onClick = [this] { toggleViewMode(); };
     ui.topMenuBar.onSaveRequested = [this] { saveProject(); };
     ui.topMenuBar.onExportRequested = [this] { startExport(); };
+    ui.topMenuBar.onThemeManagerRequested = [this] {
+        if (themeWindow == nullptr)
+            themeWindow = std::make_unique<ThemeManagerWindow>("Theme Manager");
+        themeWindow->setVisible(true);
+        themeWindow->toFront(true);
+    };
+    ui.topMenuBar.onThemeManagerRequested = [this] {
+        if (themeWindow == nullptr)
+            themeWindow = std::make_unique<ThemeManagerWindow>("Theme Manager");
+        themeWindow->setVisible(true);
+        themeWindow->toFront(true);
+    };
 
     // --- CONEXIÓN METRÓNOMO (UI -> DSP) ---
     ui.topMenuBar.metronomeBtn.onClick = [this] {
@@ -208,6 +220,7 @@ void MainComponent::prepareToPlay(int samples, double s) {
             t->pdcBuffer.clear();
         }
         // DOUBLE BUFFER: publicar snapshot inicial con los clips/notas cargados del proyecto
+        t->prepare(s, samples);
         t->commitSnapshot();
     }
 
@@ -220,6 +233,7 @@ void MainComponent::prepareToPlay(int samples, double s) {
         mt->tempSynthBuffer.setSize(2, maxSamples, false, true, false);
         mt->midSideBuffer.setSize(1, maxSamples, false, true, false);
         mt->audioBuffer.clear();
+        mt->prepare(s, samples);
         mt->commitSnapshot();
         audioEngine.setMasterTrack(mt);
     }
@@ -240,7 +254,6 @@ void MainComponent::getNextAudioBlock(const juce::AudioSourceChannelInfo& buffer
     audioEngine.transportState.previewPitch.store(ui.pianoRollUI.getPreviewPitch(), std::memory_order_relaxed);
     audioEngine.transportState.bpm.store(ui.pianoRollUI.getBpm(), std::memory_order_relaxed);
     audioEngine.transportState.loopEndPos.store(juce::jmax(ui.pianoRollUI.getLoopEndPos(), ui.playlistUI.getLoopEndPos()), std::memory_order_relaxed);
-    audioEngine.masterVolume.store(ui.mixerUI.getMasterVolume(), std::memory_order_relaxed);
 
     // PROTECCIÓN ANTI-CRASH: El audioMutex se toma brevemente para garantizar que
     // el audio thread no acceda a Track* que el UI thread acaba de destruir.
@@ -261,7 +274,13 @@ void MainComponent::getNextAudioBlock(const juce::AudioSourceChannelInfo& buffer
 
 void MainComponent::releaseResources() { audioEngine.releaseResources(); }
 
-void MainComponent::paint(juce::Graphics& g) { g.fillAll(juce::Colour(30, 32, 35)); }
+void MainComponent::paint(juce::Graphics& g) {
+    if (auto* theme = dynamic_cast<CustomTheme*>(&getLookAndFeel())) {
+        g.fillAll(theme->getSkinColor("WINDOW_BG", juce::Colour(28, 30, 34)));
+    } else {
+        g.fillAll(juce::Colour(28, 30, 34));
+    }
+}
 
 void MainComponent::toggleViewMode() {
     currentView = (currentView == ViewMode::Arrangement) ? ViewMode::Mixer : ViewMode::Arrangement;
@@ -313,12 +332,38 @@ void MainComponent::startExport() {
             audioEngine.processBlock(info);
         };
 
+        offlineRenderer->onPrepareEngine = [this](double sampleRate) {
+            // Preparar motor de audio para el sample rate del render (Rule #18)
+            audioEngine.prepareToPlay(4096, sampleRate);
+            audioEngine.resetForRender();
+            
+            // Re-preparar todos los tracks con el nuevo sample rate
+            const juce::ScopedLock sl(audioMutex);
+            for (auto* t : ui.trackContainer.getTracks()) {
+                t->prepare(sampleRate, 4096);
+            }
+            if (ui.masterTrackObj) {
+                ui.masterTrackObj->prepare(sampleRate, 4096);
+            }
+        };
+
         offlineRenderer->onClose = [this] {
             audioEngine.transportState.isPlaying.store(false);
             
-            // RESTAURAR ESTADO REAL-TIME
+            // RESTAURAR ESTADO REAL-TIME (Rule #18)
             audioEngine.setNonRealtime(false);
-            audioEngine.prepareToPlay(512, deviceManager.getAudioDeviceSetup().sampleRate);
+            double hwSampleRate = deviceManager.getAudioDeviceSetup().sampleRate;
+            audioEngine.prepareToPlay(512, hwSampleRate);
+            
+            // Restaurar tracks al sample rate del hardware
+            const juce::ScopedLock sl(audioMutex);
+            for (auto* t : ui.trackContainer.getTracks()) {
+                t->prepare(hwSampleRate, 512);
+            }
+            if (ui.masterTrackObj) {
+                ui.masterTrackObj->prepare(hwSampleRate, 512);
+            }
+
             audioEngine.resetForRender();
 
             offlineRenderer->setVisible(false);

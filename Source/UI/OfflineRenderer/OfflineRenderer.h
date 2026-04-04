@@ -17,6 +17,7 @@ public:
     ~OfflineRenderer() override;
 
     std::function<void(juce::AudioBuffer<float>& buffer, int numSamples)> onProcessOfflineBlock;
+    std::function<void(double sampleRate)> onPrepareEngine;
     std::function<void()> onClose;
 
     // Abre la ventana en modo "Configuración"

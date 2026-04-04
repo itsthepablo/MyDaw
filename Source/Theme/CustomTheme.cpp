@@ -14,6 +14,7 @@ CustomTheme::CustomTheme()
     }
 
     loadSkinFromFolder(skinDir);
+    loadThemeFromFile(); // Cargar colores personalizados si existen
 }
 
 void CustomTheme::drawDocumentWindowTitleBar(juce::DocumentWindow& window, juce::Graphics& g,
@@ -88,6 +89,68 @@ juce::Colour CustomTheme::getSkinColor(const juce::String& colorName, juce::Colo
     if (skinColors.find(colorName) != skinColors.end())
         return skinColors[colorName];
     return fallbackColor;
+}
+
+void CustomTheme::setSkinColor(const juce::String& name, juce::Colour color, bool shouldSave)
+{
+    skinColors[name] = color;
+    if (shouldSave) saveThemeToFile();
+    
+    // Notificar a los oyentes que el tema ha cambiado
+    sendChangeMessage();
+}
+
+juce::StringArray CustomTheme::getColorKeys() const
+{
+    static const char* keys[] = {
+        "WINDOW_BG", "TOP_BAR_BG", "SIDEBAR_BG", "DOCK_BG", 
+        "PLAYLIST_BG", "MIXER_BG", "PIANOROLL_BG", "ACCENT_COLOR", "TEXT_COLOR"
+    };
+    return juce::StringArray(keys, 9);
+}
+
+void CustomTheme::saveThemeToFile()
+{
+    juce::DynamicObject::Ptr obj = new juce::DynamicObject();
+    for (auto const& [name, color] : skinColors) {
+        obj->setProperty(name, color.toDisplayString(true));
+    }
+
+    juce::File file = juce::File::getSpecialLocation(juce::File::userDocumentsDirectory)
+        .getChildFile("MyDAW_Skins/theme_custom.json");
+    
+    if (auto stream = file.createOutputStream()) {
+        stream->writeString(juce::JSON::toString(juce::var(obj.get())));
+    }
+}
+
+void CustomTheme::loadThemeFromFile()
+{
+    juce::File file = juce::File::getSpecialLocation(juce::File::userDocumentsDirectory)
+        .getChildFile("MyDAW_Skins/theme_custom.json");
+
+    if (file.existsAsFile()) {
+        if (auto var = juce::JSON::parse(file)) {
+            if (auto* obj = var.getDynamicObject()) {
+                for (auto const& key : getColorKeys()) {
+                    if (obj->hasProperty(key)) {
+                        skinColors[key] = juce::Colour::fromString(obj->getProperty(key).toString());
+                    }
+                }
+            }
+        }
+    } else {
+        // Valores por defecto iniciales (Dark Theme)
+        skinColors["WINDOW_BG"] = juce::Colour(28, 30, 34);
+        skinColors["TOP_BAR_BG"] = juce::Colour(20, 22, 25);
+        skinColors["SIDEBAR_BG"] = juce::Colour(35, 37, 40);
+        skinColors["DOCK_BG"] = juce::Colour(35, 37, 40);
+        skinColors["PLAYLIST_BG"] = juce::Colour(30, 32, 35);
+        skinColors["MIXER_BG"] = juce::Colour(30, 32, 35);
+        skinColors["PIANOROLL_BG"] = juce::Colour(30, 32, 35);
+        skinColors["ACCENT_COLOR"] = juce::Colours::orange;
+        skinColors["TEXT_COLOR"] = juce::Colours::white;
+    }
 }
 
 // ------------------------------------------------------------------------------
