@@ -6,6 +6,7 @@
 #include "PlaylistActionHandler.h"
 #include "PlaylistDropHandler.h"
 #include "../UI/Playlist/LoudnessRenderer.h"
+#include "../UI/Playlist/BalanceRenderer.h"
 #include "Tools/EraserTool.h"
 #include "Tools/MuteTool.h"
 #include "Tools/PointerTool.h"
@@ -79,9 +80,12 @@ void PlaylistComponent::timerCallback() {
           for (auto* t : *tracksRef) {
               if (t->getType() == TrackType::Loudness) {
                   float lufs = masterTrackPtr->postLoudness.getShortTerm();
-                  // Suponemos 44100 de sample rate base para el posicionamiento
                   double samplePos = (double)playheadAbsPos; 
                   t->loudnessHistory.addPoint(samplePos, lufs);
+              } else if (t->getType() == TrackType::Balance) {
+                  float bal = masterTrackPtr->postBalance.getBalance();
+                  double samplePos = (double)playheadAbsPos;
+                  t->balanceHistory.addPoint(samplePos, bal);
               }
           }
       }
@@ -562,6 +566,12 @@ void PlaylistComponent::paint(juce::Graphics &g) {
 
               juce::Rectangle<float> loudnessArea(0.0f, (float)(yPos + 2), (float)getWidth(), (float)(trackHeight - 4));
               LoudnessRenderer::drawLoudnessTrack(g, loudnessArea, t, (float)hZoom, (float)hS);
+          } else if (t->getType() == TrackType::Balance) {
+              int yPos = trackYCache.count(t) ? trackYCache[t] : -1;
+              if (yPos == -1) continue;
+
+              juce::Rectangle<int> balanceArea(0, yPos + 2, getWidth(), (int)trackHeight - 4);
+              BalanceRenderer::drawBalanceTrack(g, t->balanceHistory, balanceArea, hZoom, (double)hS);
           }
       }
   }

@@ -99,6 +99,28 @@ public:
                 repaint();
                 if (onWaveformViewChanged) onWaveformViewChanged();
             };
+        } else if (track.getType() == TrackType::Balance) {
+            // Pista de Balance Estéreo
+            addAndMakeVisible(balanceScaleCombo);
+            balanceScaleCombo.addItem("±12 dB (Normal)", 1);
+            balanceScaleCombo.addItem("±6 dB (Surgical)", 2);
+            balanceScaleCombo.addItem("±3 dB (Mastering)", 3);
+            balanceScaleCombo.addItem("±2 dB (Extreme)", 4);
+            
+            if (track.balanceHistory.referenceScaleDB == 12.0f) balanceScaleCombo.setSelectedId(1, juce::dontSendNotification);
+            else if (track.balanceHistory.referenceScaleDB == 6.0f) balanceScaleCombo.setSelectedId(2, juce::dontSendNotification);
+            else if (track.balanceHistory.referenceScaleDB == 3.0f) balanceScaleCombo.setSelectedId(3, juce::dontSendNotification);
+            else if (track.balanceHistory.referenceScaleDB == 2.0f) balanceScaleCombo.setSelectedId(4, juce::dontSendNotification);
+            
+            balanceScaleCombo.onChange = [this] {
+                int id = balanceScaleCombo.getSelectedId();
+                if (id == 1) track.balanceHistory.referenceScaleDB = 12.0f;
+                else if (id == 2) track.balanceHistory.referenceScaleDB = 6.0f;
+                else if (id == 3) track.balanceHistory.referenceScaleDB = 3.0f;
+                else if (id == 4) track.balanceHistory.referenceScaleDB = 2.0f;
+                repaint();
+                if (onWaveformViewChanged) onWaveformViewChanged();
+            };
         } else {
             // Pistas normales: Todo el arsenal de controles
             addAndMakeVisible(muteBtn);
@@ -107,8 +129,6 @@ public:
             addAndMakeVisible(panKnob);
             addAndMakeVisible(levelMeter);
             addAndMakeVisible(effectsBtn);
-            
-            // ... (resto de configuraciones ya asignadas arriba)
         }
 
         if (track.getType() == TrackType::MIDI) {
@@ -131,7 +151,7 @@ public:
     ~TrackControlPanel() { stopTimer(); }
 
     void timerCallback() override {
-        if (track.getType() == TrackType::Loudness) return; // No hay medidor de peak en Loudness
+        if (track.getType() == TrackType::Loudness || track.getType() == TrackType::Balance) return; 
         if (track.isMuted) { levelMeter.setLevel(0.0f, 0.0f); return; }
         float vol = track.getVolume();
         float pan = track.getBalance();
@@ -237,6 +257,8 @@ public:
 
         if (track.getType() == TrackType::Loudness) {
             targetLufsCombo.setBounds(contentArea.removeFromTop(24).reduced(4, 2));
+        } else if (track.getType() == TrackType::Balance) {
+            balanceScaleCombo.setBounds(contentArea.removeFromTop(24).reduced(4, 2));
         } else {
             auto botRow = leftCol.removeFromTop(18);
             effectsBtn.setBounds(botRow.reduced(2, 0));
@@ -314,7 +336,7 @@ public:
             e.originalComponent == &muteBtn || e.originalComponent == &soloBtn ||
             e.originalComponent == &fxButton || e.originalComponent == &prButton ||
             e.originalComponent == &inlineBtn || e.originalComponent == &effectsBtn ||
-            e.originalComponent == &targetLufsCombo)
+            e.originalComponent == &targetLufsCombo || e.originalComponent == &balanceScaleCombo)
             return;
 
         if (auto* dc = juce::DragAndDropContainer::findParentDragContainerFor(this)) {
@@ -341,7 +363,7 @@ private:
 
     juce::Label nameLabel; juce::TextButton muteBtn, soloBtn; FloatingValueSlider volKnob, panKnob;
     juce::TextButton fxButton, prButton, inlineBtn, effectsBtn, folderBtn, compactBtn;
-    juce::ComboBox targetLufsCombo;
+    juce::ComboBox targetLufsCombo, balanceScaleCombo;
     juce::OwnedArray<juce::TextButton> pluginButtons; LevelMeter levelMeter;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TrackControlPanel)
 };

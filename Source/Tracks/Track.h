@@ -4,6 +4,7 @@
 #include "../Native_Plugins/BaseEffect.h"
 #include "../PluginHost/VSTHost.h" 
 #include "../Engine/SimpleLoudness.h"
+#include "../Engine/SimpleBalance.h"
 #include "AudioClipData.h"
 #include <juce_dsp/juce_dsp.h>
 #include <map>
@@ -13,7 +14,7 @@
 #include <cmath>
 #include <atomic>
 
-enum class TrackType { MIDI, Audio, Folder, Loudness };
+enum class TrackType { MIDI, Audio, Folder, Loudness, Balance };
 enum class WaveformViewMode { Combined, SeparateLR, MidSide, Spectrogram }; 
 enum class SendRouting { Stereo, Mid, Side }; 
 
@@ -78,6 +79,25 @@ struct MidiClipSnapshot {
 struct LoudnessPoint {
     double samplePos = 0.0;
     float shortTermLUFS = -70.0f;
+};
+
+struct BalanceHistory {
+    std::map<double, float> points; // samplePos -> balanceDB (-12 a +12)
+    float referenceScaleDB = 12.0f; // Escala vertical (6.0 o 12.0)
+    bool isActive = true;
+
+    void clear() { points.clear(); }
+    
+    // High-Fidelity Recording (Precisión de Muestra)
+    void addPoint(double pos, float val) {
+        // Forward Erase de 10ms
+        auto it = points.lower_bound(pos);
+        auto itEnd = points.upper_bound(pos + 500.0);
+        if (it != points.end()) {
+            points.erase(it, itEnd);
+        }
+        points[pos] = val;
+    }
 };
 
 struct LoudnessHistory {
@@ -237,10 +257,12 @@ public:
 
     SimpleLoudness preLoudness;
     SimpleLoudness postLoudness;
+    SimpleBalance  postBalance;
     bool isAnalyzersPrepared = false;
 
     // --- LOUDNESS TRACK SPECIFIC ---
     LoudnessHistory loudnessHistory;
+    BalanceHistory  balanceHistory;
     std::atomic<bool> isLoudnessRecording { true };
 
     AudioClipData* loadAndAddAudioClip(const juce::File& file, float startX)

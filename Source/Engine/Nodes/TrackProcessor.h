@@ -37,6 +37,7 @@ public:
         if (!track->isAnalyzersPrepared) {
             track->preLoudness.prepare(44100.0, 512);
             track->postLoudness.prepare(44100.0, 512);
+            track->postBalance.prepare(44100.0, 512);
             track->isAnalyzersPrepared = true;
         }
 

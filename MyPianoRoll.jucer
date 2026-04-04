@@ -30,6 +30,8 @@
       </GROUP>
       <GROUP id="{721FC522-4CF1-05D4-BC36-D97CDC4B59FC}" name="UI">
         <GROUP id="{6D660262-129A-F82F-7410-493E0F46A50D}" name="Playlist">
+          <FILE id="VfrgOT" name="BalanceRenderer.h" compile="0" resource="0"
+                file="Source/UI/Playlist/BalanceRenderer.h"/>
           <FILE id="TfaWko" name="LoudnessRenderer.h" compile="0" resource="0"
                 file="Source/UI/Playlist/LoudnessRenderer.h"/>
         </GROUP>
@@ -131,6 +133,7 @@
           <FILE id="skfGlU" name="AudioThreadPool.h" compile="0" resource="0"
                 file="Source/Engine/Threading/AudioThreadPool.h"/>
         </GROUP>
+        <FILE id="c2VdJY" name="SimpleBalance.h" compile="0" resource="0" file="Source/Engine/SimpleBalance.h"/>
         <FILE id="f8Nvgg" name="SimpleLoudness.h" compile="0" resource="0"
               file="Source/Engine/SimpleLoudness.h"/>
         <FILE id="RaIB7b" name="StereoAnalyzer.h" compile="0" resource="0"
