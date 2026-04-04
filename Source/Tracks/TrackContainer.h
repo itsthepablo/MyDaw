@@ -33,7 +33,8 @@ public:
     std::function<void()> onTrackAdded;
     std::function<void(Track*)> onActiveTrackChanged;
     std::function<void(float)> onScrollWheel;
-
+    std::function<void(TrackType, bool)> onToggleAnalysisTrack;
+    
     int vOffset = 0;
     float trackHeight = 100.0f;
 
@@ -63,6 +64,19 @@ public:
 
         addMidiBtn.onClick = [this] { addTrack(TrackType::MIDI); };
         addAudioBtn.onClick = [this] { addTrack(TrackType::Audio); };
+
+        // --- Botones de Análisis (Switches) ---
+        addAndMakeVisible(toggleLdnBtn);
+        addAndMakeVisible(toggleBalBtn);
+        addAndMakeVisible(toggleMsBtn);
+
+        toggleLdnBtn.setClickingTogglesState(true);
+        toggleBalBtn.setClickingTogglesState(true);
+        toggleMsBtn.setClickingTogglesState(true);
+
+        toggleLdnBtn.onClick = [this] { if (onToggleAnalysisTrack) onToggleAnalysisTrack(TrackType::Loudness, toggleLdnBtn.getToggleState()); };
+        toggleBalBtn.onClick = [this] { if (onToggleAnalysisTrack) onToggleAnalysisTrack(TrackType::Balance, toggleBalBtn.getToggleState()); };
+        toggleMsBtn.onClick = [this] { if (onToggleAnalysisTrack) onToggleAnalysisTrack(TrackType::MidSide, toggleMsBtn.getToggleState()); };
     }
 
     void setExternalMutex(juce::CriticalSection* mutex) { audioMutex = mutex; }
@@ -109,13 +123,16 @@ public:
         if (audioMutex != nullptr) lock = std::make_unique<juce::ScopedLock>(*audioMutex);
 
         int id = idToUse > 0 ? idToUse : (int)tracks.size() + 1;
-        juce::String defaultName = "Track ";
-        if (type == TrackType::MIDI) defaultName = "Inst ";
-        else if (type == TrackType::Audio) defaultName = "Audio ";
-        else if (type == TrackType::Folder) defaultName = "Folder ";
-        else if (type == TrackType::Loudness) defaultName = "Loudness ";
+        juce::String nameToUse;
+        if (type == TrackType::MIDI) nameToUse = "Inst " + juce::String(id);
+        else if (type == TrackType::Audio) nameToUse = "Audio " + juce::String(id);
+        else if (type == TrackType::Folder) nameToUse = "Folder " + juce::String(id);
+        else if (type == TrackType::Loudness) nameToUse = "Loudness Track";
+        else if (type == TrackType::Balance) nameToUse = "Balance Track";
+        else if (type == TrackType::MidSide) nameToUse = "Mid-Side Track";
+        else nameToUse = "Track " + juce::String(id);
 
-        auto* t = new Track(id, defaultName + juce::String(id), type);
+        auto* t = new Track(id, nameToUse, type);
         tracks.add(t);
         auto* p = new TrackControlPanel(*t);
 
@@ -290,6 +307,12 @@ public:
 
     void refreshTrackPanels() { for (auto* p : trackPanels) p->updatePlugins(); }
 
+    void setAnalysisTrackToggleState(TrackType type, bool state) {
+        if (type == TrackType::Loudness) toggleLdnBtn.setToggleState(state, juce::dontSendNotification);
+        else if (type == TrackType::Balance) toggleBalBtn.setToggleState(state, juce::dontSendNotification);
+        else if (type == TrackType::MidSide) toggleMsBtn.setToggleState(state, juce::dontSendNotification);
+    }
+
     bool isInterestedInDragSource(const SourceDetails& d) override { return d.description == "TRACK"; }
     void itemDragMove(const SourceDetails& d) override {
         if (d.description != "TRACK") return;
@@ -389,8 +412,16 @@ public:
                 currentY += (int)trackHeight;
             }
         }
-        addMidiBtn.setBounds(5, 5, 80, 25); addAudioBtn.setBounds(90, 5, 80, 25);
-        headerBg.toBack(); addMidiBtn.toFront(false); addAudioBtn.toFront(false);
+        addMidiBtn.setBounds(5, 5, 55, 25); 
+        addAudioBtn.setBounds(65, 5, 55, 25);
+        
+        toggleLdnBtn.setBounds(125, 5, 38, 25);
+        toggleBalBtn.setBounds(167, 5, 38, 25);
+        toggleMsBtn.setBounds(209, 5, 36, 25);
+
+        headerBg.toBack(); 
+        addMidiBtn.toFront(false); addAudioBtn.toFront(false);
+        toggleLdnBtn.toFront(false); toggleBalBtn.toFront(false); toggleMsBtn.toFront(false);
     }
 
     void updateStyles() {
@@ -398,6 +429,14 @@ public:
             auto bg = theme->getSkinColor("TRACKS_BG", juce::Colour(25, 27, 30));
             addMidiBtn.setColour(juce::TextButton::buttonColourId, bg.brighter(0.1f));
             addAudioBtn.setColour(juce::TextButton::buttonColourId, bg.brighter(0.1f));
+            toggleLdnBtn.setColour(juce::TextButton::buttonColourId, bg.brighter(0.1f));
+            toggleBalBtn.setColour(juce::TextButton::buttonColourId, bg.brighter(0.1f));
+            toggleMsBtn.setColour(juce::TextButton::buttonColourId, bg.brighter(0.1f));
+            
+            // Colores activos para los "Switches"
+            toggleLdnBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colours::orange.withAlpha(0.6f));
+            toggleBalBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colours::cyan.withAlpha(0.6f));
+            toggleMsBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colours::magenta.withAlpha(0.6f));
         }
     }
 
@@ -414,6 +453,7 @@ public:
 private:
     TrackHeaderBackground headerBg;
     juce::TextButton addMidiBtn{ "+ MIDI" }, addAudioBtn{ "+ AUDIO" };
+    juce::TextButton toggleLdnBtn{ "LDN" }, toggleBalBtn{ "BAL" }, toggleMsBtn{ "MS" };
     juce::OwnedArray<Track> tracks;
     juce::OwnedArray<TrackControlPanel> trackPanels;
     juce::CriticalSection* audioMutex = nullptr;

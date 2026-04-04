@@ -29,11 +29,16 @@
         <FILE id="ghMFvY" name="UtilityPlugin.h" compile="0" resource="0" file="Source/Native_Plugins/UtilityPlugin.h"/>
       </GROUP>
       <GROUP id="{721FC522-4CF1-05D4-BC36-D97CDC4B59FC}" name="UI">
+        <GROUP id="{B6357D25-D9E2-3C4A-AA66-543D29690500}" name="Loudness">
+          <FILE id="nhC3ZN" name="LoudnessMeter.h" compile="0" resource="0" file="Source/UI/Loudness/LoudnessMeter.h"/>
+        </GROUP>
         <GROUP id="{6D660262-129A-F82F-7410-493E0F46A50D}" name="Playlist">
           <FILE id="VfrgOT" name="BalanceRenderer.h" compile="0" resource="0"
                 file="Source/UI/Playlist/BalanceRenderer.h"/>
           <FILE id="TfaWko" name="LoudnessRenderer.h" compile="0" resource="0"
                 file="Source/UI/Playlist/LoudnessRenderer.h"/>
+          <FILE id="WMWpRT" name="MidSideRenderer.h" compile="0" resource="0"
+                file="Source/UI/Playlist/MidSideRenderer.h"/>
         </GROUP>
         <GROUP id="{370703D0-1732-1E2E-EE22-515A559A3353}" name="OfflineRenderer">
           <FILE id="HQ3qTp" name="OfflineRenderer.cpp" compile="1" resource="0"
@@ -136,6 +141,7 @@
         <FILE id="c2VdJY" name="SimpleBalance.h" compile="0" resource="0" file="Source/Engine/SimpleBalance.h"/>
         <FILE id="f8Nvgg" name="SimpleLoudness.h" compile="0" resource="0"
               file="Source/Engine/SimpleLoudness.h"/>
+        <FILE id="sj4QAx" name="SimpleMidSide.h" compile="0" resource="0" file="Source/Engine/SimpleMidSide.h"/>
         <FILE id="RaIB7b" name="StereoAnalyzer.h" compile="0" resource="0"
               file="Source/Engine/StereoAnalyzer.h"/>
       </GROUP>

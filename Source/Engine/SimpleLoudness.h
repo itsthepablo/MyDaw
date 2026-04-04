@@ -19,7 +19,6 @@ public:
         lufsRange.store(0.0f);
 
         // --- 1. FILTROS BS.1770-4 (Coeficientes Biquad Manuales) ---
-        // Stage 1: High Shelf
         double f0 = 1500.0, G = 4.0, Q = 1.0 / std::sqrt(2.0);
         double K = std::tan(juce::MathConstants<double>::pi * f0 / fs);
         double V = std::pow(10.0, G / 20.0);
@@ -33,7 +32,6 @@ public:
             (1.0 - K / Q + K * K) / norm1
         );
 
-        // Stage 2: High Pass
         f0 = 38.0; Q = 0.5;
         K = std::tan(juce::MathConstants<double>::pi * f0 / fs);
         double norm2 = 1.0 + K / Q + K * K;
@@ -59,11 +57,8 @@ public:
         currentBlockAccumulator = 0.0;
         currentBlockSamples = 0;
 
-        // Pre-alocar memoria para buffers de proceso para evitar allocations en process()
         processBuffer.setSize(2, samplesPerBlock);
 
-        // Los vectores de historia NO deben crecer en el audio thread.
-        // Se usarán solo para análisis offline o recolectados por hilos de UI.
         integratedEnergyBlocks.clear();
         integratedEnergyBlocks.reserve(100000); 
         shortTermLufsHistory.clear();
@@ -77,10 +72,8 @@ public:
         for (int i = 0; i < 2; ++i) { kFilterShelf[i].reset(); kFilterHP[i].reset(); }
         std::fill(energyBuffer.begin(), energyBuffer.end(), 0.0);
         bufferIndex = 0; runningSumShort = 0.0;
-
         integratedEnergyBlocks.clear();
         shortTermLufsHistory.clear();
-
         currentBlockAccumulator = 0.0; currentBlockSamples = 0;
 
         lufsShort.store(-70.0f); 
@@ -91,29 +84,26 @@ public:
 
     void process(const juce::AudioBuffer<float>& buffer)
     {
+        if (energyBuffer.empty()) return; // SEGURIDAD: Evita el crash si no se ha llamado a prepare()
+
         int numSamples = buffer.getNumSamples();
         if (numSamples <= 0) return;
 
-        // Segurizar tamaño de buffer de proceso (Rule #1: No alloc en el hilo sagrado si es posible)
-        // En un DAW real, prepareToPlay garantiza el samplesPerBlock. 
         if (processBuffer.getNumSamples() < numSamples) 
             processBuffer.setSize(2, numSamples, false, true, true);
 
-        // TRUE PEAK (Aproximación rápida, para True Peak real se requiere 4x oversampling)
         float maxP = buffer.getMagnitude(0, 0, numSamples);
         if (buffer.getNumChannels() > 1) 
             maxP = std::max(maxP, buffer.getMagnitude(1, 0, numSamples));
         
         float currentTP = lufsTruePeak.load();
         if (maxP > currentTP) lufsTruePeak.store(maxP); 
-        else lufsTruePeak.store(currentTP * 0.9999f); // Decay suave
+        else lufsTruePeak.store(currentTP * 0.9999f);
 
-        // FILTRADO K-Weighting
         for (int ch = 0; ch < juce::jmin(2, buffer.getNumChannels()); ++ch) {
             float* dest = processBuffer.getWritePointer(ch);
             const float* src = buffer.getReadPointer(ch);
             juce::FloatVectorOperations::copy(dest, src, numSamples);
-            
             kFilterShelf[ch].processSamples(dest, numSamples); 
             kFilterHP[ch].processSamples(dest, numSamples);
         }
@@ -139,10 +129,15 @@ public:
                 double blockMean = currentBlockAccumulator / (double)currentBlockSamples;
                 lufsMomentary.store(energyToLufs(blockMean));
                 
-                // NOTA: En Real-time Recording, no pusheamos directamente aquí.
-                // El LoudnessTrack leerá lufsShort cada 100ms desde un Timer.
+                if (integratedEnergyBlocks.size() < integratedEnergyBlocks.capacity()) {
+                    integratedEnergyBlocks.push_back(blockMean);
+                }
                 
-                // integratedEnergyBlocks.push_back(blockMean); // EVITAR EN REAL-TIME
+                float stMeanTotal = runningSumShort / (double)shortTermSize;
+                float currentShort = energyToLufs(stMeanTotal);
+                if (shortTermLufsHistory.size() < shortTermLufsHistory.capacity()) {
+                    shortTermLufsHistory.push_back(currentShort);
+                }
 
                 currentBlockAccumulator = 0.0; currentBlockSamples = 0;
             }
@@ -158,24 +153,7 @@ public:
     float getTruePeak() const { return lufsTruePeak.load(); }
     float getRange() const { return lufsRange.load(); }
 
-private:
-    double fs = 44100.0;
-    juce::IIRFilter kFilterShelf[2], kFilterHP[2];
-    std::vector<double> energyBuffer;
-    juce::AudioBuffer<float> processBuffer; // Pre-alloc
-    int shortTermSize = 0, bufferIndex = 0;
-    double runningSumShort = 0.0;
-    std::vector<double> integratedEnergyBlocks;
-    std::vector<float> shortTermLufsHistory;
-    int blockSize = 0, currentBlockSamples = 0;
-    double currentBlockAccumulator = 0.0;
-    std::atomic<float> lufsMomentary { -70.0f }, lufsShort { -70.0f }, lufsIntegrated { -70.0f }, lufsTruePeak { 0.0f }, lufsRange { 0.0f };
-
-    float energyToLufs(double energy) {
-        if (energy <= 1.0e-20) return -70.0f;
-        return (float)(-0.691 + 10.0 * std::log10(energy));
-    }
-
+public:
     void calculateIntegratedAndLRA() {
         if (integratedEnergyBlocks.size() < 4) return;
         std::vector<double> windows;
@@ -190,21 +168,21 @@ private:
         int countValid = 0;
         for (double w : windows) { if (w > absThresh) { sumValid += w; countValid++; } }
 
-        if (countValid == 0) { lufsIntegrated = -70.0f; lufsRange = 0.0f; return; }
+        if (countValid == 0) { lufsIntegrated.store(-70.0f); lufsRange.store(0.0f); return; }
 
-        double relLoudness = energyToLufs(sumValid / countValid);
+        double relLoudness = (double)energyToLufs(sumValid / (double)countValid);
         double relThresh = std::pow(10.0, (relLoudness - 10.0 + 0.691) / 10.0);
 
         double finalSum = 0.0;
         int finalCount = 0;
         for (double w : windows) { if (w > relThresh) { finalSum += w; finalCount++; } }
 
-        if (finalCount > 0) lufsIntegrated.store(energyToLufs(finalSum / finalCount));
+        if (finalCount > 0) lufsIntegrated.store(energyToLufs(finalSum / (double)finalCount));
         else lufsIntegrated.store(-70.0f);
 
         if (shortTermLufsHistory.empty()) return;
 
-        float gateLRA = lufsIntegrated - 20.0f;
+        float gateLRA = lufsIntegrated.load() - 20.0f;
         float lowerGate = std::max(-70.0f, gateLRA);
 
         std::vector<float> validLRA;
@@ -224,5 +202,23 @@ private:
         if (idx10 >= idx95) idx10 = (idx95 > 0 ? idx95 - 1 : 0);
 
         lufsRange.store(validLRA[idx95] - validLRA[idx10]);
+    }
+
+private:
+    double fs = 44100.0;
+    juce::IIRFilter kFilterShelf[2], kFilterHP[2];
+    std::vector<double> energyBuffer;
+    juce::AudioBuffer<float> processBuffer;
+    int shortTermSize = 0, bufferIndex = 0;
+    double runningSumShort = 0.0;
+    std::vector<double> integratedEnergyBlocks;
+    std::vector<float> shortTermLufsHistory;
+    int blockSize = 0, currentBlockSamples = 0;
+    double currentBlockAccumulator = 0.0;
+    std::atomic<float> lufsMomentary { -70.0f }, lufsShort { -70.0f }, lufsIntegrated { -70.0f }, lufsTruePeak { 0.0f }, lufsRange { 0.0f };
+
+    float energyToLufs(double energy) {
+        if (energy <= 1.0e-20) return -70.0f;
+        return (float)(-0.691 + 10.0 * std::log10(energy));
     }
 };

@@ -4,6 +4,7 @@
 #include "../PluginHost/VSTHost.h" 
 #include "../UI/Knobs/FloatingValueSlider.h" 
 #include "../UI/LevelMeter.h"
+#include "../UI/Loudness/LoudnessMeter.h"
 
 class TrackControlPanel : public juce::Component, private juce::Timer, public juce::ChangeListener {
 public:
@@ -19,7 +20,10 @@ public:
     TrackControlPanel(Track& t) : track(t) {
         addAndMakeVisible(nameLabel);
         nameLabel.setText(track.getName(), juce::dontSendNotification);
-        nameLabel.setEditable(true);
+        bool isAnalysisTrack = (track.getType() == TrackType::Loudness || 
+                               track.getType() == TrackType::Balance || 
+                               track.getType() == TrackType::MidSide);
+        nameLabel.setEditable(!isAnalysisTrack);
         nameLabel.onTextChange = [this] { track.setName(nameLabel.getText()); };
 
         muteBtn.setButtonText("M");
@@ -85,6 +89,9 @@ public:
             targetLufsCombo.addItem("-23 LUFS (Broad)", 1);
             targetLufsCombo.addItem("-14 LUFS (Stream)", 2);
             targetLufsCombo.addItem("-5 LUFS (Loud)", 3);
+
+            loudnessMeter = std::make_unique<LoudnessMeter>(track);
+            addAndMakeVisible(*loudnessMeter);
             
             if (track.loudnessHistory.referenceLUFS == -23.0f) targetLufsCombo.setSelectedId(1, juce::dontSendNotification);
             else if (track.loudnessHistory.referenceLUFS == -14.0f) targetLufsCombo.setSelectedId(2, juce::dontSendNotification);
@@ -173,8 +180,15 @@ public:
 
         if (track.getType() == TrackType::MIDI) {
             addAndMakeVisible(prButton);
+            prButton.setButtonText("Piano Roll");
+            
             addAndMakeVisible(inlineBtn);
+            inlineBtn.setButtonText("Inline");
+            inlineBtn.setClickingTogglesState(true);
+            inlineBtn.setToggleState(track.isInlineEditingActive, juce::dontSendNotification);
+            
             addAndMakeVisible(fxButton);
+            fxButton.setButtonText("VSTi");
             
             prButton.onClick = [this] { if (onPianoRollClick) onPianoRollClick(); };
             inlineBtn.onClick = [this] {
@@ -283,7 +297,12 @@ public:
         leftCol.removeFromTop(2);
         
         if (track.getType() == TrackType::Loudness) {
-            targetLufsCombo.setBounds(leftCol.removeFromTop(22).reduced(2));
+            // Reposicionar el combo a la derecha arriba
+            auto topArea = leftCol.removeFromTop(20);
+            targetLufsCombo.setBounds(topArea.removeFromRight(85).reduced(2));
+            
+            if (loudnessMeter)
+                loudnessMeter->setBounds(leftCol.withTrimmedTop(4).reduced(2));
         } else if (track.getType() == TrackType::Balance) {
             balanceScaleCombo.setBounds(leftCol.removeFromTop(22).reduced(2));
         } else if (track.getType() == TrackType::MidSide) {
@@ -406,6 +425,7 @@ private:
     juce::Label nameLabel; juce::TextButton muteBtn, soloBtn; FloatingValueSlider volKnob, panKnob;
     juce::TextButton fxButton, prButton, inlineBtn, effectsBtn, folderBtn, compactBtn;
     juce::ComboBox targetLufsCombo, balanceScaleCombo, midSideScaleCombo, midSideModeCombo;
+    std::unique_ptr<LoudnessMeter> loudnessMeter;
     juce::OwnedArray<juce::TextButton> pluginButtons; LevelMeter levelMeter;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TrackControlPanel)
 };

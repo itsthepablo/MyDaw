@@ -221,6 +221,21 @@ public:
             
             // Volcar Master Track al buffer de hardware final
             MasterMixer::routeToMaster(masterTrack, bufferToFill.numSamples, hardwareOutChannels, bufferToFill);
+
+            // =======================================================
+            // FASE 2.6: ALIMENTAR TRACKS DE ANÁLISIS (SISTEMA)
+            // =======================================================
+            // Extraer la región del buffer a analizar (teniendo en cuenta startSample)
+            juce::AudioBuffer<float> analysisProxy(bufferToFill.buffer->getArrayOfWritePointers(), 
+                                                  bufferToFill.buffer->getNumChannels(), 
+                                                  bufferToFill.startSample, 
+                                                  bufferToFill.numSamples);
+
+            for (auto* t : topo->activeTracks) {
+                if (t->getType() == TrackType::Loudness) t->postLoudness.process(analysisProxy);
+                else if (t->getType() == TrackType::Balance) t->postBalance.process(analysisProxy);
+                else if (t->getType() == TrackType::MidSide) t->postMidSide.process(analysisProxy);
+            }
         }
 
         // =======================================================

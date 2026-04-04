@@ -55,25 +55,35 @@ void MainComponent::setupCallbacks() {
     ui.topMenuBar.metronomeBtn.onClick = [this] {
         audioEngine.metronome.setEnabled(ui.topMenuBar.metronomeBtn.getToggleState());
         };
-
-    ui.topMenuBar.onToggleLoudnessTrack = [this](bool visible) {
-        Track* loudnessTrack = nullptr;
-        for (auto* t : ui.trackContainer.getTracks()) {
-            if (t->getType() == TrackType::Loudness) {
-                loudnessTrack = t;
+    ui.trackContainer.onToggleAnalysisTrack = [this](TrackType type, bool visible) {
+        Track* targetTrack = nullptr;
+        int trackIndex = -1;
+        auto& tracks = ui.trackContainer.getTracks();
+        for (int i = 0; i < tracks.size(); ++i) {
+            if (tracks[i]->getType() == type) {
+                targetTrack = tracks[i];
+                trackIndex = i;
                 break;
             }
         }
 
         if (visible) {
-            if (loudnessTrack == nullptr) {
-                loudnessTrack = ui.trackContainer.addTrack(TrackType::Loudness);
-                loudnessTrack->setColor(juce::Colours::orange);
+            if (targetTrack == nullptr) {
+                targetTrack = ui.trackContainer.addTrack(type);
+                double currentSR = audioEngine.currentSampleRate > 0 ? audioEngine.currentSampleRate : 44100.0;
+                targetTrack->postLoudness.prepare(currentSR, 512);
+                targetTrack->postBalance.prepare(currentSR, 512);
+                targetTrack->postMidSide.prepare(currentSR);
+                if (type == TrackType::Loudness) { targetTrack->setColor(juce::Colours::orange); targetTrack->setName("Loudness Track"); }
+                else if (type == TrackType::Balance) { targetTrack->setColor(juce::Colours::cyan); targetTrack->setName("Balance Track"); }
+                else if (type == TrackType::MidSide) { targetTrack->setColor(juce::Colours::magenta); targetTrack->setName("Mid-Side Track"); }
             }
-            loudnessTrack->isShowingInChildren = true;
+            targetTrack->isShowingInChildren = true;
         } else {
-            if (loudnessTrack != nullptr) {
-                loudnessTrack->isShowingInChildren = false;
+            if (trackIndex != -1) {
+                // Físicamente borrar el track usando la lógica existente de onDeleteTrack
+                // Pasamos por el callback asignado abajo para mantener consistencia
+                ui.trackContainer.onDeleteTrack(trackIndex);
             }
         }
         
@@ -182,6 +192,10 @@ void MainComponent::setupCallbacks() {
         if (index >= 0 && index < ui.trackContainer.getTracks().size()) {
             Track* trackToDelete = ui.trackContainer.getTracks()[index];
             BridgeManager::cleanupTrack(trackToDelete, ui.pianoRollUI, [this] { closePianoRoll(); });
+
+            if (trackToDelete->getType() == TrackType::Loudness) ui.trackContainer.setAnalysisTrackToggleState(TrackType::Loudness, false);
+            else if (trackToDelete->getType() == TrackType::Balance) ui.trackContainer.setAnalysisTrackToggleState(TrackType::Balance, false);
+            else if (trackToDelete->getType() == TrackType::MidSide) ui.trackContainer.setAnalysisTrackToggleState(TrackType::MidSide, false);
 
             ui.playlistUI.purgeClipsOfTrack(trackToDelete);
             ui.trackContainer.removeTrack(index); 

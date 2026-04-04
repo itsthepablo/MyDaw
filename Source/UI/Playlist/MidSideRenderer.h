@@ -49,8 +49,6 @@ public:
 
             g.setColour(fillCol);
             g.fillPath(path);
-            g.setColour(strokeCol);
-            g.strokePath(path, juce::PathStrokeType(strokeW));
         };
 
         bool drawMid = (history.displayMode == 0 || history.displayMode == 1);
