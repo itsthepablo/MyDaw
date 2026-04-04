@@ -143,11 +143,16 @@ public:
         g.fillAll(juce::Colour(30, 32, 35));
         auto area = getLocalBounds();
         int indent = track.folderDepth * 15;
-        auto contentArea = area.withTrimmedLeft(indent);
+        
+        // --- NUEVO DISEÑO: Indicador Desacoplado ---
+        auto colorBarArea = area.withTrimmedLeft(indent + 4).removeFromLeft(6).reduced(0, 4);
+        g.setColour(track.getColor());
+        g.fillRoundedRectangle(colorBarArea.toFloat(), 3.0f);
 
-        // Eliminamos el gradiente y aplicamos un tinte suave del color de la pista
+        // --- Fondo de la pista (con Gap tras el indicador) ---
+        auto contentArea = area.withTrimmedLeft(indent + 4 + 6 + 4); // Indent + Margen + AnchoBarra + Gap
         g.setColour(track.getColor().withAlpha(0.15f));
-        g.fillRect(contentArea);
+        g.fillRoundedRectangle(contentArea.toFloat().reduced(0, 2), 4.0f);
 
         // GRID FIX: Líneas de jerarquía milimétricas
         if (track.folderDepth > 0) {
@@ -167,9 +172,9 @@ public:
 
         if (track.isSelected) {
             g.setColour(juce::Colours::white.withAlpha(0.12f));
-            g.fillRect(area);
-            g.setColour(juce::Colours::white.withAlpha(0.5f));
-            g.drawRect(area, 1);
+            g.fillRoundedRectangle(contentArea.toFloat().reduced(0, 2), 4.0f);
+            g.setColour(juce::Colours::white.withAlpha(0.4f));
+            g.drawRoundedRectangle(contentArea.toFloat().reduced(0, 2), 4.0f, 1.5f);
         }
 
         if (dragHoverMode != 0) {
@@ -178,16 +183,14 @@ public:
             else if (dragHoverMode == 3) g.fillRect(indent, getHeight() - 2, getWidth() - indent, 2);
             else if (dragHoverMode == 2) g.drawRect(contentArea, 2);
         }
-
-        g.setColour(track.getColor());
-        g.fillRect(contentArea.removeFromLeft(4));
     }
 
     void resized() override {
         int indent = track.folderDepth * 15;
-        // GRID FIX: Altura estricta de 100px (sin reduced externo)
+        // GRID FIX: Altura estricta de 100px
         auto area = getLocalBounds();
-        auto contentArea = area.withTrimmedLeft(indent).reduced(4, 2);
+        // El contenido real empieza después del indicador (Indent + Margen + Barra + Gap)
+        auto contentArea = area.withTrimmedLeft(indent + 4 + 6 + 4).reduced(4, 2);
 
         auto leftCol = contentArea.removeFromLeft(125);
         auto topRow = leftCol.removeFromTop(20);
