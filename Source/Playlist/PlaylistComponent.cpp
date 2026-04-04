@@ -7,6 +7,7 @@
 #include "PlaylistDropHandler.h"
 #include "../UI/Playlist/LoudnessRenderer.h"
 #include "../UI/Playlist/BalanceRenderer.h"
+#include "../UI/Playlist/MidSideRenderer.h"
 #include "Tools/EraserTool.h"
 #include "Tools/MuteTool.h"
 #include "Tools/PointerTool.h"
@@ -86,6 +87,12 @@ void PlaylistComponent::timerCallback() {
                   float bal = masterTrackPtr->postBalance.getBalance();
                   double samplePos = (double)playheadAbsPos;
                   t->balanceHistory.addPoint(samplePos, bal);
+              } else if (t->getType() == TrackType::MidSide) {
+                  float m = masterTrackPtr->postMidSide.getMid();
+                  float s = masterTrackPtr->postMidSide.getSide();
+                  float c = masterTrackPtr->postMidSide.getPhaseCorrelation();
+                  double samplePos = (double)playheadAbsPos;
+                  t->midSideHistory.addPoint(samplePos, m, s, c);
               }
           }
       }
@@ -572,6 +579,12 @@ void PlaylistComponent::paint(juce::Graphics &g) {
 
               juce::Rectangle<int> balanceArea(0, yPos + 2, getWidth(), (int)trackHeight - 4);
               BalanceRenderer::drawBalanceTrack(g, t->balanceHistory, balanceArea, hZoom, (double)hS);
+          } else if (t->getType() == TrackType::MidSide) {
+              int yPos = trackYCache.count(t) ? trackYCache[t] : -1;
+              if (yPos == -1) continue;
+
+              juce::Rectangle<int> midSideArea(0, yPos + 2, getWidth(), (int)trackHeight - 4);
+              MidSideRenderer::drawMidSideTrack(g, t->midSideHistory, midSideArea, hZoom, (double)hS);
           }
       }
   }

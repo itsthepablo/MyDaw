@@ -5,6 +5,7 @@
 #include "../PluginHost/VSTHost.h" 
 #include "../Engine/SimpleLoudness.h"
 #include "../Engine/SimpleBalance.h"
+#include "../Engine/SimpleMidSide.h"
 #include "AudioClipData.h"
 #include <juce_dsp/juce_dsp.h>
 #include <map>
@@ -14,7 +15,7 @@
 #include <cmath>
 #include <atomic>
 
-enum class TrackType { MIDI, Audio, Folder, Loudness, Balance };
+enum class TrackType { MIDI, Audio, Folder, Loudness, Balance, MidSide };
 enum class WaveformViewMode { Combined, SeparateLR, MidSide, Spectrogram }; 
 enum class SendRouting { Stereo, Mid, Side }; 
 
@@ -120,6 +121,27 @@ struct LoudnessHistory {
 
         // 2. Inserción Directa: Sin promedios ni rejillas que quiten precisión.
         points[pos] = val;
+    }
+};
+
+struct MidSidePoint {
+    float mid, side, correlation;
+};
+
+struct MidSideHistory {
+    std::map<double, MidSidePoint> points; 
+    float referenceScaleDB = 1.0f; // Default 1x Zoom
+    int displayMode = 0; // 0=Overlay, 1=Mid, 2=Side
+
+    void clear() { points.clear(); }
+
+    void addPoint(double pos, float m, float s, float c) {
+        auto it = points.lower_bound(pos);
+        auto itEnd = points.upper_bound(pos + 500.0);
+        if (it != points.end()) {
+            points.erase(it, itEnd);
+        }
+        points[pos] = { m, s, c };
     }
 };
 
@@ -258,11 +280,13 @@ public:
     SimpleLoudness preLoudness;
     SimpleLoudness postLoudness;
     SimpleBalance  postBalance;
+    SimpleMidSide  postMidSide;
     bool isAnalyzersPrepared = false;
 
-    // --- LOUDNESS TRACK SPECIFIC ---
+    // --- LOUDNESS/ANALYSIS TRACK SPECIFIC ---
     LoudnessHistory loudnessHistory;
     BalanceHistory  balanceHistory;
+    MidSideHistory  midSideHistory;
     std::atomic<bool> isLoudnessRecording { true };
 
     AudioClipData* loadAndAddAudioClip(const juce::File& file, float startX)

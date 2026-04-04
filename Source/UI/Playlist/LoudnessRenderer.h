@@ -27,12 +27,6 @@ public:
         g.drawText(juce::String((int)history.referenceLUFS) + " LUFS", 
                    area.getX() + 5, refY - 12, 60, 12, juce::Justification::left);
 
-        // Guías de escala relativa (±3 dB)
-        g.setColour(juce::Colours::white.withAlpha(0.1f));
-        float yPlus3 = lufsToY(history.referenceLUFS + 3.0f, area, floorLUFS, ceilingLUFS);
-        float yMinus3 = lufsToY(history.referenceLUFS - 3.0f, area, floorLUFS, ceilingLUFS);
-        g.drawHorizontalLine((int)yPlus3, area.getX(), area.getRight());
-        g.drawHorizontalLine((int)yMinus3, area.getX(), area.getRight());
 
         // --- 2. DIBUJAR LA CURVA (SHORT-TERM) ---
         if (history.points.empty()) return;

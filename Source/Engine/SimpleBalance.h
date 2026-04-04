@@ -51,8 +51,8 @@ public:
             kFilterHP[i].reset();
         }
 
-        // --- 2. BUFFERS DE SUAVIZADO (3 SEGUNDOS) ---
-        smoothWindowSize = (int)(fs * 3.0);
+        // --- 2. BUFFERS DE SUAVIZADO (400ms para Reactividad Estándar) ---
+        smoothWindowSize = (int)(fs * 0.4);
         energyBufferL.assign(smoothWindowSize, 0.0);
         energyBufferR.assign(smoothWindowSize, 0.0);
         bufferIndex = 0;
@@ -100,7 +100,6 @@ public:
             double pL = (double)(L[i] * L[i]);
             double pR = (double)(R[i] * R[i]);
 
-            // Actualizar ventanas deslizantes
             runningSumL -= energyBufferL[bufferIndex];
             energyBufferL[bufferIndex] = pL;
             runningSumL += pL;
@@ -112,15 +111,18 @@ public:
             bufferIndex = (bufferIndex + 1) % smoothWindowSize;
         }
 
-        // 3. Resultado en dB
-        // balance = 10 * log10(EnergyL / EnergyR)
         double meanL = runningSumL / (double)smoothWindowSize;
         double meanR = runningSumR / (double)smoothWindowSize;
 
-        const double epsilon = 1.0e-12; // -120dB floor
-        float balanceDB = (float)(10.0 * std::log10((meanL + epsilon) / (meanR + epsilon)));
-        
-        // Limitar para evitar infinitos visuales (Youlean style)
+        // 3. Gate de Silencio (-70dB): Si ambos son muy bajos, forzar centro.
+        const double epsilon = 1.0e-7; // -70dB en energía aprox
+        if (meanL < epsilon && meanR < epsilon) {
+            currentBalance.store(0.0f);
+            return;
+        }
+
+        // 4. Resultado en dB
+        float balanceDB = (float)(10.0 * std::log10((meanL + 1e-12) / (meanR + 1e-12)));
         currentBalance.store(juce::jlimit(-24.0f, 24.0f, balanceDB));
     }
 

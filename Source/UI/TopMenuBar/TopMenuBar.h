@@ -189,6 +189,7 @@ public:
             menu.addItem(102, "Folder Track", true, false);
             menu.addItem(103, "Loudness Track", true, false);
             menu.addItem(104, "Balance Track", true, false);
+            menu.addItem(105, "Mid-Side Track", true, false);
         }
         else if (menuName == "VIEW") {
             menu.addItem(20, "Loudness Track", true, isLoudnessTrackVisible);
@@ -207,6 +208,7 @@ public:
                 if (result == 102 && onNewTrackRequested) onNewTrackRequested(TrackType::Folder);
                 if (result == 103 && onNewTrackRequested) onNewTrackRequested(TrackType::Loudness);
                 if (result == 104 && onNewTrackRequested) onNewTrackRequested(TrackType::Balance);
+                if (result == 105 && onNewTrackRequested) onNewTrackRequested(TrackType::MidSide);
 
                 if (result == 3 && onSaveRequested) {
                     onSaveRequested();

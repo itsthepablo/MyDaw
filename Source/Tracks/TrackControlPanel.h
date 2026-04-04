@@ -102,22 +102,62 @@ public:
         } else if (track.getType() == TrackType::Balance) {
             // Pista de Balance Estéreo
             addAndMakeVisible(balanceScaleCombo);
-            balanceScaleCombo.addItem("±12 dB (Normal)", 1);
-            balanceScaleCombo.addItem("±6 dB (Surgical)", 2);
-            balanceScaleCombo.addItem("±3 dB (Mastering)", 3);
-            balanceScaleCombo.addItem("±2 dB (Extreme)", 4);
+            balanceScaleCombo.addItem("1x (12 dB)", 1);
+            balanceScaleCombo.addItem("2x (6 dB)", 2);
+            balanceScaleCombo.addItem("4x (3 dB)", 3);
+            balanceScaleCombo.addItem("6x (2 dB)", 4);
             
-            if (track.balanceHistory.referenceScaleDB == 12.0f) balanceScaleCombo.setSelectedId(1, juce::dontSendNotification);
-            else if (track.balanceHistory.referenceScaleDB == 6.0f) balanceScaleCombo.setSelectedId(2, juce::dontSendNotification);
-            else if (track.balanceHistory.referenceScaleDB == 3.0f) balanceScaleCombo.setSelectedId(3, juce::dontSendNotification);
-            else if (track.balanceHistory.referenceScaleDB == 2.0f) balanceScaleCombo.setSelectedId(4, juce::dontSendNotification);
+            // Sincronización Inicial: Asegurar que el UI refleje el valor real (Default 1x/12dB)
+            if      (track.balanceHistory.referenceScaleDB == 12.0f) balanceScaleCombo.setSelectedId(1, juce::dontSendNotification);
+            else if (track.balanceHistory.referenceScaleDB == 6.0f)  balanceScaleCombo.setSelectedId(2, juce::dontSendNotification);
+            else if (track.balanceHistory.referenceScaleDB == 3.0f)  balanceScaleCombo.setSelectedId(3, juce::dontSendNotification);
+            else if (track.balanceHistory.referenceScaleDB == 2.0f)  balanceScaleCombo.setSelectedId(4, juce::dontSendNotification);
+            else {
+                track.balanceHistory.referenceScaleDB = 12.0f; // Forzar default si hay discrepancia
+                balanceScaleCombo.setSelectedId(1, juce::dontSendNotification);
+            }
             
             balanceScaleCombo.onChange = [this] {
                 int id = balanceScaleCombo.getSelectedId();
-                if (id == 1) track.balanceHistory.referenceScaleDB = 12.0f;
+                if      (id == 1) track.balanceHistory.referenceScaleDB = 12.0f;
                 else if (id == 2) track.balanceHistory.referenceScaleDB = 6.0f;
                 else if (id == 3) track.balanceHistory.referenceScaleDB = 3.0f;
                 else if (id == 4) track.balanceHistory.referenceScaleDB = 2.0f;
+                repaint();
+                if (onWaveformViewChanged) onWaveformViewChanged();
+            };
+        } else if (track.getType() == TrackType::MidSide) {
+            // Pista de Análisis Mid-Side
+            addAndMakeVisible(midSideScaleCombo);
+            midSideScaleCombo.addItem("1x (Normal)", 1);
+            midSideScaleCombo.addItem("2x (+6dB)", 2);
+            midSideScaleCombo.addItem("4x (+12dB)", 3);
+            midSideScaleCombo.addItem("8x (+18dB)", 4);
+            
+            // Sincronización Inicial
+            if      (track.midSideHistory.referenceScaleDB == 1.0f) midSideScaleCombo.setSelectedId(1, juce::dontSendNotification);
+            else if (track.midSideHistory.referenceScaleDB == 2.0f) midSideScaleCombo.setSelectedId(2, juce::dontSendNotification);
+            else if (track.midSideHistory.referenceScaleDB == 4.0f) midSideScaleCombo.setSelectedId(3, juce::dontSendNotification);
+            else if (track.midSideHistory.referenceScaleDB == 8.0f) midSideScaleCombo.setSelectedId(4, juce::dontSendNotification);
+            else midSideScaleCombo.setSelectedId(1, juce::dontSendNotification);
+
+            midSideScaleCombo.onChange = [this] {
+                int id = midSideScaleCombo.getSelectedId();
+                if      (id == 1) track.midSideHistory.referenceScaleDB = 1.0f;
+                else if (id == 2) track.midSideHistory.referenceScaleDB = 2.0f;
+                else if (id == 3) track.midSideHistory.referenceScaleDB = 4.0f;
+                else if (id == 4) track.midSideHistory.referenceScaleDB = 8.0f;
+                repaint();
+                if (onWaveformViewChanged) onWaveformViewChanged();
+            };
+
+            addAndMakeVisible(midSideModeCombo);
+            midSideModeCombo.addItem("Overlay (Both)", 1);
+            midSideModeCombo.addItem("Mid Only", 2);
+            midSideModeCombo.addItem("Side Only", 3);
+            midSideModeCombo.setSelectedId(track.midSideHistory.displayMode + 1, juce::dontSendNotification);
+            midSideModeCombo.onChange = [this] {
+                track.midSideHistory.displayMode = midSideModeCombo.getSelectedId() - 1;
                 repaint();
                 if (onWaveformViewChanged) onWaveformViewChanged();
             };
@@ -151,7 +191,7 @@ public:
     ~TrackControlPanel() { stopTimer(); }
 
     void timerCallback() override {
-        if (track.getType() == TrackType::Loudness || track.getType() == TrackType::Balance) return; 
+        if (track.getType() == TrackType::Loudness || track.getType() == TrackType::Balance || track.getType() == TrackType::MidSide) return; 
         if (track.isMuted) { levelMeter.setLevel(0.0f, 0.0f); return; }
         float vol = track.getVolume();
         float pan = track.getBalance();
@@ -241,30 +281,32 @@ public:
         nameLabel.setBounds(topRow);
         
         leftCol.removeFromTop(2);
-        auto kRow = leftCol.removeFromTop(28);
-        muteBtn.setBounds(kRow.removeFromLeft(20).reduced(1));
-        soloBtn.setBounds(kRow.removeFromLeft(20).reduced(1));
-        panKnob.setBounds(kRow.removeFromLeft(35));
-        volKnob.setBounds(kRow.removeFromLeft(35));
-
-        leftCol.removeFromTop(4);
-        if (track.getType() == TrackType::MIDI) {
-            auto prRow = leftCol.removeFromTop(18);
-            prButton.setBounds(prRow.removeFromLeft(prRow.getWidth() / 2).reduced(1));
-            inlineBtn.setBounds(prRow.reduced(1));
-            leftCol.removeFromTop(4);
-        }
-
+        
         if (track.getType() == TrackType::Loudness) {
-            targetLufsCombo.setBounds(contentArea.removeFromTop(24).reduced(4, 2));
+            targetLufsCombo.setBounds(leftCol.removeFromTop(22).reduced(2));
         } else if (track.getType() == TrackType::Balance) {
-            balanceScaleCombo.setBounds(contentArea.removeFromTop(24).reduced(4, 2));
+            balanceScaleCombo.setBounds(leftCol.removeFromTop(22).reduced(2));
+        } else if (track.getType() == TrackType::MidSide) {
+            midSideScaleCombo.setBounds(leftCol.removeFromTop(22).reduced(2));
+            midSideModeCombo.setBounds(leftCol.removeFromTop(22).reduced(2));
         } else {
+            auto kRow = leftCol.removeFromTop(28);
+            muteBtn.setBounds(kRow.removeFromLeft(20).reduced(1));
+            soloBtn.setBounds(kRow.removeFromLeft(20).reduced(1));
+            panKnob.setBounds(kRow.removeFromLeft(35));
+            volKnob.setBounds(kRow.removeFromLeft(35));
+            
             auto botRow = leftCol.removeFromTop(18);
             effectsBtn.setBounds(botRow.reduced(2, 0));
         }
 
-        if (track.getType() != TrackType::Loudness) {
+        if (track.getType() == TrackType::MIDI) {
+            auto prRow = leftCol.removeFromTop(18);
+            prButton.setBounds(prRow.removeFromLeft(prRow.getWidth() / 2).reduced(1));
+            inlineBtn.setBounds(prRow.reduced(1));
+        }
+
+        if (track.getType() != TrackType::Loudness && track.getType() != TrackType::Balance && track.getType() != TrackType::MidSide) {
             auto meterArea = contentArea.removeFromRight(12);
             levelMeter.setBounds(meterArea.reduced(0, 2));
             contentArea.removeFromRight(8);
@@ -363,7 +405,7 @@ private:
 
     juce::Label nameLabel; juce::TextButton muteBtn, soloBtn; FloatingValueSlider volKnob, panKnob;
     juce::TextButton fxButton, prButton, inlineBtn, effectsBtn, folderBtn, compactBtn;
-    juce::ComboBox targetLufsCombo, balanceScaleCombo;
+    juce::ComboBox targetLufsCombo, balanceScaleCombo, midSideScaleCombo, midSideModeCombo;
     juce::OwnedArray<juce::TextButton> pluginButtons; LevelMeter levelMeter;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TrackControlPanel)
 };

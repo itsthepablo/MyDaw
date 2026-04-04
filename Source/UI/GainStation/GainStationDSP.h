@@ -36,5 +36,6 @@ public:
         // 3. LECTURA POST-FX
         track->postLoudness.process(buffer);
         track->postBalance.process(buffer);
+        track->postMidSide.process(buffer);
     }
 };
