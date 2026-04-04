@@ -145,9 +145,8 @@ public:
         int indent = track.folderDepth * 15;
         auto contentArea = area.withTrimmedLeft(indent);
 
-        juce::ColourGradient grad(juce::Colour(45, 48, 52), contentArea.toFloat().getTopLeft(),
-                                  juce::Colour(20, 22, 25), contentArea.toFloat().getBottomLeft(), false);
-        g.setGradientFill(grad);
+        // Eliminamos el gradiente y aplicamos un tinte suave del color de la pista
+        g.setColour(track.getColor().withAlpha(0.15f));
         g.fillRect(contentArea);
 
         // GRID FIX: Líneas de jerarquía milimétricas
@@ -273,6 +272,13 @@ public:
     }
 
     void mouseDrag(const juce::MouseEvent& e) override {
+        // --- FIX: Si el arrastre empezó en un mando o botón, NO arrastramos la pista ---
+        if (e.originalComponent == &volKnob || e.originalComponent == &panKnob || 
+            e.originalComponent == &muteBtn || e.originalComponent == &soloBtn ||
+            e.originalComponent == &fxButton || e.originalComponent == &prButton ||
+            e.originalComponent == &inlineBtn || e.originalComponent == &effectsBtn)
+            return;
+
         if (auto* dc = juce::DragAndDropContainer::findParentDragContainerFor(this)) {
             juce::Image g(juce::Image::ARGB, 1, 1, true); dc->startDragging("TRACK", this, g, true);
         }
