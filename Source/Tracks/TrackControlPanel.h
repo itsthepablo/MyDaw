@@ -22,7 +22,6 @@ public:
         nameLabel.setEditable(true);
         nameLabel.onTextChange = [this] { track.setName(nameLabel.getText()); };
 
-        addAndMakeVisible(muteBtn);
         muteBtn.setButtonText("M");
         muteBtn.setClickingTogglesState(true);
         muteBtn.setToggleState(track.isMuted, juce::dontSendNotification);
@@ -30,7 +29,6 @@ public:
         muteBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colours::red.darker(0.2f));
         muteBtn.onClick = [this] { track.isMuted = muteBtn.getToggleState(); };
 
-        addAndMakeVisible(soloBtn);
         soloBtn.setButtonText("S");
         soloBtn.setClickingTogglesState(true);
         soloBtn.setToggleState(track.isSoloed, juce::dontSendNotification);
@@ -39,7 +37,6 @@ public:
         soloBtn.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
         soloBtn.onClick = [this] { track.isSoloed = soloBtn.getToggleState(); };
 
-        addAndMakeVisible(volKnob); addAndMakeVisible(panKnob);
         volKnob.setName("TrackKnob");
         volKnob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
         volKnob.setRange(0.0, 1.0);
@@ -66,7 +63,6 @@ public:
         volKnob.addMouseListener(this, false);
         panKnob.addMouseListener(this, false);
 
-        addAndMakeVisible(effectsBtn);
         effectsBtn.setButtonText("Effects");
         effectsBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(60, 65, 70));
         effectsBtn.onClick = [this] { if (onEffectsClick) onEffectsClick(); };
@@ -82,42 +78,14 @@ public:
             }
         };
 
-        if (track.getType() == TrackType::MIDI) {
-            addAndMakeVisible(prButton); prButton.setButtonText("PIANO ROLL");
-            prButton.onClick = [this] { if (onPianoRollClick) onPianoRollClick(); };
-
-            addAndMakeVisible(inlineBtn);
-            inlineBtn.setButtonText("INLINE");
-            inlineBtn.setClickingTogglesState(true);
-            inlineBtn.setToggleState(track.isInlineEditingActive, juce::dontSendNotification);
-            inlineBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colours::orange);
-            inlineBtn.onClick = [this] {
-                track.isInlineEditingActive = inlineBtn.getToggleState();
-                if (onWaveformViewChanged) onWaveformViewChanged();
-            };
-
-            addAndMakeVisible(fxButton); fxButton.setButtonText("+ VSTi");
-            fxButton.onClick = [this] { if (onInstrumentClick) onInstrumentClick(); };
-        }
-        else if (track.getType() == TrackType::Loudness) {
-            addAndMakeVisible(clearHistoryBtn);
-            clearHistoryBtn.setButtonText("CLEAR");
-            clearHistoryBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(80, 40, 40));
-            clearHistoryBtn.onClick = [this] { track.loudnessHistory.clear(); if (onWaveformViewChanged) onWaveformViewChanged(); };
-
-            addAndMakeVisible(recToggleBtn);
-            recToggleBtn.setButtonText("REC");
-            recToggleBtn.setClickingTogglesState(true);
-            recToggleBtn.setToggleState(track.isLoudnessRecording, juce::dontSendNotification);
-            recToggleBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colours::red);
-            recToggleBtn.onClick = [this] { track.isLoudnessRecording = recToggleBtn.getToggleState(); };
-
+        // --- CONFIGURACIÓN CONDICIONAL POR TIPO DE PISTA ---
+        if (track.getType() == TrackType::Loudness) {
+            // Pista de Loudness: Solo nombre y selector de Target
             addAndMakeVisible(targetLufsCombo);
             targetLufsCombo.addItem("-23 LUFS (Broad)", 1);
             targetLufsCombo.addItem("-14 LUFS (Stream)", 2);
             targetLufsCombo.addItem("-5 LUFS (Loud)", 3);
             
-            // Set initial selection based on track reference
             if (track.loudnessHistory.referenceLUFS == -23.0f) targetLufsCombo.setSelectedId(1, juce::dontSendNotification);
             else if (track.loudnessHistory.referenceLUFS == -14.0f) targetLufsCombo.setSelectedId(2, juce::dontSendNotification);
             else if (track.loudnessHistory.referenceLUFS == -5.0f) targetLufsCombo.setSelectedId(3, juce::dontSendNotification);
@@ -131,17 +99,39 @@ public:
                 repaint();
                 if (onWaveformViewChanged) onWaveformViewChanged();
             };
+        } else {
+            // Pistas normales: Todo el arsenal de controles
+            addAndMakeVisible(muteBtn);
+            addAndMakeVisible(soloBtn);
+            addAndMakeVisible(volKnob);
+            addAndMakeVisible(panKnob);
+            addAndMakeVisible(levelMeter);
+            addAndMakeVisible(effectsBtn);
+            
+            // ... (resto de configuraciones ya asignadas arriba)
         }
 
-        addAndMakeVisible(levelMeter);
-        startTimerHz(30);
-        setWantsKeyboardFocus(true);
+        if (track.getType() == TrackType::MIDI) {
+            addAndMakeVisible(prButton);
+            addAndMakeVisible(inlineBtn);
+            addAndMakeVisible(fxButton);
+            
+            prButton.onClick = [this] { if (onPianoRollClick) onPianoRollClick(); };
+            inlineBtn.onClick = [this] {
+                track.isInlineEditingActive = inlineBtn.getToggleState();
+                if (onWaveformViewChanged) onWaveformViewChanged();
+            };
+            fxButton.onClick = [this] { if (onInstrumentClick) onInstrumentClick(); };
+        }
+
         updateFolderBtnVisuals();
+        startTimerHz(30);
     }
 
     ~TrackControlPanel() { stopTimer(); }
 
     void timerCallback() override {
+        if (track.getType() == TrackType::Loudness) return; // No hay medidor de peak en Loudness
         if (track.isMuted) { levelMeter.setLevel(0.0f, 0.0f); return; }
         float vol = track.getVolume();
         float pan = track.getBalance();
@@ -245,19 +235,18 @@ public:
             leftCol.removeFromTop(4);
         }
 
-        auto botRow = leftCol.removeFromTop(18);
         if (track.getType() == TrackType::Loudness) {
-            recToggleBtn.setBounds(botRow.removeFromLeft(botRow.getWidth() / 2).reduced(1));
-            clearHistoryBtn.setBounds(botRow.reduced(1));
-            leftCol.removeFromTop(4);
-            targetLufsCombo.setBounds(leftCol.removeFromTop(20).reduced(1));
+            targetLufsCombo.setBounds(contentArea.removeFromTop(24).reduced(4, 2));
         } else {
+            auto botRow = leftCol.removeFromTop(18);
             effectsBtn.setBounds(botRow.reduced(2, 0));
         }
 
-        auto meterArea = contentArea.removeFromRight(12);
-        levelMeter.setBounds(meterArea.reduced(0, 2));
-        contentArea.removeFromRight(8);
+        if (track.getType() != TrackType::Loudness) {
+            auto meterArea = contentArea.removeFromRight(12);
+            levelMeter.setBounds(meterArea.reduced(0, 2));
+            contentArea.removeFromRight(8);
+        }
 
         auto fxArea = contentArea.removeFromRight(110);
         if (track.getType() == TrackType::MIDI) {
@@ -296,6 +285,10 @@ public:
                 m.addItem(4, "Vista: Mid / Side", true, track.getWaveformViewMode() == WaveformViewMode::MidSide);
                 m.addItem(5, "Vista: Espectrograma (Frecuencias)", true, track.getWaveformViewMode() == WaveformViewMode::Spectrogram);
             }
+            if (track.getType() == TrackType::Loudness) {
+                m.addSeparator();
+                m.addItem(10, "Borrar Historial de Sonoridad");
+            }
             m.showMenuAsync(juce::PopupMenu::Options(), [this](int r) {
                 if (r == 1 && onDeleteClick) onDeleteClick();
                 else if (r == 7 && onMoveToNewFolder) onMoveToNewFolder();
@@ -304,6 +297,7 @@ public:
                     cs->setCurrentColour(track.getColor()); cs->addChangeListener(this); cs->setSize(300, 400);
                     juce::CallOutBox::launchAsynchronously(std::unique_ptr<juce::Component>(cs), getScreenBounds(), nullptr);
                 } else if (r >= 2 && r <= 5 && onWaveformViewChanged) { track.setWaveformViewMode((WaveformViewMode)(r-2)); onWaveformViewChanged(); }
+                else if (r == 10) { track.loudnessHistory.clear(); if (onWaveformViewChanged) onWaveformViewChanged(); }
             });
         }
     }
@@ -347,7 +341,6 @@ private:
 
     juce::Label nameLabel; juce::TextButton muteBtn, soloBtn; FloatingValueSlider volKnob, panKnob;
     juce::TextButton fxButton, prButton, inlineBtn, effectsBtn, folderBtn, compactBtn;
-    juce::TextButton clearHistoryBtn, recToggleBtn;
     juce::ComboBox targetLufsCombo;
     juce::OwnedArray<juce::TextButton> pluginButtons; LevelMeter levelMeter;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TrackControlPanel)

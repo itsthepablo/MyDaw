@@ -6,6 +6,8 @@
 #include "../Engine/SimpleLoudness.h"
 #include "AudioClipData.h"
 #include <juce_dsp/juce_dsp.h>
+#include <map>
+#include <map>
 #include <vector>
 #include <algorithm>
 #include <cmath>
@@ -79,25 +81,25 @@ struct LoudnessPoint {
 };
 
 struct LoudnessHistory {
-    std::vector<LoudnessPoint> points;
+    std::map<double, float> points; // samplePos -> shortTermLUFS
     float referenceLUFS = -23.0f;
     bool isActive = true;
 
     void clear() { points.clear(); }
     
-    // Añadir punto con ordenación por tiempo (para permitir sobreescritura)
+    // High-Fidelity Recording (Precisión de Muestra)
     void addPoint(double pos, float val) {
-        // Encontrar si ya existe un punto cerca (precisión de 1 pixel)
-        for (auto& p : points) {
-            if (std::abs(p.samplePos - pos) < 1.0) { 
-                p.shortTermLUFS = val;
-                return;
-            }
+        // 1. Limpieza de Vecindad (Forward Erase):
+        // Borramos los puntos en un rango pequeño de 20 muestras adelante
+        // para asegurar que al sobreescribir no queden "restos" del pasado.
+        auto it = points.lower_bound(pos);
+        auto itEnd = points.upper_bound(pos + 500.0); // ~10ms de borrado adelante
+        if (it != points.end()) {
+            points.erase(it, itEnd);
         }
-        points.push_back({ pos, val });
-        std::sort(points.begin(), points.end(), [](const auto& a, const auto& b) {
-            return a.samplePos < b.samplePos;
-        });
+
+        // 2. Inserción Directa: Sin promedios ni rejillas que quiten precisión.
+        points[pos] = val;
     }
 };
 

@@ -12,73 +12,100 @@ public:
         auto& history = track->loudnessHistory;
         if (!history.isActive) return;
 
+        float floorLUFS = -35.0f;
+        float ceilingLUFS = history.referenceLUFS + 3.0f; 
+
         // --- 1. DIBUJAR LÍNEAS DE REFERENCIA ---
-        float refY = lufsToY(history.referenceLUFS, area);
+        float refY = lufsToY(history.referenceLUFS, area, floorLUFS, ceilingLUFS);
         
-        // Línea de -23 LUFS (Roja)
-        g.setColour(juce::Colours::red.withAlpha(0.6f));
+        // Línea de Objetivo (Roja)
+        g.setColour(juce::Colours::red.withAlpha(0.8f));
         g.drawHorizontalLine((int)refY, area.getX(), area.getRight());
         
         g.setFont(10.0f);
+        g.setColour(juce::Colours::white.withAlpha(0.7f));
         g.drawText(juce::String((int)history.referenceLUFS) + " LUFS", 
                    area.getX() + 5, refY - 12, 60, 12, juce::Justification::left);
 
-        // Guías de escala (-18, -40)
+        // Guías de escala relativa (±3 dB)
         g.setColour(juce::Colours::white.withAlpha(0.1f));
-        float y18 = lufsToY(-18.0f, area);
-        float y40 = lufsToY(-40.0f, area);
-        g.drawHorizontalLine((int)y18, area.getX(), area.getRight());
-        g.drawHorizontalLine((int)y40, area.getX(), area.getRight());
+        float yPlus3 = lufsToY(history.referenceLUFS + 3.0f, area, floorLUFS, ceilingLUFS);
+        float yMinus3 = lufsToY(history.referenceLUFS - 3.0f, area, floorLUFS, ceilingLUFS);
+        g.drawHorizontalLine((int)yPlus3, area.getX(), area.getRight());
+        g.drawHorizontalLine((int)yMinus3, area.getX(), area.getRight());
 
         // --- 2. DIBUJAR LA CURVA (SHORT-TERM) ---
         if (history.points.empty()) return;
 
-        juce::Path curve;
-        bool first = true;
+        juce::Path strokeCurve;
+        juce::Path fillCurve;
+        
+        bool firstInSegment = true;
+        double lastSamplePos = -100.0;
+        float segmentStartX = 0;
+        
+        // Umbral de salto: ahora que tenemos precisión de muestra, un salto pequeño
+        // es suficiente para detectar un hueco técnico. 
+        const double gapThreshold = 1000.0; // aprox 22ms a 44.1k
 
-        for (const auto& p : history.points) {
-            float x = (float)(p.samplePos * hZoom) - hScroll; // Mapeo directo 1:1 con arreglo
+        auto finalizeSegment = [&](juce::Path& fill, float lastX) {
+            if (!fill.isEmpty()) {
+                fill.lineTo(lastX, area.getBottom());
+                fill.lineTo(segmentStartX, area.getBottom());
+                fill.closeSubPath();
+            }
+        };
+
+        float lastX = 0;
+        for (const auto& pair : history.points) {
+            double sPos = pair.first;
+            float lufsVal = pair.second;
             
-            // Culling horizontal
-            if (x < -100.0f) continue;
+            float x = (float)(sPos * hZoom) - hScroll;
+            float y = lufsToY(lufsVal, area, floorLUFS, ceilingLUFS);
+            
+            // Culling horizontal básico
+            if (x < -100.0f) { lastSamplePos = sPos; lastX = x; continue; }
             if (x > area.getRight() + 100.0f) break;
 
-            float y = lufsToY(p.shortTermLUFS, area);
+            // Detectar salto (Adelante o Atrás)
+            bool isJump = (lastSamplePos >= 0) && (sPos < lastSamplePos || (sPos - lastSamplePos) > gapThreshold);
 
-            if (first) {
-                curve.startNewSubPath(x, y);
-                first = false;
+            if (firstInSegment || isJump) {
+                if (isJump) finalizeSegment(fillCurve, lastX);
+                
+                strokeCurve.startNewSubPath(x, y);
+                fillCurve.startNewSubPath(x, y);
+                segmentStartX = x;
+                firstInSegment = false;
             } else {
-                curve.lineTo(x, y);
+                strokeCurve.lineTo(x, y);
+                fillCurve.lineTo(x, y);
             }
+            
+            lastSamplePos = sPos;
+            lastX = x;
         }
+        finalizeSegment(fillCurve, lastX);
 
-        if (!curve.isEmpty()) {
-            g.setOpacity(0.8f);
-            g.setColour(juce::Colours::orange);
-            g.strokePath(curve, juce::PathStrokeType(1.5f));
-            
-            // Opcional: Relleno suave bajo la curva
-            juce::Path fill = curve;
-            fill.lineTo(fill.getCurrentPosition().getX(), area.getBottom());
-            
-            // Encontrar el primer punto visible para cerrar el relleno
-            float firstX = (float)(history.points.front().samplePos * hZoom) - hScroll;
-            fill.lineTo(firstX, area.getBottom());
-            fill.closeSubPath();
-            
-            juce::ColourGradient grad(juce::Colours::orange.withAlpha(0.2f), 0.0f, area.getY(),
+        if (!strokeCurve.isEmpty()) {
+            // 2. DIBUJAR RELLENO (Look Profesional Tipo Youlean)
+            g.setOpacity(0.4f);
+            juce::ColourGradient grad(juce::Colours::orange.withAlpha(0.7f), 0.0f, area.getY(),
                                        juce::Colours::transparentWhite, 0.0f, area.getBottom(), false);
             g.setGradientFill(grad);
-            g.fillPath(fill);
+            g.fillPath(fillCurve);
+
+            // 1. DIBUJAR TRAZO (Máxima Resolución)
             g.setOpacity(1.0f);
+            g.setColour(juce::Colours::orange);
+            g.strokePath(strokeCurve, juce::PathStrokeType(1.6f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded)); 
         }
     }
 
 private:
-    static float lufsToY(float lufs, juce::Rectangle<float> area) {
-        // Escala: 0 LUFS arriba, -60 LUFS abajo (ajustable)
-        float normalized = (lufs - (-60.0f)) / (0.0f - (-60.0f));
+    static float lufsToY(float lufs, juce::Rectangle<float> area, float floor, float ceiling) {
+        float normalized = (lufs - floor) / (ceiling - floor);
         normalized = juce::jlimit(0.0f, 1.0f, normalized);
         return area.getBottom() - (normalized * area.getHeight());
     }

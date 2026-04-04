@@ -74,10 +74,10 @@ void PlaylistComponent::timerCallback() {
     if (playheadAbsPos != newPos) {
       playheadAbsPos = newPos;
 
-      // --- RECORD LOUDNESS HISTORY ---
+      // --- RECORD LOUDNESS HISTORY (AUTOMATIC) ---
       if (tracksRef && this->masterTrackPtr && !isDraggingTimeline) {
           for (auto* t : *tracksRef) {
-              if (t->getType() == TrackType::Loudness && t->isLoudnessRecording) {
+              if (t->getType() == TrackType::Loudness) {
                   float lufs = masterTrackPtr->postLoudness.getShortTerm();
                   // Suponemos 44100 de sample rate base para el posicionamiento
                   double samplePos = (double)playheadAbsPos; 
