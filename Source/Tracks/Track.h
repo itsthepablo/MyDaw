@@ -326,6 +326,24 @@ public:
         return nullptr;
     }
 
+    // --- MIGRACIÓN DE COORDENADAS (Legacy support) ---
+    void migrateMidiToRelative()
+    {
+        bool changed = false;
+        for (auto* clip : midiClips) {
+            if (!clip) continue;
+            for (auto& note : clip->notes) {
+                // Heurística: si la nota está en el rango absoluto [startX, startX + width], 
+                // la convertimos a relativa restando startX.
+                if (note.x >= (int)clip->startX && note.x < (int)(clip->startX + clip->width + 1.0f)) {
+                    note.x -= (int)clip->startX;
+                    changed = true;
+                }
+            }
+        }
+        if (changed) commitSnapshot();
+    }
+
     std::atomic<TrackSnapshot*> snapshot { nullptr };
 
     void commitSnapshot()

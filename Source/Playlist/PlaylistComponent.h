@@ -69,6 +69,7 @@ public:
     float dragStartAbsX = 0.0f;
     float dragStartXOriginal = 0.0f;
     float dragStartWidth = 0.0f;
+    bool isAltDragging = false;
 
     int draggingNoteIndex = -1;
     bool isResizingNote = false;

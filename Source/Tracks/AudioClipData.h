@@ -47,6 +47,41 @@ struct AudioClipData {
     juce::Image spectrogramImage;
     std::unique_ptr<juce::AudioThumbnail> thumbnail;
 
+    // Constructor de copia manual para evitar errores con std::atomic y std::unique_ptr
+    AudioClipData() = default;
+    AudioClipData(const AudioClipData& other)
+    {
+        name = other.name;
+        startX = other.startX;
+        width = other.width;
+        offsetX = other.offsetX;
+        originalWidth = other.originalWidth;
+        isMuted = other.isMuted;
+        isSelected = other.isSelected;
+        isLoaded.store(other.isLoaded.load());
+        sourceFilePath = other.sourceFilePath;
+        fileBuffer.makeCopyOf(other.fileBuffer);
+        sourceSampleRate = other.sourceSampleRate;
+        cachedPeaksL = other.cachedPeaksL;
+        cachedPeaksR = other.cachedPeaksR;
+        cachedPeaksMid = other.cachedPeaksMid;
+        cachedPeaksSide = other.cachedPeaksSide;
+        lod1PeaksL = other.lod1PeaksL;
+        lod1PeaksR = other.lod1PeaksR;
+        lod1PeaksMid = other.lod1PeaksMid;
+        lod1PeaksSide = other.lod1PeaksSide;
+        lod2PeaksL = other.lod2PeaksL;
+        lod2PeaksR = other.lod2PeaksR;
+        lod2PeaksMid = other.lod2PeaksMid;
+        lod2PeaksSide = other.lod2PeaksSide;
+        lod3PeaksL = other.lod3PeaksL;
+        lod3PeaksR = other.lod3PeaksR;
+        lod3PeaksMid = other.lod3PeaksMid;
+        lod3PeaksSide = other.lod3PeaksSide;
+        spectrogramImage = other.spectrogramImage;
+        // thumbnail no se copia, debe re-crearse si es necesario.
+    }
+
     /**
      * Genera la jerarquía de picos (Mip-Maps) siguiendo el estándar de FL Studio.
      * LOD 0 (Base): 256 samples

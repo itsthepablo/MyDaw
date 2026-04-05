@@ -104,10 +104,12 @@ public:
             for (const auto& clipSnap : snap->midiClips) {
                 if (clipSnap.isMuted) continue;
                 for (const auto& note : clipSnap.notes) {
+                    // --- MOTOR MIDI RELATIVO: worldX = inicio del clip + (posición nota - offset de recorte) ---
                     float noteWorldX = clipSnap.startX + ((float)note.x - clipSnap.offsetX);
                     float offWorldX = noteWorldX + (float)note.width;
 
-                    bool isInClip = (noteWorldX >= clipSnap.startX && noteWorldX < clipSnap.startX + clipSnap.width);
+                    // Culling: solo disparamos si la nota está dentro de los límites visuales del clip
+                    bool isInClip = (noteWorldX >= clipSnap.startX - 0.001f && noteWorldX < clipSnap.startX + clipSnap.width);
                     if (!isInClip) continue;
 
                     bool triggerOn = clock.looped
@@ -126,7 +128,7 @@ public:
                         ? ((offWorldX >= clock.currentPh && offWorldX < clock.nextPh + 1.0f) || (offWorldX >= 0 && offWorldX < clock.nextPh))
                         : (offWorldX >= clock.currentPh && offWorldX < clock.nextPh);
                     
-                    if (triggerOff && offWorldX <= clipSnap.startX + clipSnap.width) {
+                    if (triggerOff && offWorldX <= clipSnap.startX + clipSnap.width + 0.001f) {
                         long long nOff = (long long)(offWorldX * clock.samplesPerPixel);
                         int offset = (int)(nOff - clock.currentSamplePos);
                         if (clock.looped && nOff < clock.currentSamplePos)

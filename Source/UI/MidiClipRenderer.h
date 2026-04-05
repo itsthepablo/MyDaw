@@ -107,7 +107,9 @@ public:
                 float normalizedY = 1.0f - ((float)(note.pitch - minPitch) / (float)pitchRange);
                 float noteY = clipRect.getY() + 4.0f + (normalizedY * (clipRect.getHeight() - 12.0f));
 
-                int noteScreenX = (int)(note.x * hZoom) - (int)hS;
+                // --- DIBUJO RELATIVO: Sumamos clipData.startX para posicionar la nota 0-based en el mundo real ---
+                float worldX = clipData.startX + (note.x - clipData.offsetX);
+                int noteScreenX = (int)(worldX * hZoom) - (int)hS;
                 int noteScreenW = std::max(3, (int)(note.width * hZoom));
 
                 juce::Rectangle<float> miniNoteRect((float)noteScreenX, noteY, (float)noteScreenW, 5.0f);
@@ -149,7 +151,8 @@ public:
             float normalizedY = 1.0f - ((float)(note.pitch - minPitch) / (float)pitchRange);
             float noteY = clipRect.getY() + 4.0f + (normalizedY * (clipRect.getHeight() - 12.0f));
 
-            int noteScreenX = (int)(note.x * hZoom) - (int)hS;
+            float worldX = clipData.startX + (note.x - clipData.offsetX);
+            int noteScreenX = (int)(worldX * hZoom) - (int)hS;
             int noteScreenW = std::max(3, (int)(note.width * hZoom));
 
             juce::Rectangle<float> noteRect((float)noteScreenX, noteY, (float)noteScreenW, 5.0f);
@@ -184,7 +187,8 @@ public:
             float normalizedY = 1.0f - ((float)(note.pitch - minP) / (float)pitchRange);
             float noteY = (float)area.getY() + (normalizedY * (height - 4.0f)) + 2.0f;
 
-            int noteScreenX = (int)(note.x * hZoom) - (int)hS;
+            float worldX = clipData.startX + (note.x - clipData.offsetX);
+            int noteScreenX = (int)(worldX * hZoom) - (int)hS;
             int noteScreenW = std::max(2, (int)(note.width * hZoom));
 
             // Solo renderizar si es visible horizontalmente

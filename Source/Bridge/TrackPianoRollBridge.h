@@ -22,24 +22,14 @@ public:
                     if (targetClip == sourceClip) {
                         trackModified = true;
                     }
-                    // Si es un clon (Ghost Copy) - Sincronizamos notas
+                    // Si es un clon (Ghost Copy) - Sincronizamos notas 0-based
                     else if (targetClip->name == sourceClip->name) {
-                        float timeShift = targetClip->startX - sourceClip->startX;
                         targetClip->notes = sourceClip->notes;
-                        for (auto& note : targetClip->notes) note.x += timeShift;
 
                         targetClip->autoVol = sourceClip->autoVol;
                         targetClip->autoPan = sourceClip->autoPan;
                         targetClip->autoPitch = sourceClip->autoPitch;
                         targetClip->autoFilter = sourceClip->autoFilter;
-
-                        auto shiftLane = [timeShift](AutoLane& lane) {
-                            for (auto& node : lane.nodes) node.x += timeShift;
-                            };
-                        shiftLane(targetClip->autoVol);
-                        shiftLane(targetClip->autoPan);
-                        shiftLane(targetClip->autoPitch);
-                        shiftLane(targetClip->autoFilter);
 
                         targetClip->color = sourceClip->color;
                         targetClip->width = sourceClip->width;
@@ -61,6 +51,7 @@ public:
 
 
         container.onOpenPianoRoll = [&container, &playlist, &ui, onOpenPianoRoll](Track& t) {
+            t.migrateMidiToRelative(); // MIGRACIÓN AUTOMÁTICA
             MidiClipData* targetClip = nullptr;
 
             if (t.midiClips.size() > 0) {
@@ -99,6 +90,7 @@ public:
         std::function<void()> onOpenPianoRoll)
     {
         playlist.onMidiClipDoubleClicked = [&ui, onOpenPianoRoll](Track* t, MidiClipData* clip) {
+            if (t) t->migrateMidiToRelative(); // MIGRACIÓN AUTOMÁTICA
             ui.setActiveClip(clip);
 
             if (onOpenPianoRoll) onOpenPianoRoll();

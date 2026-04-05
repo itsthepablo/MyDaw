@@ -292,14 +292,38 @@ public:
         if (p.draggingNoteIndex != -1) {
             auto* midiClip = p.clips[p.draggingClipIndex].linkedMidi;
             auto& note = midiClip->notes[p.draggingNoteIndex];
+            
+            // RELATIVO: snappedX es relativo al inicio del clip (congelado en 0 por ahora para notas)
             float snappedX = std::round((p.dragStartNoteX + diff) / p.snapPixels) * p.snapPixels;
 
             if (p.isResizingNote) note.width = juce::jmax(10.0f, p.dragStartNoteWidth + diff);
-            else note.x = juce::jmax(midiClip->startX, snappedX);
+            else note.x = (int)juce::jmax(0.0f, snappedX); // Las notas siempre son >= 0
 
             p.notifyPatternEdited(midiClip);
             p.repaint();
             return;
+        }
+
+        // --- DUPLICACIÓN DE CLIP CON ALT ---
+        if (e.mods.isAltDown() && !p.isAltDragging && !p.isResizingClip) {
+            p.isAltDragging = true;
+            auto& source = p.clips[p.draggingClipIndex];
+            
+            if (source.linkedMidi) {
+                MidiClipData* clone = new MidiClipData(*source.linkedMidi);
+                source.trackPtr->midiClips.add(clone);
+                p.clips.push_back({ source.trackPtr, source.startX, source.width, source.name, nullptr, clone });
+                p.draggingClipIndex = (int)p.clips.size() - 1;
+                p.selectedClipIndices.clear();
+                p.selectedClipIndices.push_back(p.draggingClipIndex);
+            } else if (source.linkedAudio) {
+                AudioClipData* clone = new AudioClipData(*source.linkedAudio);
+                source.trackPtr->audioClips.add(clone);
+                p.clips.push_back({ source.trackPtr, source.startX, source.width, source.name, clone, nullptr });
+                p.draggingClipIndex = (int)p.clips.size() - 1;
+                p.selectedClipIndices.clear();
+                p.selectedClipIndices.push_back(p.draggingClipIndex);
+            }
         }
 
         int newTrackIdx = p.getTrackAtY(e.y);
@@ -386,6 +410,7 @@ public:
 
         p.draggingClipIndex = -1;
         p.draggingNoteIndex = -1;
+        p.isAltDragging = false;
     }
 
     void mouseMove(const juce::MouseEvent& e, PlaylistComponent& p) override {
