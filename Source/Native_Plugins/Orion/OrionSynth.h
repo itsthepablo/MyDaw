@@ -45,7 +45,9 @@ public:
         lowPassFilter.prepare(spec);
         adsr.setSampleRate(spec.sampleRate);
         
-        synthBuffer.setSize(spec.numChannels, spec.maximumBlockSize, false, false, true);
+        // CORRECCIÓN: Evitar 'true' (avoidReallocating) en el primer setSize, 
+        // de lo contrario el buffer queda con 0 samples si no estaba alocado.
+        synthBuffer.setSize(spec.numChannels, (int)spec.maximumBlockSize, false, false, false);
         
         smoothedCutoff.reset(spec.sampleRate, 0.02);
         smoothedRes.reset(spec.sampleRate, 0.02);
@@ -65,18 +67,17 @@ public:
     void renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int startSample, int numSamples) override {
         if (!isVoiceActive()) return;
 
-        synthBuffer.setSize(outputBuffer.getNumChannels(), numSamples, false, false, true);
+        // Reset buffer local si el canal cambió o el tamaño es insuficiente
+        if (synthBuffer.getNumChannels() != outputBuffer.getNumChannels() || synthBuffer.getNumSamples() < numSamples)
+            synthBuffer.setSize(outputBuffer.getNumChannels(), numSamples, false, false, false);
+            
         synthBuffer.clear();
 
         auto* outL = synthBuffer.getWritePointer(0);
         auto* outR = synthBuffer.getNumChannels() > 1 ? synthBuffer.getWritePointer(1) : nullptr;
 
         for (int s = 0; s < numSamples; ++s) {
-            float sample = 0.0f;
-            
-            // Generación manual de onda (Saw simple)
-            if (oscType == 1) sample = (float)(phase / juce::MathConstants<double>::pi);
-            else sample = (float)std::sin(phase);
+            float sample = (float)(phase / juce::MathConstants<double>::pi);
 
             if (outL) outL[s] = sample * level;
             if (outR) outR[s] = sample * level;
@@ -85,17 +86,12 @@ public:
             if (phase > juce::MathConstants<double>::pi) phase -= juce::MathConstants<double>::twoPi;
         }
 
-        // Aplicar Filtro y ADSR
-        juce::dsp::AudioBlock<float> block(synthBuffer);
-        juce::dsp::ProcessContextReplacing<float> context(block);
-        lowPassFilter.setCutoffFrequencyHz(smoothedCutoff.getNextValue());
-        lowPassFilter.setResonance(smoothedRes.getNextValue());
-        lowPassFilter.process(context);
-        
+        // Aplicamos ADSR para evitar clicks, pero mantenemos el oscilador directo para asegurar sonido.
         adsr.applyEnvelopeToBuffer(synthBuffer, 0, numSamples);
 
         for (int ch = 0; ch < outputBuffer.getNumChannels(); ++ch) {
-            outputBuffer.addFrom(ch, startSample, synthBuffer, ch, 0, numSamples);
+            // USAMOS UN GAIN DE 1.0 (Sumado) PARA ASEGURAR QUE SE ESCUCHE.
+            outputBuffer.addFrom(ch, startSample, synthBuffer, ch, 0, numSamples, 1.0f);
         }
 
         if (!adsr.isActive()) clearCurrentNote();

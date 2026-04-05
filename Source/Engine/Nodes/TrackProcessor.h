@@ -235,6 +235,7 @@ public:
             }
         }
 
+        // --- FORZAR SUMA SI HAY INSTRUMENTO (Incluso si no hay clips) ---
         if (hasInstruments) {
             for (int ch = 0; ch < safeChannels; ++ch) {
                 track->audioBuffer.addFrom(ch, 0, track->instrumentMixBuffer, ch, 0, numSamples);

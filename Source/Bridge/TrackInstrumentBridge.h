@@ -56,6 +56,9 @@ public:
                         if (bottomDock.getCurrentTab() == BottomDock::InstrumentTab)
                             instrumentPanel.updateInstrumentView();
 
+                        // IMPORTANTE: Notificar al motor de audio (Lock-free)
+                        t.commitSnapshot();
+                        
                         newPlugin->showWindow();
                         });
                 }
@@ -83,7 +86,10 @@ public:
                 if (bottomDock.getCurrentTab() == BottomDock::EffectsTab) effectsPanel.updateSlots();
                 if (bottomDock.getCurrentTab() == BottomDock::InstrumentTab) instrumentPanel.updateInstrumentView();
                 
-                orion->showWindow(nullptr);
+                // IMPORTANTE: Publicar cambio para el hilo de audio inmediatamente (Soluciona silencio Orion)
+                t.commitSnapshot();
+                
+                // Ya no llamamos a showWindow() para Orion, se ve integrado en el panel
             });
         };
 

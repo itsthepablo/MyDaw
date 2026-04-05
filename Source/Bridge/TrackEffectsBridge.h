@@ -52,6 +52,10 @@ public:
                         host->onSidechainChanged = [&engine, &container]() { engine.routingMatrix.commitNewTopology(container.getTracks()); };
                         engine.routingMatrix.commitNewTopology(container.getTracks());
                         refreshUIs();
+                        
+                        // IMPORTANTE: Notificar al motor de audio
+                        t.commitSnapshot();
+                        
                         host->showWindow(&container);
                     });
                 }
@@ -76,6 +80,10 @@ public:
                 utility->onSidechainChanged = [&engine, &container]() { engine.routingMatrix.commitNewTopology(container.getTracks()); };
                 engine.routingMatrix.commitNewTopology(container.getTracks());
                 refreshUIs();
+                
+                // IMPORTANTE: Sincronizar motor de audio
+                t.commitSnapshot();
+                
                 utility->showWindow(&container);
             });
         };
@@ -98,7 +106,11 @@ public:
                 orion->onSidechainChanged = [&engine, &container]() { engine.routingMatrix.commitNewTopology(container.getTracks()); };
                 engine.routingMatrix.commitNewTopology(container.getTracks());
                 refreshUIs();
-                orion->showWindow(&container);
+                
+                // IMPORTANTE: Sincronizar motor de audio para que Orion suene
+                t.commitSnapshot();
+                
+                // Orion se muestra integrado, no necesita showWindow()
             });
         };
 
@@ -132,6 +144,10 @@ public:
             if (idx >= 0 && idx < t.plugins.size()) {
                 t.plugins.remove(idx); 
                 engine.routingMatrix.commitNewTopology(container.getTracks());
+                
+                // IMPORTANTE: Sincronizar tras eliminación
+                t.commitSnapshot();
+                
                 juce::MessageManager::callAsync([refreshUIs]() { refreshUIs(); });
             }
         };
