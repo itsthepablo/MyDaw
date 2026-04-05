@@ -60,7 +60,7 @@ private:
     // ----------------------------------------
 
     bool isBottomDockVisible = true;
-    int bottomDockHeight = 250;
+    int bottomDockHeight = 300;
     bool isLeftSidebarVisible = true;
     int leftSidebarWidth = 200;
 

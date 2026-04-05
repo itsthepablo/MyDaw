@@ -29,7 +29,6 @@ void LayoutHandler::performLayout(LayoutDependencies d) {
         d.trackContainer.setVisible(false);
         d.playlistUI.setVisible(false);
         d.bottomDock.setVisible(false);
-        d.bottomDockResizer.setVisible(false);
         d.leftSidebar.setVisible(false);
         d.sidebarResizer.setVisible(false);
         d.mixerUI.setVisible(false);
@@ -45,7 +44,6 @@ void LayoutHandler::performLayout(LayoutDependencies d) {
             d.trackContainer.setVisible(false);
             d.playlistUI.setVisible(false);
             d.bottomDock.setVisible(false);
-            d.bottomDockResizer.setVisible(false);
             d.leftSidebar.setVisible(false);
             d.sidebarResizer.setVisible(false);
 
@@ -66,13 +64,10 @@ void LayoutHandler::performLayout(LayoutDependencies d) {
 
             if (d.isBottomDockVisible) {
                 d.bottomDock.setVisible(true);
-                d.bottomDockResizer.setVisible(true);
                 d.bottomDock.setBounds(area.removeFromBottom(d.bottomDockHeight));
-                d.bottomDockResizer.setBounds(area.removeFromBottom(4));
             }
             else {
                 d.bottomDock.setVisible(false);
-                d.bottomDockResizer.setVisible(false);
             }
 
             if (d.isLeftSidebarVisible) {

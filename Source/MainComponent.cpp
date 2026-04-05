@@ -178,10 +178,7 @@ void MainComponent::setupCallbacks() {
         resized();
         };
 
-    ui.bottomDockResizer.onResizeDelta = [this](int d) {
-        bottomDockHeight = juce::jlimit(100, (int)(getHeight() * 0.8f), bottomDockHeight - d);
-        resized();
-        };
+    // bottomDockResizer.onResizeDelta eliminado (altura fija)
 
     ui.playlistUI.onMidiClipDeleted = [this](MidiClipData* c) {
         if (ui.pianoRollUI.getActiveClip() == c) closePianoRoll();
@@ -437,7 +434,7 @@ void MainComponent::resized() {
     LayoutHandler::performLayout({
         getLocalBounds(), ui.topMenuBar, ui.hintPanel, ui.resourceMeter.get(), ui.transportBar,
         ui.pianoRollUI, ui.closePianoRollBtn, ui.mixerUI, *ui.masterChannelUI, ui.trackContainer, ui.playlistUI,
-        ui.bottomDock, ui.bottomDockResizer, ui.leftSidebar, ui.sidebarResizer, ui.masterStrip,
+        ui.bottomDock, ui.leftSidebar, ui.sidebarResizer, ui.masterStrip,
         currentView, isPianoRollVisible, isBottomDockVisible, bottomDockHeight, isLeftSidebarVisible, leftSidebarWidth
         });
 }

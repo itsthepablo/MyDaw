@@ -16,7 +16,6 @@
 #include "../UI/LeftSidebar.h"
 #include "../UI/BottomDock.h"       
 #include "../UI/SidebarResizer.h" 
-#include "../UI/BottomDockResizer.h" 
 #include "../UI/HintPanel.h"   
 #include "TopMenuBar/TopMenuBar.h"
 
@@ -37,7 +36,6 @@ struct DAWUIComponents {
     EffectsPanel effectsPanelUI;
     InstrumentPanel instrumentPanelUI;
     BottomDock bottomDock{ rackPanelUI, effectsPanelUI, instrumentPanelUI, miniMixerUI };
-    BottomDockResizer bottomDockResizer;
     PickerPanel pickerPanelUI;
     FileBrowserPanel fileBrowserPanelUI;
     LeftSidebar leftSidebar{ pickerPanelUI, fileBrowserPanelUI };

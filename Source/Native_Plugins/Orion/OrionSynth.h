@@ -25,8 +25,54 @@ public:
         return dynamic_cast<OrionSound*>(sound) != nullptr;
     }
 
+    void renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int startSample, int numSamples) override {
+        if (!isVoiceActive()) return;
+
+        // --- GESTIÓN DE BUFFER LOCAL ---
+        if (synthBuffer.getNumChannels() != outputBuffer.getNumChannels() || synthBuffer.getNumSamples() < numSamples)
+            synthBuffer.setSize(outputBuffer.getNumChannels(), numSamples, false, false, false);
+            
+        synthBuffer.clear();
+
+        // --- OSCILADOR ---
+        auto* outL = synthBuffer.getWritePointer(0);
+        auto* outR = synthBuffer.getNumChannels() > 1 ? synthBuffer.getWritePointer(1) : nullptr;
+
+        for (int s = 0; s < numSamples; ++s) {
+            // Forma de onda Sawtooth limpia
+            float sample = (float)(phase / juce::MathConstants<double>::pi);
+
+            if (outL) outL[s] = sample * level;
+            if (outR) outR[s] = sample * level;
+
+            phase += phaseDelta;
+            if (phase > juce::MathConstants<double>::pi) phase -= juce::MathConstants<double>::twoPi;
+        }
+
+        // --- FILTRO LADDER ANALÓGICO ---
+        // Actualizamos los parámetros del filtro con suavizado
+        lowPassFilter.setCutoffFrequencyHz(juce::jlimit(20.0f, 20000.0f, smoothedCutoff.getNextValue()));
+        lowPassFilter.setResonance(juce::jlimit(0.0f, 1.0f, smoothedRes.getNextValue()));
+
+        juce::dsp::AudioBlock<float> block(synthBuffer);
+        juce::dsp::ProcessContextReplacing<float> context(block);
+        lowPassFilter.process(context);
+
+        // --- ENVOLVENTE ADSR ---
+        adsr.applyEnvelopeToBuffer(synthBuffer, 0, numSamples);
+
+        // --- MEZCLA FINAL ---
+        for (int ch = 0; ch < outputBuffer.getNumChannels(); ++ch) {
+            // Un gain de 0.8f en la suma final para dejar un pequeño margen de seguridad (headroom)
+            outputBuffer.addFrom(ch, startSample, synthBuffer, ch, 0, numSamples, 0.8f);
+        }
+
+        if (!adsr.isActive()) clearCurrentNote();
+    }
+
     void startNote(int midiNoteNumber, float velocity, juce::SynthesiserSound*, int) override {
-        level = velocity * 0.5f;
+        // Reducimos el nivel base (0.15f) para permitir polifonía sin clipping
+        level = velocity * 0.15f; 
         auto cyclesPerSample = juce::MidiMessage::getMidiNoteInHertz(midiNoteNumber) / getSampleRate();
         phaseDelta = cyclesPerSample * 2.0 * juce::MathConstants<double>::pi;
         phase = 0.0;
@@ -44,9 +90,6 @@ public:
     void prepare(const juce::dsp::ProcessSpec& spec) {
         lowPassFilter.prepare(spec);
         adsr.setSampleRate(spec.sampleRate);
-        
-        // CORRECCIÓN: Evitar 'true' (avoidReallocating) en el primer setSize, 
-        // de lo contrario el buffer queda con 0 samples si no estaba alocado.
         synthBuffer.setSize(spec.numChannels, (int)spec.maximumBlockSize, false, false, false);
         
         smoothedCutoff.reset(spec.sampleRate, 0.02);
@@ -62,39 +105,6 @@ public:
         smoothedCutoff.setTargetValue(cutoff);
         smoothedRes.setTargetValue(res);
         oscType = type1;
-    }
-
-    void renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int startSample, int numSamples) override {
-        if (!isVoiceActive()) return;
-
-        // Reset buffer local si el canal cambió o el tamaño es insuficiente
-        if (synthBuffer.getNumChannels() != outputBuffer.getNumChannels() || synthBuffer.getNumSamples() < numSamples)
-            synthBuffer.setSize(outputBuffer.getNumChannels(), numSamples, false, false, false);
-            
-        synthBuffer.clear();
-
-        auto* outL = synthBuffer.getWritePointer(0);
-        auto* outR = synthBuffer.getNumChannels() > 1 ? synthBuffer.getWritePointer(1) : nullptr;
-
-        for (int s = 0; s < numSamples; ++s) {
-            float sample = (float)(phase / juce::MathConstants<double>::pi);
-
-            if (outL) outL[s] = sample * level;
-            if (outR) outR[s] = sample * level;
-
-            phase += phaseDelta;
-            if (phase > juce::MathConstants<double>::pi) phase -= juce::MathConstants<double>::twoPi;
-        }
-
-        // Aplicamos ADSR para evitar clicks, pero mantenemos el oscilador directo para asegurar sonido.
-        adsr.applyEnvelopeToBuffer(synthBuffer, 0, numSamples);
-
-        for (int ch = 0; ch < outputBuffer.getNumChannels(); ++ch) {
-            // USAMOS UN GAIN DE 1.0 (Sumado) PARA ASEGURAR QUE SE ESCUCHE.
-            outputBuffer.addFrom(ch, startSample, synthBuffer, ch, 0, numSamples, 1.0f);
-        }
-
-        if (!adsr.isActive()) clearCurrentNote();
     }
 
 private:

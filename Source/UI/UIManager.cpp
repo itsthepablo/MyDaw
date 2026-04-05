@@ -12,7 +12,7 @@ void UIManager::setupUI(DAWUIComponents& ui, juce::Component& parent, std::funct
     parent.addAndMakeVisible(ui.sidebarResizer);
     parent.addAndMakeVisible(ui.trackContainer);
     parent.addAndMakeVisible(ui.playlistUI);
-    parent.addAndMakeVisible(ui.bottomDockResizer);
+    // bottomDockResizer eliminado
     parent.addAndMakeVisible(ui.bottomDock);
     parent.addAndMakeVisible(ui.mixerUI);
     // masterChannelUI se añade abajo después de ser creado
