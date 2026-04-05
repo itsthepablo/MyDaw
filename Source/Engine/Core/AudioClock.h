@@ -16,6 +16,7 @@ struct AudioClock {
     bool wasPlayingLastBlock = false;
     int lastPreviewPitch = -1;
     bool looped = false;
+    long long loopEndSamplePos = 0;
     bool justSeeked = false;
 
     void prepare(double s, int bufSize) {
@@ -71,6 +72,8 @@ struct AudioClock {
             nextPh = nextPh - loopEndPos;
             looped = true;
         }
+
+        loopEndSamplePos = (long long)(loopEndPos * samplesPerPixel);
 
         // Lógica estricta de posición de muestra basada puramente en el mapeo espacial del proyecto
         // Al calcular currentSamplePos mediante una simple multiplicación, nunca hay "drift" ni desface

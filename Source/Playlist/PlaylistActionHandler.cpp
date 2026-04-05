@@ -105,14 +105,13 @@ void PlaylistActionHandler::handleDoubleClick(PlaylistComponent& p, const juce::
         if (!targetTrack->midiClips.isEmpty()) {
             MidiClipData* sourceClip = targetTrack->midiClips.getLast();
             newMidiClip = new MidiClipData(*sourceClip);
-            float timeShift = snappedX - sourceClip->startX;
             newMidiClip->startX = snappedX;
-            for (auto& note : newMidiClip->notes) note.x += timeShift;
-            auto shiftAutoLane = [timeShift](AutoLane& lane) { for (auto& node : lane.nodes) node.x += timeShift; };
-            shiftAutoLane(newMidiClip->autoVol);
-            shiftAutoLane(newMidiClip->autoPan);
-            shiftAutoLane(newMidiClip->autoPitch);
-            shiftAutoLane(newMidiClip->autoFilter);
+            // IMPORTANTE: Ya no sumamos timeShift a las notas. 
+            // Las notas son relativas (0-based) para que los clones funcionen.
+            newMidiClip->autoVol = sourceClip->autoVol;
+            newMidiClip->autoPan = sourceClip->autoPan;
+            newMidiClip->autoPitch = sourceClip->autoPitch;
+            newMidiClip->autoFilter = sourceClip->autoFilter;
         }
         else {
             int maxPatternNum = 0;

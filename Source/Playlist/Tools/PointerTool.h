@@ -338,18 +338,8 @@ public:
             if (p.clips[p.draggingClipIndex].linkedMidi != nullptr) p.clips[p.draggingClipIndex].linkedMidi->width = newW;
         }
         else {
-            if (p.clips[p.draggingClipIndex].linkedMidi != nullptr) {
-                float timeShift = snappedX - p.clips[p.draggingClipIndex].linkedMidi->startX;
-                for (auto& note : p.clips[p.draggingClipIndex].linkedMidi->notes) note.x += timeShift;
-                auto shiftAutoLane = [timeShift](AutoLane& lane) { for (auto& node : lane.nodes) node.x += timeShift; };
-                shiftAutoLane(p.clips[p.draggingClipIndex].linkedMidi->autoVol);
-                shiftAutoLane(p.clips[p.draggingClipIndex].linkedMidi->autoPan);
-                shiftAutoLane(p.clips[p.draggingClipIndex].linkedMidi->autoPitch);
-                shiftAutoLane(p.clips[p.draggingClipIndex].linkedMidi->autoFilter);
-            }
-
+            // Las notas MIDI se mantienen relativas al bloque (0-based)
             p.clips[p.draggingClipIndex].startX = snappedX;
-            // Retenemos el linkedAudio->startX original hasta soltar el clic.
             if (p.clips[p.draggingClipIndex].linkedMidi != nullptr) p.clips[p.draggingClipIndex].linkedMidi->startX = snappedX;
         }
         p.repaint();

@@ -3,9 +3,11 @@
 #include "../Tracks/TrackContainer.h"
 #include "../Instruments/InstrumentPanel.h"
 #include "../Effects/EffectsPanel.h"
+#include "../Native_Plugins/BaseEffect.h"
 #include "../UI/BottomDock.h"
 #include "../PluginHost/VSTHost.h"
-#include "../Engine/Core/AudioEngine.h" // <-- Para conocer los valores en tiempo real
+#include "../Native_Plugins/Orion/OrionPlugin.h"
+#include "../Engine/Core/AudioEngine.h" 
 
 class TrackInstrumentBridge {
 public:
@@ -63,9 +65,31 @@ public:
                 });
             };
 
+        instrumentPanel.onAddNativeInstrument = [&audioMutex, &audioEngine, &trackContainer, &effectsPanel, &instrumentPanel, &bottomDock](Track& t) {
+            juce::MessageManager::callAsync([&t, &audioMutex, &audioEngine, &trackContainer, &effectsPanel, &instrumentPanel, &bottomDock]() {
+                juce::ScopedLock sl(audioMutex);
+                auto* orion = new OrionPlugin();
+                
+                double currentSR = audioEngine.clock.sampleRate > 0.0 ? audioEngine.clock.sampleRate : 44100.0;
+                int currentBS = audioEngine.clock.maxBlockSize > 0 ? audioEngine.clock.maxBlockSize : 512;
+                
+                orion->prepareToPlay(currentSR, currentBS);
+                t.plugins.add(orion);
+                t.allocatePdcBuffer();
+                orion->setIsInstrument(true);
+                
+                // Refrescar UIs
+                trackContainer.refreshTrackPanels();
+                if (bottomDock.getCurrentTab() == BottomDock::EffectsTab) effectsPanel.updateSlots();
+                if (bottomDock.getCurrentTab() == BottomDock::InstrumentTab) instrumentPanel.updateInstrumentView();
+                
+                orion->showWindow(nullptr);
+            });
+        };
+
         instrumentPanel.onOpenInstrumentWindow = [](Track& t, BaseEffect* effect) {
             if (effect != nullptr) {
-                effect->showWindow();
+                effect->showWindow(nullptr);
             }
             };
     }

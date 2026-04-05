@@ -1,53 +1,53 @@
 #include "InstrumentPanel.h"
 #include "../Theme/CustomTheme.h"
 
-InstrumentPanel::InstrumentPanel() {
+InstrumentPanel::InstrumentPanel() 
+{
     addAndMakeVisible(addInstrumentBtn);
-    // Texto m�s limpio para que encaje en la "caja"
     addInstrumentBtn.setButtonText("+ ADD VSTi");
 
-    // Colores tipo "Slot vac�o" de Ableton
     addInstrumentBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(40, 43, 48));
     addInstrumentBtn.setColour(juce::TextButton::textColourOffId, juce::Colours::white.withAlpha(0.6f));
 
     addInstrumentBtn.onClick = [this] {
-        if (activeTrack != nullptr && onAddInstrument) {
-            onAddInstrument(*activeTrack);
+        if (activeTrack != nullptr) {
+            juce::PopupMenu m;
+            m.addItem(1, "Native: Orion (Synth)");
+            m.addSeparator();
+            m.addItem(2, "External VST3...");
+
+            m.showMenuAsync(juce::PopupMenu::Options(), [this](int result) {
+                if (result == 1 && onAddNativeInstrument) onAddNativeInstrument(*activeTrack);
+                if (result == 2 && onAddInstrument) onAddInstrument(*activeTrack);
+            });
         }
-        };
+    };
 }
 
-InstrumentPanel::~InstrumentPanel() {
+InstrumentPanel::~InstrumentPanel() 
+{
 }
 
-void InstrumentPanel::setTrack(Track* t) {
+void InstrumentPanel::setTrack(Track* t) 
+{
     activeTrack = t;
     updateInstrumentView();
 }
 
-void InstrumentPanel::updateInstrumentView() {
-    instrumentButtons.clear();
+void InstrumentPanel::updateInstrumentView() 
+{
+    devices.clear();
 
     if (activeTrack != nullptr) {
-        for (auto* p : activeTrack->plugins) {
-            if (p->getIsInstrument()) {
-                // Creamos una caja para cada instrumento
-                auto* btn = new juce::TextButton(p->getLoadedPluginName());
-
-                // Dise�o de la caja (Ableton style)
-                btn->setColour(juce::TextButton::buttonColourId, juce::Colour(55, 60, 65));
-                btn->setColour(juce::TextButton::buttonOnColourId, juce::Colour(75, 80, 85));
-                btn->setColour(juce::TextButton::textColourOffId, juce::Colours::white);
-                btn->setTooltip("Clic para abrir la ventana del sintetizador");
-
-                btn->onClick = [this, p] {
-                    if (activeTrack != nullptr && onOpenInstrumentWindow) {
-                        onOpenInstrumentWindow(*activeTrack, p);
-                    }
-                    };
-
-                instrumentButtons.add(btn);
-                addAndMakeVisible(btn);
+        for (int i = 0; i < (int)activeTrack->plugins.size(); ++i) {
+            auto* p = activeTrack->plugins[i];
+            if (p && p->getIsInstrument()) {
+                // Reutilizamos el componente EffectDevice para mostrar el slot del instrumento.
+                // Como EffectDevice requiere una referencia a EffectsPanel, usamos un cast de puntero nulo 
+                // para la referencia, asumiendo que el instrumento no usará funciones de ruteo de efectos.
+                auto* dev = new EffectDevice(i, p->getLoadedPluginName(), true, p->isBypassed(), p, *static_cast<EffectsPanel*>(nullptr));
+                devices.add(dev);
+                addAndMakeVisible(dev);
             }
         }
         addInstrumentBtn.setVisible(true);
@@ -79,27 +79,20 @@ void InstrumentPanel::paint(juce::Graphics& g) {
     }
 }
 
-
 void InstrumentPanel::resized() {
     if (activeTrack != nullptr) {
         auto area = getLocalBounds();
-
-        // Dejamos un margen arriba para el texto y m�rgenes a los lados
         area.removeFromTop(35);
         area.removeFromBottom(15);
         area.removeFromLeft(15);
         area.removeFromRight(15);
 
-        int boxWidth = 140; // Ancho fijo de la caja tipo Ableton
-        int padding = 10;   // Espacio entre cajas
-
-        // Colocamos las cajas de los VSTi de izquierda a derecha
-        for (auto* btn : instrumentButtons) {
-            btn->setBounds(area.removeFromLeft(boxWidth));
-            area.removeFromLeft(padding); // Separador
+        int padding = 10;
+        for (auto* dev : devices) {
+            int dWidth = dev->getPreferredWidth();
+            dev->setBounds(area.removeFromLeft(dWidth));
+            area.removeFromLeft(padding);
         }
-
-        // Colocamos el bot�n de agregar al final de la cadena
-        addInstrumentBtn.setBounds(area.removeFromLeft(boxWidth));
+        addInstrumentBtn.setBounds(area.removeFromLeft(140));
     }
 }

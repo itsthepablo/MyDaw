@@ -14,14 +14,17 @@ public:
         // --- MOTOR GLOBAL DE SINCRONIZACIÓN DE CLONES (GHOST COPIES) ---
         auto syncEngine = [&container, &playlist](MidiClipData* sourceClip) {
             if (!sourceClip) return;
-            bool synced = false;
 
             for (auto* track : container.getTracks()) {
+                bool trackModified = false;
                 for (auto* targetClip : track->midiClips) {
-
-                    if (targetClip != sourceClip && targetClip->name == sourceClip->name) {
+                    // Si es el clip original que estamos editando
+                    if (targetClip == sourceClip) {
+                        trackModified = true;
+                    }
+                    // Si es un clon (Ghost Copy) - Sincronizamos notas
+                    else if (targetClip->name == sourceClip->name) {
                         float timeShift = targetClip->startX - sourceClip->startX;
-
                         targetClip->notes = sourceClip->notes;
                         for (auto& note : targetClip->notes) note.x += timeShift;
 
@@ -40,13 +43,17 @@ public:
 
                         targetClip->color = sourceClip->color;
                         targetClip->width = sourceClip->width;
-
-                        synced = true;
+                        trackModified = true;
                     }
                 }
+                
+                // CRUCIAL: Publicar los cambios al hilo de Audio (Doble Buffer)
+                if (trackModified) {
+                    track->commitSnapshot();
+                }
             }
-            if (synced) playlist.repaint();
-            };
+            playlist.repaint();
+        };
 
         // Enlazamos el motor tanto al Piano Roll como a la edición Inline de la Playlist
         ui.onPatternEdited = syncEngine;

@@ -27,6 +27,7 @@ public:
     std::function<void(Track&)> onAddVST3;           
     std::function<void(Track&, const juce::String&, const juce::String&, int)> onAddVST3FromFile; 
     std::function<void(Track&)> onAddNativeUtility;  
+    std::function<void(Track&)> onAddNativeOrion;
     std::function<void(Track&, int)> onOpenEffect;
     std::function<void(Track&, int, bool)> onBypassChanged;
     std::function<void(Track&, int, int)> onReorderEffects;

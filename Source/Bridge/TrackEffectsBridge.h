@@ -3,6 +3,7 @@
 #include "../Tracks/TrackContainer.h"
 #include "../Effects/EffectsPanel.h"
 #include "../Native_Plugins/UtilityPlugin.h" 
+#include "../Native_Plugins/Orion/OrionPlugin.h"
 
 #include "../Engine/Core/AudioEngine.h"
 
@@ -83,6 +84,25 @@ public:
         mixerUI.onAddNativeUtility = addNativeAction;
         miniMixerUI.onAddNativeUtility = addNativeAction;
         if (masterChannelUI) masterChannelUI->onAddNativeUtility = addNativeAction;
+
+        // --- LÓGICA ORION ---
+        auto addOrionAction = [&audioMutex, &sampleRate, &blockSize, refreshUIs, &engine, &container](Track& t) {
+            juce::MessageManager::callAsync([&t, &audioMutex, sampleRate, blockSize, refreshUIs, &engine, &container]() {
+                juce::ScopedLock sl(audioMutex);
+                auto* orion = new OrionPlugin();
+                int currentBlockSize = blockSize > 0 ? blockSize : 512;
+                orion->prepareToPlay(sampleRate, currentBlockSize);
+                t.plugins.add(orion);
+                t.allocatePdcBuffer();
+                orion->setIsInstrument(true);
+                orion->onSidechainChanged = [&engine, &container]() { engine.routingMatrix.commitNewTopology(container.getTracks()); };
+                engine.routingMatrix.commitNewTopology(container.getTracks());
+                refreshUIs();
+                orion->showWindow(&container);
+            });
+        };
+
+        ui.onAddNativeOrion = addOrionAction;
 
         // --- OPEN / BYPASS / DELETE ---
         auto openEffectAction = [&container](Track& t, int idx) {

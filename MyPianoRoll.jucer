@@ -25,6 +25,10 @@
         <FILE id="HNJ2Wb" name="daw_icon.png" compile="0" resource="1" file="Source/Images/daw_icon.png"/>
       </GROUP>
       <GROUP id="{1F0EA522-B943-AF42-C851-3209A0EC109F}" name="Native_Plugins">
+        <GROUP id="{057B74F5-6107-C964-0936-C31DB5EB3FAF}" name="Orion">
+          <FILE id="ofhMlj" name="OrionPlugin.h" compile="0" resource="0" file="Source/Native_Plugins/Orion/OrionPlugin.h"/>
+          <FILE id="Az01y0" name="OrionSynth.h" compile="0" resource="0" file="Source/Native_Plugins/Orion/OrionSynth.h"/>
+        </GROUP>
         <FILE id="fK5R3n" name="BaseEffect.h" compile="0" resource="0" file="Source/Native_Plugins/BaseEffect.h"/>
         <FILE id="ghMFvY" name="UtilityPlugin.h" compile="0" resource="0" file="Source/Native_Plugins/UtilityPlugin.h"/>
       </GROUP>
@@ -126,6 +130,8 @@
         <GROUP id="{40222405-9D28-4BAE-EA86-5F09BF1D9754}" name="Nodes">
           <FILE id="y7s4xb" name="MetronomeProcessor.h" compile="0" resource="0"
                 file="Source/Engine/Nodes/MetronomeProcessor.h"/>
+          <FILE id="P2VdhR" name="MidiPatternEngine.h" compile="0" resource="0"
+                file="Source/Engine/Nodes/MidiPatternEngine.h"/>
           <FILE id="pAxzFs" name="TrackProcessor.h" compile="0" resource="0"
                 file="Source/Engine/Nodes/TrackProcessor.h"/>
         </GROUP>

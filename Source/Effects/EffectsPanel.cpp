@@ -32,12 +32,14 @@ EffectsPanel::EffectsPanel() {
         if (activeTrack) {
             juce::PopupMenu m;
             m.addItem(1, "Native: Utility (Gain/Pan)");
+            m.addItem(2, "Native: Orion (Synth)");
             m.addSeparator();
-            m.addItem(2, "External VST3...");
+            m.addItem(3, "External VST3...");
 
             m.showMenuAsync(juce::PopupMenu::Options(), [this](int result) {
                 if (result == 1 && onAddNativeUtility) onAddNativeUtility(*activeTrack);
-                if (result == 2 && onAddVST3) onAddVST3(*activeTrack);
+                if (result == 2 && onAddNativeOrion) onAddNativeOrion(*activeTrack);
+                if (result == 3 && onAddVST3) onAddVST3(*activeTrack);
                 });
         }
         };
@@ -226,8 +228,9 @@ void EffectsPanel::resized() {
 
     // --- 1. PLUGINS ---
     for (auto* device : devices) {
-        device->setBounds(x, y, slotWidth, slotHeight);
-        x += slotWidth + padding;
+        int dWidth = device->getPreferredWidth();
+        device->setBounds(x, y, dWidth, slotHeight);
+        x += dWidth + padding;
     }
 
     addEffectBtn.setBounds(x, y + (slotHeight / 2) - 20, 80, 40);

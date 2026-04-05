@@ -70,16 +70,34 @@ public:
         if (isPlayingNow && snap) {
             // --- Notas directas (Piano Roll) ---
             for (const auto& note : snap->notes) {
+                // Aplicamos margen de seguridad épsilon (-0.0001f) para que las notas en el inicio exacto del bloque siempre disparen
                 bool triggerOn = clock.looped
-                    ? ((note.x >= clock.currentPh && note.x < clock.nextPh + clock.looped) || (note.x >= 0 && note.x < clock.nextPh))
-                    : (note.x >= clock.currentPh && note.x < clock.nextPh);
-                if (triggerOn) trackMidi.addEvent(juce::MidiMessage::noteOn(1, note.pitch, 0.8f), 0);
+                   ? ((note.x >= clock.currentPh - 0.0001f && note.x < clock.nextPh + 1.0f) || (note.x >= 0 && note.x < clock.nextPh))
+                   : (note.x >= clock.currentPh - 0.0001f && note.x < clock.nextPh);
+
+                if (triggerOn) {
+                    // Calculamos offset preciso de muestra para que suene 'Professional'
+                    long long noteStartSample = (long long)(note.x * clock.samplesPerPixel);
+                    int offset = (int)(noteStartSample - clock.currentSamplePos);
+                    if (clock.looped && noteStartSample < clock.currentSamplePos) // Caso wrap-around
+                        offset = (int)(noteStartSample + (clock.loopEndSamplePos - clock.currentSamplePos));
+                    
+                    trackMidi.addEvent(juce::MidiMessage::noteOn(1, note.pitch, 0.8f), juce::jlimit(0, numSamples - 1, offset));
+                }
 
                 float offX = (float)(note.x + note.width);
                 bool triggerOff = clock.looped
-                    ? ((offX >= clock.currentPh && offX < clock.nextPh + clock.looped) || (offX >= 0 && offX < clock.nextPh))
-                    : (offX >= clock.currentPh && offX < clock.nextPh);
-                if (triggerOff) trackMidi.addEvent(juce::MidiMessage::noteOff(1, note.pitch), 0);
+                   ? ((offX >= clock.currentPh && offX < clock.nextPh + 1.0f) || (offX >= 0 && offX < clock.nextPh))
+                   : (offX >= clock.currentPh && offX < clock.nextPh);
+
+                if (triggerOff) {
+                    long long noteOffSample = (long long)(offX * clock.samplesPerPixel);
+                    int offset = (int)(noteOffSample - clock.currentSamplePos);
+                    if (clock.looped && noteOffSample < clock.currentSamplePos)
+                        offset = (int)(noteOffSample + (clock.loopEndSamplePos - clock.currentSamplePos));
+                        
+                    trackMidi.addEvent(juce::MidiMessage::noteOff(1, note.pitch), juce::jlimit(0, numSamples - 1, offset));
+                }
             }
 
             // --- MIDI clips ---
@@ -87,20 +105,33 @@ public:
                 if (clipSnap.isMuted) continue;
                 for (const auto& note : clipSnap.notes) {
                     float noteWorldX = clipSnap.startX + ((float)note.x - clipSnap.offsetX);
+                    float offWorldX = noteWorldX + (float)note.width;
 
-                    if (noteWorldX >= clipSnap.startX && noteWorldX < clipSnap.startX + clipSnap.width) {
-                        bool triggerOn = clock.looped
-                            ? ((noteWorldX >= clock.currentPh && noteWorldX < clock.nextPh + clock.looped) || (noteWorldX >= 0 && noteWorldX < clock.nextPh))
-                            : (noteWorldX >= clock.currentPh && noteWorldX < clock.nextPh);
-                        if (triggerOn) trackMidi.addEvent(juce::MidiMessage::noteOn(1, note.pitch, 0.8f), 0);
+                    bool isInClip = (noteWorldX >= clipSnap.startX && noteWorldX < clipSnap.startX + clipSnap.width);
+                    if (!isInClip) continue;
 
-                        float offX = noteWorldX + (float)note.width;
-                        if (offX <= clipSnap.startX + clipSnap.width) {
-                            bool triggerOff = clock.looped
-                                ? ((offX >= clock.currentPh && offX < clock.nextPh + clock.looped) || (offX >= 0 && offX < clock.nextPh))
-                                : (offX >= clock.currentPh && offX < clock.nextPh);
-                            if (triggerOff) trackMidi.addEvent(juce::MidiMessage::noteOff(1, note.pitch), 0);
-                        }
+                    bool triggerOn = clock.looped
+                        ? ((noteWorldX >= clock.currentPh - 0.0001f && noteWorldX < clock.nextPh + 1.0f) || (noteWorldX >= 0 && noteWorldX < clock.nextPh))
+                        : (noteWorldX >= clock.currentPh - 0.0001f && noteWorldX < clock.nextPh);
+
+                    if (triggerOn) {
+                        long long nStart = (long long)(noteWorldX * clock.samplesPerPixel);
+                        int offset = (int)(nStart - clock.currentSamplePos);
+                        if (clock.looped && nStart < clock.currentSamplePos)
+                             offset = (int)(nStart + (clock.loopEndSamplePos - clock.currentSamplePos));
+                        trackMidi.addEvent(juce::MidiMessage::noteOn(1, note.pitch, 0.8f), juce::jlimit(0, numSamples - 1, offset));
+                    }
+
+                    bool triggerOff = clock.looped
+                        ? ((offWorldX >= clock.currentPh && offWorldX < clock.nextPh + 1.0f) || (offWorldX >= 0 && offWorldX < clock.nextPh))
+                        : (offWorldX >= clock.currentPh && offWorldX < clock.nextPh);
+                    
+                    if (triggerOff && offWorldX <= clipSnap.startX + clipSnap.width) {
+                        long long nOff = (long long)(offWorldX * clock.samplesPerPixel);
+                        int offset = (int)(nOff - clock.currentSamplePos);
+                        if (clock.looped && nOff < clock.currentSamplePos)
+                            offset = (int)(nOff + (clock.loopEndSamplePos - clock.currentSamplePos));
+                        trackMidi.addEvent(juce::MidiMessage::noteOff(1, note.pitch), juce::jlimit(0, numSamples - 1, offset));
                     }
                 }
             }

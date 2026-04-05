@@ -143,8 +143,16 @@ public:
         }
 
         bool isStoppingNow = transportState.isStoppingNow.load(std::memory_order_relaxed);
+        
+        // --- LIMPIEZA MIDI EN PAUSA/STOP --- 
+        // Si acabamos de dejar de tocar (Pausa o Stop manual), forzamos isStoppingNow por un bloque
+        if (!isPlayingNow && clock.wasPlayingLastBlock) {
+            isStoppingNow = true;
+        }
+
         if (isStoppingNow)
             transportState.isStoppingNow.store(false, std::memory_order_relaxed);
+
         clock.wasPlayingLastBlock = isPlayingNow;
 
         // Construir MIDI de preview (teclado virtual on-screen)

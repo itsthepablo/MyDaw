@@ -376,7 +376,10 @@ void PianoRollComponent::mouseDown(const juce::MouseEvent& event) {
         if (currentTool == ToolMode::Select || event.mods.isCtrlDown() || event.mods.isCommandDown()) { isSelecting = true; selectionStart = event.getPosition(); selectionEnd = event.getPosition(); if (!event.mods.isShiftDown()) selectedNotes.clear(); }
         else {
             hasStateChanged = true; selectedNotes.clear();
-            int fx = (int)(std::floor(absX / getSnapPixels()) * getSnapPixels()); if (fx >= 32.0 * 320.0) return;
+            float relX = absX - activeClip->startX;
+            int fx = (int)(std::floor(relX / getSnapPixels()) * getSnapPixels()); 
+            if (fx < 0) fx = 0; // No permitir notas antes del inicio del clip
+            if (fx >= 32.0 * 320.0) return;
             activeClip->notes.push_back({ p, fx, lastNoteWidth, f }); animations.push_back({ p, fx, lastNoteWidth, 1.0f, false });
             int ni = (int)activeClip->notes.size() - 1; selectedNotes.insert(ni); dragStates.clear(); dragStates.push_back({ ni, fx, p, lastNoteWidth }); isResizing = true; dragStartAbsX = absX; dragStartPitch = p; previewPitch = p; isPreviewingNote = true;
         }
@@ -401,7 +404,11 @@ void PianoRollComponent::mouseDrag(const juce::MouseEvent& event) {
     bool canMP = true; if (!isResizing) for (auto& s : dragStates) if (s.startPitch + dP < 0 || s.startPitch + dP > 127) canMP = false;
     for (auto& s : dragStates) {
         if (isResizing) { activeClip->notes[s.index].width = std::max((int)getSnapPixels(), (int)(std::round((s.startWidth + (absX - dragStartAbsX)) / getSnapPixels()) * getSnapPixels())); lastNoteWidth = activeClip->notes[s.index].width; }
-        else { activeClip->notes[s.index].x = juce::jlimit(0, (int)(32.0 * 320.0), s.startX + snappedDX); if (canMP && dP != 0) { int newP = s.startPitch + dP; if (activeClip->notes[s.index].pitch != newP) { activeClip->notes[s.index].pitch = newP; activeClip->notes[s.index].frequency = 440.0 * std::pow(2.0, (newP - 69) / 12.0); previewPitch = newP; isPreviewingNote = true; } } }
+        else { 
+            int newRelX = s.startX + snappedDX;
+            activeClip->notes[s.index].x = juce::jlimit(0, (int)(32.0 * 320.0), newRelX); 
+            if (canMP && dP != 0) { int newP = s.startPitch + dP; if (activeClip->notes[s.index].pitch != newP) { activeClip->notes[s.index].pitch = newP; activeClip->notes[s.index].frequency = 440.0 * std::pow(2.0, (newP - 69) / 12.0); previewPitch = newP; isPreviewingNote = true; } } 
+        }
     }
     if (linkAutoBtn.getToggleState() && snappedDX != 0 && !isResizing) { automationEditor.moveLinkedNodes((float)snappedDX); }
 

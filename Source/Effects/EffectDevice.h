@@ -14,6 +14,7 @@ public:
 
     void paint(juce::Graphics& g) override;
     void resized() override;
+    int getPreferredWidth() const { return nativeEditor ? 400 : 140; }
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseDrag(const juce::MouseEvent& e) override;
 
