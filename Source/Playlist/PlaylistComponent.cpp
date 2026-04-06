@@ -13,9 +13,14 @@
 #include "Tools/MuteTool.h"
 #include "Tools/PointerTool.h"
 #include "Tools/ScissorTool.h"
+#include "PlaylistCoordinateUtils.h"
+#include "PlaylistAnalyzer.h"
+#include "View/PlaylistGridRenderer.h"
+#include "View/PlaylistRenderer.h"
 #include <algorithm>
 #include <cmath>
 #include <unordered_map>
+
 
 
 PlaylistComponent::PlaylistComponent() {
@@ -77,30 +82,14 @@ void PlaylistComponent::timerCallback() {
     if (playheadAbsPos != newPos) {
       playheadAbsPos = newPos;
 
-      // --- RECORD LOUDNESS HISTORY (AUTOMATIC) ---
-      if (tracksRef && this->masterTrackPtr && !isDraggingTimeline) {
-          for (auto* t : *tracksRef) {
-              if (t->getType() == TrackType::Loudness) {
-                  float lufs = masterTrackPtr->postLoudness.getShortTerm();
-                  double samplePos = (double)playheadAbsPos; 
-                  t->loudnessHistory.addPoint(samplePos, lufs);
-              } else if (t->getType() == TrackType::Balance) {
-                  float bal = masterTrackPtr->postBalance.getBalance();
-                  double samplePos = (double)playheadAbsPos;
-                  t->balanceHistory.addPoint(samplePos, bal);
-              } else if (t->getType() == TrackType::MidSide) {
-                  float m = masterTrackPtr->postMidSide.getMid();
-                  float s = masterTrackPtr->postMidSide.getSide();
-                  float c = masterTrackPtr->postMidSide.getPhaseCorrelation();
-                  double samplePos = (double)playheadAbsPos;
-                  t->midSideHistory.addPoint(samplePos, m, s, c);
-              }
-          }
-      }
+      // Delegación al Analyzer para grabación de historial (Loudness, Balance, MS)
+      PlaylistAnalyzer::recordAnalysisData(tracksRef, masterTrackPtr, playheadAbsPos, isDraggingTimeline);
+      
       repaint();
     }
   }
 }
+
 
 void PlaylistComponent::updateScrollBars() {
   hNavigator.setZoomContext(hZoom, getTimelineLength());
@@ -153,97 +142,21 @@ void PlaylistComponent::addAudioClipToView(Track *targetTrack,
 
 void PlaylistComponent::drawMinimap(juce::Graphics &g,
                                     juce::Rectangle<int> bounds) {
-  if (!tracksRef || tracksRef->isEmpty())
-    return;
-
-  double maxTime = getTimelineLength();
-  double scaleX = bounds.getWidth() / maxTime;
-
-  int visibleTracks = 0;
-  for (auto *t : *tracksRef) {
-    if (t->isShowingInChildren)
-      visibleTracks++;
-  }
-  if (visibleTracks == 0)
-    visibleTracks = 1;
-
-  float trackMinimapH =
-      std::min(6.0f, (float)bounds.getHeight() / visibleTracks);
-  float totalOccupiedH = trackMinimapH * visibleTracks;
-  float startY = bounds.getY() + (bounds.getHeight() - totalOccupiedH) / 2.0f;
-
-  for (const auto &clip : clips) {
-    int tIdx = -1;
-    int currentVisIdx = 0;
-    for (int i = 0; i < tracksRef->size(); ++i) {
-      auto *t = (*tracksRef)[i];
-      if (t == clip.trackPtr) {
-        if (!t->isShowingInChildren) {
-          tIdx = -1;
-          break;
-        }
-        tIdx = currentVisIdx;
-        break;
-      }
-      if (t->isShowingInChildren)
-        currentVisIdx++;
-    }
-    if (tIdx == -1)
-      continue;
-
-    float x = bounds.getX() + (clip.startX * scaleX);
-    float w = clip.width * scaleX;
-    float y = startY + (tIdx * trackMinimapH);
-
-    g.setColour(clip.trackPtr->getColor().withAlpha(0.8f));
-    float padY = trackMinimapH > 3.0f ? 1.0f : 0.0f;
-    g.fillRoundedRectangle(x, y + padY, juce::jmax(1.0f, w),
-                           juce::jmax(1.0f, trackMinimapH - (padY * 2.0f)),
-                           1.5f);
-  }
+  PlaylistRenderer::drawMinimap(g, bounds, tracksRef, clips, getTimelineLength());
 }
 
+
 int PlaylistComponent::getTrackY(Track *targetTrack) const {
-  if (!tracksRef || !targetTrack)
-    return -1;
-
-  // BUG FIX: Si el track está oculto por una carpeta, sus clips NO TIENEN
-  // COORDENADA Y (deberían ocultarse)
-  if (!targetTrack->isShowingInChildren)
-    return -1;
-
-  int topOffset = menuBarH + navigatorH + timelineH;
-  int currentY = topOffset - (int)vBar.getCurrentRangeStart();
-
-  for (auto *t : *tracksRef) {
-    if (t == targetTrack)
-      return currentY;
-    if (t->isShowingInChildren)
-      currentY += (int)trackHeight;
-  }
-  return -1;
+  return PlaylistCoordinateUtils::getTrackY(targetTrack, tracksRef, 
+                                            menuBarH + navigatorH + timelineH, 
+                                            vBar, trackHeight);
 }
 
 int PlaylistComponent::getTrackAtY(int y) const {
-  int topOffset = menuBarH + navigatorH + timelineH;
-  if (y < topOffset)
-    return -1;
-
-  int vS = (int)vBar.getCurrentRangeStart();
-  int currentY = topOffset - vS;
-
-  if (!tracksRef)
-    return -1;
-  for (int i = 0; i < (int)tracksRef->size(); ++i) {
-    auto *t = (*tracksRef)[i];
-    if (!t->isShowingInChildren)
-      continue;
-    if (y >= currentY && y < currentY + trackHeight)
-      return i;
-    currentY += (int)trackHeight;
-  }
-  return -1;
+  return PlaylistCoordinateUtils::getTrackAtY(y, menuBarH + navigatorH + timelineH, 
+                                              vBar, tracksRef, trackHeight);
 }
+
 
 void PlaylistComponent::deleteSelectedClips() {
   PlaylistActionHandler::deleteSelectedClips(*this);
@@ -283,25 +196,24 @@ bool PlaylistComponent::keyPressed(const juce::KeyPress &key,
 }
 
 void PlaylistComponent::paint(juce::Graphics &g) {
-    if (auto* theme = dynamic_cast<CustomTheme*>(&getLookAndFeel())) {
-        g.fillAll(theme->getSkinColor("PLAYLIST_BG", juce::Colour(25, 27, 30)));
-    } else {
-        g.fillAll(juce::Colour(25, 27, 30));
-    }
+  if (auto* theme = dynamic_cast<CustomTheme*>(&getLookAndFeel())) {
+    g.fillAll(theme->getSkinColor("PLAYLIST_BG", juce::Colour(25, 27, 30)));
+  } else {
+    g.fillAll(juce::Colour(25, 27, 30));
+  }
+
   float hS = (float)hNavigator.getCurrentRangeStart();
   float vS = (float)vBar.getCurrentRangeStart();
-
   int topOffset = menuBarH + navigatorH + timelineH;
   int viewAreaH = getHeight() - topOffset;
 
   g.saveState();
-  juce::Rectangle<int> playlistBounds(
-      0, topOffset, getWidth() - (vBar.isVisible() ? vBarWidth : 0), viewAreaH);
+  juce::Rectangle<int> playlistBounds(0, topOffset, 
+                                      getWidth() - (vBar.isVisible() ? vBarWidth : 0), 
+                                      viewAreaH);
   g.reduceClipRegion(playlistBounds);
 
-  // --- OPTIMIZACIÓN DE RENDIMIENTO: CACHÉ DE COORDENADAS Y CULLING ---
-  // 1. Pre-calculamos las alturas Y de todas las pistas para evitar 5,000+
-  // búsquedas redundantes
+  // --- PRE-CÁLCULO DE CACHÉ DE COORDENADAS Y ---
   std::unordered_map<Track *, int> trackYCache;
   int ty = topOffset - (int)vS;
   if (tracksRef) {
@@ -313,386 +225,44 @@ void PlaylistComponent::paint(juce::Graphics &g) {
     }
   }
 
-  // 2. Límites visibles para Culling Horizontal inteligente
-  double visibleTimeStart = (double)hS / hZoom;
-  double visibleTimeEnd = (double)(hS + getWidth()) / hZoom;
+  // 1. Dibujar el fondo alternado y la rejilla
+  PlaylistGridRenderer::drawGrid(g, topOffset, viewAreaH, getWidth(), getHeight(), 
+                                 hS, hZoom, snapPixels, getTimelineLength(), getLookAndFeel(),
+                                 tracksRef, vS, trackHeight);
 
-  // 1. Dibujar el fondo alternado cada 4 compases (FL Studio Style)
-  double blockLengthPx = 1280.0; // 4 compases * 320px
-  double startTime = (double)hS / hZoom;
-  double endTime = (double)(hS + getWidth()) / hZoom;
+  // Preparar el contexto para el renderizado de clips y otros elementos
+  PlaylistViewContext ctx = {
+    tracksRef, &clips, hZoom, hS, vS, trackHeight, topOffset, getWidth(), getHeight(),
+    playheadAbsPos, &selectedClipIndices, hoveredAutoClip, 
+    isExternalFileDragging, isInternalDragging
+  };
 
-  int startBlock = (int)(startTime / blockLengthPx);
-  int endBlock = (int)(endTime / blockLengthPx);
+  // 2. Dibujar resúmenes de carpeta (Reaper style)
+  PlaylistRenderer::drawFolderSummaries(g, ctx, trackYCache);
 
-  for (int b = startBlock; b <= endBlock; ++b) {
-    if (b % 2 != 0) { // Solo pintar el alternado (el par ya es color base)
-      double blockAbsX = b * blockLengthPx;
-      int xPos = (int)(blockAbsX * hZoom) - (int)hS;
-      int wPos = (int)(std::ceil(blockLengthPx * hZoom));
+  // 3. Dibujar clips de audio y MIDI
+  PlaylistRenderer::drawTracksAndClips(g, ctx, trackYCache);
 
-      if (auto* theme = dynamic_cast<CustomTheme*>(&getLookAndFeel())) {
-          g.setColour(theme->getSkinColor("PLAYLIST_BG_ALT", juce::Colour(32, 34, 38)));
-      } else {
-          g.setColour(juce::Colour(32, 34, 38));
-      }
-      g.fillRect(xPos, topOffset, wPos, viewAreaH);
-    }
-  }
+  // 4. Dibujar pistas de análisis (Loudness, Balance, MidSide)
+  PlaylistRenderer::drawSpecialAnalysisTracks(g, ctx, trackYCache);
 
-  // 2. Líneas verticales dinámicas y Culling
-  double visualSnap = (snapPixels < 10.0) ? 80.0 : snapPixels;
-  double currentDrawSnap = visualSnap;
-
-  // Limitador de congestión
-  while ((currentDrawSnap * hZoom) < 8.0 && currentDrawSnap < 320.0) {
-    currentDrawSnap *= 2.0;
-  }
-  if (currentDrawSnap >= 320.0) {
-    double pxPerMeasure = 320.0 * hZoom;
-    if (pxPerMeasure < 5.0)
-      currentDrawSnap = 320.0 * 16.0;
-    else if (pxPerMeasure < 10.0)
-      currentDrawSnap = 320.0 * 8.0;
-    else if (pxPerMeasure < 20.0)
-      currentDrawSnap = 320.0 * 4.0;
-    else if (pxPerMeasure < 40.0)
-      currentDrawSnap = 320.0 * 2.0;
-  }
-
-  double startLineSearch =
-      std::floor(startTime / currentDrawSnap) * currentDrawSnap;
-  double endLineSearch = std::min(getTimelineLength(), endTime);
-
-  for (double i = startLineSearch; i <= endLineSearch; i += currentDrawSnap) {
-    int dx = (int)(i * hZoom - hS);
-
-    if (std::fmod(i, 320.0) == 0.0)
-      g.setColour(juce::Colours::black);
-    else if (std::fmod(i, 80.0) == 0.0)
-      g.setColour(juce::Colours::black);
-    else
-      g.setColour(juce::Colours::black);
-
-    g.drawVerticalLine(dx, (float)topOffset, (float)getHeight());
-  }
-
-  int currentY = topOffset - (int)vS;
-  if (tracksRef) {
-    for (auto *t : *tracksRef) {
-      if (!t->isShowingInChildren)
-        continue;
-      g.setColour(
-          juce::Colours::black.withAlpha(0.8f)); // Separador mucho más oscuro
-      g.fillRect(0.0f, (float)(currentY + (int)trackHeight - 2),
-                 (float)getWidth(), 2.0f); // 2 píxeles de grosor puro
-      currentY += (int)trackHeight;
-    }
-  }
-
-  // --- NUEVO: RENDERIZADO DE RESÚMENES DE CARPETA (REAPER STYLE) ---
-  if (tracksRef) {
-    for (auto *t : *tracksRef) {
-      if (t->getType() == TrackType::Folder) {
-        int yPos = -1;
-        if (trackYCache.count(t))
-          yPos = trackYCache[t];
-        if (yPos == -1)
-          continue;
-
-        // Culling vertical básico para el resumen de la carpeta
-        if (yPos + (int)trackHeight < topOffset || yPos > getHeight())
-          continue;
-
-        // 1. Recolectar IDs de todos los descendientes (recursivo)
-        std::vector<int> descendantIds;
-        std::function<void(int)> gatherDescendantIds = [&](int pid) {
-          for (auto *trk : *tracksRef) {
-            if (trk->parentId == pid) {
-              descendantIds.push_back(trk->getId());
-              if (trk->getType() == TrackType::Folder)
-                gatherDescendantIds(trk->getId());
-            }
-          }
-        };
-        gatherDescendantIds(t->getId());
-
-        if (descendantIds.empty())
-          continue;
-
-        // 1. Calcular rango global de notas para la carpeta (Alineación
-        // Vertical)
-        int folderMinP = 127, folderMaxP = 0;
-        bool folderHasMidi = false;
-        for (const auto &clip : clips) {
-          if (clip.linkedMidi == nullptr)
-            continue;
-          if (std::find(descendantIds.begin(), descendantIds.end(),
-                        clip.trackPtr->getId()) != descendantIds.end()) {
-            folderHasMidi = true;
-            for (const auto &n : clip.linkedMidi->notes) {
-              folderMinP = std::min(folderMinP, n.pitch);
-              folderMaxP = std::max(folderMaxP, n.pitch);
-            }
-          }
-        }
-        if (folderHasMidi) {
-          folderMinP = std::max(0, folderMinP - 2);
-          folderMaxP = std::min(127, folderMaxP + 2);
-          if (folderMaxP - folderMinP < 12)
-            folderMaxP = std::min(127, folderMinP + 12);
-        }
-
-        // 2. Dibujar resúmenes de clips que pertenezcan a esos descendientes
-        juce::Rectangle<int> summaryArea(0, yPos + 20, getWidth(),
-                                         (int)trackHeight - 24);
-        for (const auto &clip : clips) {
-          if (clip.linkedAudio == nullptr && clip.linkedMidi == nullptr)
-            continue;
-
-          bool isChild =
-              std::find(descendantIds.begin(), descendantIds.end(),
-                        clip.trackPtr->getId()) != descendantIds.end();
-          if (isChild) {
-            int xPos = (int)(clip.startX * hZoom - (double)hS);
-            int wPos = (int)(clip.width * hZoom);
-
-            // Solo renderizar si el clip es visible horizontalmente
-            if (xPos + wPos > 0 && xPos < getWidth()) {
-              juce::Rectangle<int> clipSummaryRect(
-                  xPos, summaryArea.getY(), wPos, summaryArea.getHeight());
-
-              if (clip.linkedAudio != nullptr) {
-                double clipUnits = (double)clip.startX;
-                double viewUnits = (double)hS / hZoom;
-                WaveformRenderer::drawWaveformSummary(
-                    g, *clip.linkedAudio, clipSummaryRect.toFloat(), hZoom,
-                    clipUnits, viewUnits);
-              } else if (clip.linkedMidi != nullptr) {
-                MidiClipRenderer::drawMidiSummary(
-                    g, *clip.linkedMidi, clipSummaryRect, (float)hZoom,
-                    (float)hS, folderMinP, folderMaxP);
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  for (int i = 0; i < (int)clips.size(); ++i) {
-    const auto &clip = clips[i];
-
-    // --- CULLING HORIZONTAL REAL ---
-    if (clip.startX + clip.width < visibleTimeStart ||
-        clip.startX > visibleTimeEnd)
-      continue;
-
-    int yPos = -1;
-    if (trackYCache.count(clip.trackPtr))
-      yPos = trackYCache[clip.trackPtr];
-
-    // BUG FIX: Si el track está oculto por una carpeta, yPos será -1. Ignoramos
-    // este clip.
-    if (yPos == -1)
-      continue;
-
-    int clipTop = yPos;
-    int clipBottom = yPos + (int)trackHeight;
-
-    // Culling vertical correcto: omitimos si el clip completo está por encima o
-    // por debajo de la ventana
-    if (clipBottom < topOffset || clipTop > getHeight())
-      continue;
-
-    // BLINDAJE DE COORDENADAS (Anti-Overflow): Usamos las coordenadas reales sin recorte para mantener el anclaje
-    float exactXPos = (float)(clip.startX * hZoom - (double)hS);
-    float exactWPos = (float)(clip.width * hZoom);
-    juce::Rectangle<float> clipRectF(exactXPos, (float)(yPos + 2),
-                                     exactWPos - 1.0f,
-                                     (float)((int)trackHeight - 4));
-
-    // NO USAMOS INTERSECTION: El renderizador necesita la X original para calcular las muestras correctamente
-    if (clipRectF.getRight() < 0 || clipRectF.getX() > getWidth())
-      continue;
-
-
-    juce::Colour trackColor = clip.trackPtr->getColor();
-
-    bool isMutedLocally = (clip.linkedAudio && clip.linkedAudio->isMuted) ||
-                          (clip.linkedMidi && clip.linkedMidi->isMuted);
-    float alphaMult = isMutedLocally ? 0.3f : 1.0f;
-    g.setOpacity(alphaMult);
-
-    // 1. Dibujar el Clip
-    if (clip.linkedAudio != nullptr) {
-        // --- LÓGICA DE AUDIO (Shell estándar) ---
-        g.setColour(trackColor.darker(0.8f).withAlpha(1.0f));
-        g.fillRoundedRectangle(clipRectF, 5.0f);
-
-        juce::Rectangle<float> headerRectF = clipRectF.withHeight(14.0f);
-        g.setColour(trackColor.darker(0.8f).withAlpha(0.4f)); 
-        g.fillRoundedRectangle(headerRectF, 5.0f);
-        
-        g.setColour(juce::Colours::white);
-        g.setFont(juce::Font(11.0f, juce::Font::bold));
-        g.drawText(" " + clip.name, headerRectF.reduced(3.0f, 0.0f).toNearestInt(),
-                   juce::Justification::centredLeft, true);
-
-        juce::Rectangle<float> innerAreaF = clipRectF.withTrimmedTop(18.0f);
-        double clipUnits = (double)clip.startX;
-        double viewUnits = (double)hS / hZoom;
-        WaveformRenderer::drawWaveform(
-            g, *clip.linkedAudio, innerAreaF, trackColor,
-            clip.trackPtr->getWaveformViewMode(), hZoom, clipUnits, viewUnits);
-    }
-    else if (clip.linkedMidi != nullptr) {
-        // --- LÓGICA DE MIDI (Delegación total al Renderer basado en Estilos) ---
-        MidiClipRenderer::drawMidiClip(
-            g, *clip.linkedMidi, clipRectF.toNearestInt(), trackColor, clip.name,
-            clip.trackPtr->isInlineEditingActive, hZoom, hS, (double)playheadAbsPos);
-    }
-
-    // 4. Indicador de selección (Universal)
-    if (std::find(selectedClipIndices.begin(), selectedClipIndices.end(), i) !=
-        selectedClipIndices.end()) {
-      g.setColour(juce::Colours::yellow);
-      g.drawRoundedRectangle(clipRectF, 5.0f, 1.5f);
-    }
-
-    g.setOpacity(1.0f);
-  }
-
-  // --- NUEVO: RENDERIZADO DE PISTAS DE LOUDNESS ---
-  if (tracksRef) {
-      for (auto* t : *tracksRef) {
-          if (t->getType() == TrackType::Loudness) {
-              int yPos = trackYCache.count(t) ? trackYCache[t] : -1;
-              if (yPos == -1) continue;
-
-              juce::Rectangle<float> loudnessArea(0.0f, (float)(yPos + 2), (float)getWidth(), (float)(trackHeight - 4));
-              LoudnessRenderer::drawLoudnessTrack(g, loudnessArea, t, (float)hZoom, (float)hS);
-          } else if (t->getType() == TrackType::Balance) {
-              int yPos = trackYCache.count(t) ? trackYCache[t] : -1;
-              if (yPos == -1) continue;
-
-              juce::Rectangle<int> balanceArea(0, yPos + 2, getWidth(), (int)trackHeight - 4);
-              BalanceRenderer::drawBalanceTrack(g, t->balanceHistory, balanceArea, hZoom, (double)hS);
-          } else if (t->getType() == TrackType::MidSide) {
-              int yPos = trackYCache.count(t) ? trackYCache[t] : -1;
-              if (yPos == -1) continue;
-
-              juce::Rectangle<int> midSideArea(0, yPos + 2, getWidth(), (int)trackHeight - 4);
-              MidSideRenderer::drawMidSideTrack(g, t->midSideHistory, midSideArea, hZoom, (double)hS);
-          }
-      }
-  }
-
-  // --- NUEVO: RENDERIZADO DE AUTOMATION OVERLAYS (ABLETON STYLE) ---
-  if (tracksRef) {
-    for (auto *t : *tracksRef) {
-      if (!t->isShowingInChildren)
-        continue;
-
-      for (auto *aut : t->automationClips) {
-        if (aut && aut->isShowing) {
-          int yPos = getTrackY(t);
-          if (yPos == -1)
-            continue;
-          if (yPos + (int)trackHeight < topOffset || yPos > getHeight())
-            continue;
-
-          juce::Rectangle<int> laneRect(0, yPos, getWidth(), (int)trackHeight);
-          AutomationRenderer::drawAutomationLane(
-              g, laneRect, aut, hZoom, (float)hS, hoveredAutoClip == aut);
-        }
-      }
-    }
-  }
+  // 5. Dibujar capas de automatización (Ableton Style)
+  PlaylistRenderer::drawAutomationOverlays(g, ctx, trackYCache);
 
   g.restoreState();
 
-  g.setColour(juce::Colour(20, 22, 25));
-  g.fillRect(0, menuBarH + navigatorH, getWidth(), timelineH);
+  // 6. Dibujar la regla de tiempos (Ruler)
+  PlaylistGridRenderer::drawTimelineRuler(g, menuBarH, navigatorH, timelineH, getWidth(), 
+                                          hS, hZoom, getTimelineLength());
 
-  g.setColour(juce::Colours::white.withAlpha(0.6f));
-  g.setFont(12.0f);
+  // 7. Dibujar el cabezal de reproducción (Playhead)
+  PlaylistGridRenderer::drawPlayhead(g, playheadAbsPos, hZoom, hS, menuBarH, navigatorH, 
+                                     getWidth(), getHeight());
 
-  double pixelsPerMeasure = 320.0 * hZoom;
-  int measureMod = 1;
-  if (pixelsPerMeasure < 15.0)
-    measureMod = 16;
-  else if (pixelsPerMeasure < 30.0)
-    measureMod = 8;
-  else if (pixelsPerMeasure < 60.0)
-    measureMod = 4;
-  else if (pixelsPerMeasure < 120.0)
-    measureMod = 2;
-
-  for (double i = 0; i <= getTimelineLength(); i += 80.0) {
-    int dx = (int)(i * hZoom - hS);
-    if (dx < 0 || dx > getWidth())
-      continue;
-
-    if (std::fmod(i, 320.0) == 0.0) {
-      int measureNumber = (int)(i / 320.0) + 1;
-      g.drawVerticalLine(dx, (float)(menuBarH + navigatorH + timelineH - 12),
-                         (float)(menuBarH + navigatorH + timelineH));
-
-      if (measureMod == 1 || (measureNumber - 1) % measureMod == 0) {
-        g.drawText(juce::String(measureNumber), dx + 4, menuBarH + navigatorH,
-                   40, timelineH, juce::Justification::centredLeft, false);
-      }
-    } else {
-      if (pixelsPerMeasure >= 30.0) {
-        g.drawVerticalLine(dx, (float)(menuBarH + navigatorH + timelineH - 6),
-                           (float)(menuBarH + navigatorH + timelineH));
-      }
-    }
-  }
-
-  int phX = (int)(playheadAbsPos * hZoom) - (int)hS;
-  if (phX >= 0 && phX <= getWidth()) {
-    float phTop = (float)(menuBarH + navigatorH);
-    float phBottom = (float)getHeight();
-
-    // 1. Cola difuminada (Fade estela)
-    int tailWidth = 40; // Pixels
-    juce::Rectangle<float> tailRect(phX - tailWidth, phTop, tailWidth,
-                                    phBottom - phTop);
-    juce::ColourGradient tailGrad(
-        juce::Colours::transparentWhite, phX - tailWidth, 0.0f,
-        juce::Colours::white.withAlpha(0.15f), phX, 0.0f,
-        false // horizontal
-    );
-    g.setGradientFill(tailGrad);
-    g.fillRect(tailRect);
-
-    // 2. Línea principal (Blanca)
-    g.setColour(juce::Colours::white.withAlpha(0.85f));
-    g.drawVerticalLine(phX, phTop, phBottom);
-
-    // 3. Triángulo invertido en el timeline (simétrico)
-    juce::Path triangle;
-    float triTopY = phTop;
-    float triHeight = 8.0f;
-    float triHalfWidth = 6.0f;
-
-    triangle.addTriangle(phX - triHalfWidth, triTopY, phX + triHalfWidth,
-                         triTopY, phX, triTopY + triHeight);
-
-    g.setColour(juce::Colours::white.withAlpha(0.9f));
-    g.fillPath(triangle);
-  }
-
-  if (isExternalFileDragging || isInternalDragging) {
-    g.fillAll(juce::Colours::dodgerblue.withAlpha(0.2f));
-    g.setColour(juce::Colours::white);
-    juce::String overlayText =
-        isInternalDragging ? "SUELTA EL CLIP AQUI" : "SUELTA TU AUDIO AQUI";
-    g.drawText(overlayText, getLocalBounds(), juce::Justification::centred);
-  }
+  // 8. Dibujar overlays de arrastre (Drag & Drop)
+  PlaylistRenderer::drawDragOverlays(g, ctx);
 }
+
 
 void PlaylistComponent::resized() {
   menuBar.setBounds(0, 0, getWidth(), menuBarH);
@@ -761,17 +331,11 @@ void PlaylistComponent::mouseWheelMove(const juce::MouseEvent &e,
 }
 
 int PlaylistComponent::getClipAt(int x, int y) const {
-  int tIdx = getTrackAtY(y);
-  if (tIdx == -1)
-    return -1;
-  float absX = getAbsoluteXFromMouse(x);
-  for (int i = (int)clips.size() - 1; i >= 0; --i) {
-    if (clips[i].trackPtr == (*tracksRef)[tIdx] && absX >= clips[i].startX &&
-        absX <= clips[i].startX + clips[i].width)
-      return i;
-  }
-  return -1;
+  return PlaylistCoordinateUtils::getClipAt(x, y, hNavigator, hZoom, 
+                                            menuBarH + navigatorH + timelineH, 
+                                            vBar, tracksRef, trackHeight, clips);
 }
+
 
 void PlaylistComponent::mouseDown(const juce::MouseEvent &e) {
   if (e.y >= menuBarH + navigatorH && e.y < menuBarH + navigatorH + timelineH) {
@@ -833,6 +397,8 @@ void PlaylistComponent::mouseMove(const juce::MouseEvent &e) {
   if (activeTool)
     activeTool->mouseMove(e, *this);
 }
+
+void PlaylistComponent::lookAndFeelChanged() { repaint(); }
 
 bool PlaylistComponent::isInterestedInFileDrag(const juce::StringArray &) {
   return true;

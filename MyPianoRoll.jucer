@@ -29,6 +29,12 @@
           <FILE id="ofhMlj" name="OrionPlugin.h" compile="0" resource="0" file="Source/Native_Plugins/Orion/OrionPlugin.h"/>
           <FILE id="Az01y0" name="OrionSynth.h" compile="0" resource="0" file="Source/Native_Plugins/Orion/OrionSynth.h"/>
         </GROUP>
+        <GROUP id="{AD624843-9063-AD8D-CB01-CB252C6CEC43}" name="PatternInlineEQ">
+          <FILE id="Xi398H" name="PatternInlineEQ_DSP.h" compile="0" resource="0"
+                file="Source/Native_Plugins/PatternInlineEQ/PatternInlineEQ_DSP.h"/>
+          <FILE id="bsBDPM" name="PatternInlineEQ_GUI.h" compile="0" resource="0"
+                file="Source/Native_Plugins/PatternInlineEQ/PatternInlineEQ_GUI.h"/>
+        </GROUP>
         <FILE id="fK5R3n" name="BaseEffect.h" compile="0" resource="0" file="Source/Native_Plugins/BaseEffect.h"/>
         <FILE id="ghMFvY" name="UtilityPlugin.h" compile="0" resource="0" file="Source/Native_Plugins/UtilityPlugin.h"/>
       </GROUP>
@@ -210,14 +216,31 @@
           <FILE id="Rb4h8T" name="PointerTool.h" compile="0" resource="0" file="Source/Playlist/Tools/PointerTool.h"/>
           <FILE id="a71jBQ" name="ScissorTool.h" compile="0" resource="0" file="Source/Playlist/Tools/ScissorTool.h"/>
         </GROUP>
+        <GROUP id="{F187422B-6710-CE50-3D96-5BAC7A6F4D92}" name="View">
+          <FILE id="QHa1gj" name="PlaylistGridRenderer.cpp" compile="1" resource="0"
+                file="Source/Playlist/View/PlaylistGridRenderer.cpp"/>
+          <FILE id="FV88xY" name="PlaylistGridRenderer.h" compile="0" resource="0"
+                file="Source/Playlist/View/PlaylistGridRenderer.h"/>
+          <FILE id="AfthBd" name="PlaylistRenderer.cpp" compile="1" resource="0"
+                file="Source/Playlist/View/PlaylistRenderer.cpp"/>
+          <FILE id="Fzyyoq" name="PlaylistRenderer.h" compile="0" resource="0"
+                file="Source/Playlist/View/PlaylistRenderer.h"/>
+        </GROUP>
         <FILE id="o2lDTG" name="PlaylistActionHandler.cpp" compile="1" resource="0"
               file="Source/Playlist/PlaylistActionHandler.cpp"/>
         <FILE id="VP0zYc" name="PlaylistActionHandler.h" compile="0" resource="0"
               file="Source/Playlist/PlaylistActionHandler.h"/>
+        <FILE id="cxXkiU" name="PlaylistAnalyzer.cpp" compile="1" resource="0"
+              file="Source/Playlist/PlaylistAnalyzer.cpp"/>
+        <FILE id="WUuTcv" name="PlaylistAnalyzer.h" compile="0" resource="0"
+              file="Source/Playlist/PlaylistAnalyzer.h"/>
+        <FILE id="OEu7kF" name="PlaylistClip.h" compile="0" resource="0" file="Source/Playlist/PlaylistClip.h"/>
         <FILE id="FGYWeA" name="PlaylistComponent.cpp" compile="1" resource="0"
               file="Source/Playlist/PlaylistComponent.cpp"/>
         <FILE id="UCnxE5" name="PlaylistComponent.h" compile="0" resource="0"
               file="Source/Playlist/PlaylistComponent.h"/>
+        <FILE id="O3DuVG" name="PlaylistCoordinateUtils.h" compile="0" resource="0"
+              file="Source/Playlist/PlaylistCoordinateUtils.h"/>
         <FILE id="JGCRS4" name="PlaylistDropHandler.cpp" compile="1" resource="0"
               file="Source/Playlist/PlaylistDropHandler.cpp"/>
         <FILE id="S4Ql0Q" name="PlaylistDropHandler.h" compile="0" resource="0"

@@ -1,6 +1,5 @@
-#pragma once
+﻿#pragma once
 #include <JuceHeader.h>
-#include "PlaylistClip.h"
 #include <vector>
 #include <memory>
 #include <functional> 
@@ -11,6 +10,14 @@
 #include "ScrollBar/PlaylistNavigator.h" 
 #include "ScrollBar/VerticalNavigator.h" 
 
+struct TrackClip {
+    Track* trackPtr;
+    float startX;
+    float width;
+    juce::String name;
+    AudioClipData* linkedAudio = nullptr;
+    MidiClipData* linkedMidi = nullptr;
+};
 
 class PlaylistComponent : public juce::Component,
     public juce::FileDragAndDropTarget,
@@ -127,7 +134,7 @@ public:
 
     void paint(juce::Graphics& g) override;
     void resized() override;
-    void lookAndFeelChanged() override;
+    void lookAndFeelChanged() override { repaint(); }
     void drawMinimap(juce::Graphics& g, juce::Rectangle<int> bounds);
 
     void mouseDown(const juce::MouseEvent& e) override;
