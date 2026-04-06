@@ -19,10 +19,12 @@ enum class MidiStyleType {
 struct MidiStyleRecipe {
     juce::Colour backgroundColor;
     juce::Colour noteColor;
+    juce::Colour activeNoteColor;
     juce::Colour noteBorder;
     bool drawBackground = true;
     bool drawHeaderBackground = true;
     bool useGradient = false;
+    bool activeUseGradient = false;
     bool useBackgroundGradient = false;
     float noteCornerRadius = 1.0f;
 };
@@ -40,16 +42,19 @@ public:
         switch (style)
         {
         case MidiStyleType::Classic:
-            recipe.backgroundColor = trackColor.darker(0.1f); // Menos oscuro, más integrado
-            recipe.noteColor = juce::Colours::black.withAlpha(0.6f);
+            recipe.backgroundColor = trackColor.darker(0.1f);
+            recipe.noteColor = juce::Colours::black;
+            recipe.activeNoteColor = juce::Colours::black.withAlpha(0.5f); // Se vuelve traslúcido al sonar
+            recipe.activeUseGradient = false; 
             recipe.noteBorder = juce::Colours::black.withAlpha(0.2f);
             recipe.drawBackground = true;
-            recipe.drawHeaderBackground = false; // Sin cabezal oscuro separado
+            recipe.drawHeaderBackground = false;
             break;
 
         case MidiStyleType::Modern:
-            recipe.backgroundColor = juce::Colour(20, 20, 20); // Negro mate premium
-            recipe.noteColor = trackColor; // Brillante como el transparente
+            recipe.backgroundColor = juce::Colour(20, 20, 20);
+            recipe.noteColor = trackColor;
+            recipe.activeNoteColor = trackColor.brighter(0.8f);
             recipe.noteBorder = trackColor.brighter(0.5f).withAlpha(0.4f);
             recipe.drawBackground = true;
             recipe.drawHeaderBackground = false; 
@@ -58,20 +63,22 @@ public:
         case MidiStyleType::Minimal:
             recipe.backgroundColor = juce::Colours::transparentBlack;
             recipe.noteColor = trackColor;
+            recipe.activeNoteColor = trackColor.brighter(0.8f);
             recipe.noteBorder = trackColor.brighter(0.5f).withAlpha(0.3f);
             recipe.drawBackground = false;
             recipe.drawHeaderBackground = false;
             break;
 
         case MidiStyleType::Gradient:
-            recipe.backgroundColor = juce::Colour(15, 15, 15); // Negro mate profundo
+            recipe.backgroundColor = juce::Colour(15, 15, 15);
             recipe.noteColor = trackColor;
+            recipe.activeNoteColor = trackColor.brighter(0.8f);
             recipe.noteBorder = trackColor.brighter(0.6f).withAlpha(0.5f);
             recipe.drawBackground = true;
             recipe.drawHeaderBackground = false;
             recipe.useGradient = true;
             recipe.useBackgroundGradient = true;
-            recipe.noteCornerRadius = 2.5f; // Casi cápsula para el alto de 5px
+            recipe.noteCornerRadius = 2.5f;
             break;
         }
 

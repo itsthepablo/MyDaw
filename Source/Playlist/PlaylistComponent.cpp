@@ -550,7 +550,7 @@ void PlaylistComponent::paint(juce::Graphics &g) {
         // --- LÓGICA DE MIDI (Delegación total al Renderer basado en Estilos) ---
         MidiClipRenderer::drawMidiClip(
             g, *clip.linkedMidi, clipRectF.toNearestInt(), trackColor, clip.name,
-            clip.trackPtr->isInlineEditingActive, hZoom, hS);
+            clip.trackPtr->isInlineEditingActive, hZoom, hS, (double)playheadAbsPos);
     }
 
     // 4. Indicador de selección (Universal)

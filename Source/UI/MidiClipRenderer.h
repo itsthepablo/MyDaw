@@ -15,7 +15,8 @@ public:
         juce::String name,
         bool isInlineEditingActive,
         float hZoom,
-        float hS)
+        float hS,
+        double playheadPos = -1.0)
     {
         g.saveState();
         
@@ -147,17 +148,30 @@ public:
 
                 juce::Rectangle<float> miniNoteRect((float)noteScreenX, noteY, (float)noteScreenW, 5.0f);
 
-                if (recipe.useGradient) {
-                    juce::ColourGradient cg(recipe.noteColor.brighter(0.4f), miniNoteRect.getX(), miniNoteRect.getY(),
-                                            recipe.noteColor.darker(0.1f), miniNoteRect.getX(), miniNoteRect.getBottom(), false);
+                // --- NUEVO: EFECTO ACTIVE GLOW (Al pasar el Cabezal) ---
+                bool isActive = (playheadPos >= worldX && playheadPos <= (worldX + note.width));
+                juce::Colour finalNoteColor = isActive ? recipe.activeNoteColor : recipe.noteColor;
+                
+                if (isActive && recipe.activeUseGradient) {
+                    // Gradiente Especial para Classic (Reflejo Blanco sobre Negro)
+                    juce::Colour highlightColor = juce::Colours::white.withAlpha(0.9f);
+                    juce::ColourGradient cg(highlightColor, miniNoteRect.getX(), miniNoteRect.getY(),
+                                            recipe.activeNoteColor, miniNoteRect.getX(), miniNoteRect.getBottom(), false);
+                    g.setGradientFill(cg);
+                }
+                else if (recipe.useGradient || (isActive && !recipe.activeUseGradient)) {
+                    // Gradiente de Neón para los otros estilos (Glow)
+                    juce::Colour topColor = isActive ? recipe.activeNoteColor : recipe.noteColor.brighter(0.4f);
+                    juce::ColourGradient cg(topColor, miniNoteRect.getX(), miniNoteRect.getY(),
+                                            recipe.activeNoteColor.darker(0.1f), miniNoteRect.getX(), miniNoteRect.getBottom(), false);
                     g.setGradientFill(cg);
                 } else {
-                    g.setColour(recipe.noteColor);
+                    g.setColour(finalNoteColor);
                 }
                 
                 g.fillRoundedRectangle(miniNoteRect, recipe.noteCornerRadius);
 
-                g.setColour(recipe.noteBorder);
+                g.setColour(isActive ? finalNoteColor.brighter(0.2f) : recipe.noteBorder);
                 g.drawRoundedRectangle(miniNoteRect, recipe.noteCornerRadius, 1.0f);
             }
         }
