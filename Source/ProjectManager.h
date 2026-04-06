@@ -29,6 +29,7 @@ public:
                 mcTree.setProperty("name", mc->name, nullptr);
                 mcTree.setProperty("startX", mc->startX, nullptr);
                 mcTree.setProperty("width", mc->width, nullptr);
+                mcTree.setProperty("style", (int)mc->style, nullptr);
 
                 juce::ValueTree notesNode("NOTES");
                 for (auto& note : mc->notes)
@@ -102,6 +103,7 @@ public:
                         midi->name = cTree.getProperty("name");
                         midi->startX = cTree.getProperty("startX");
                         midi->width = cTree.getProperty("width");
+                        midi->style = (MidiStyleType)(int)cTree.getProperty("style", 0);
 
                         juce::ValueTree notesTree = cTree.getChildWithName("NOTES");
                         for (auto nTree : notesTree)

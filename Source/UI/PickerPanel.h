@@ -163,7 +163,7 @@ public:
         if (item.type == 1 && item.midiRef != nullptr) {
             float miniZoom = (float)clipRect.getWidth() / std::max(10.0f, item.midiRef->width);
             float startOffset = item.midiRef->startX * miniZoom;
-            MidiClipRenderer::drawMidiClip(g, *item.midiRef, clipRect, item.color, false, miniZoom, startOffset);
+            MidiClipRenderer::drawMidiClip(g, *item.midiRef, clipRect, item.color, item.name, false, miniZoom, startOffset);
         }
         else if (item.type == 0 && item.audioRef != nullptr) {
             double miniZoom = (double)clipRect.getWidth() / std::max(0.1, (double)item.audioRef->width);

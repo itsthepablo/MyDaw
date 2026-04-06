@@ -33,6 +33,8 @@
         <FILE id="ghMFvY" name="UtilityPlugin.h" compile="0" resource="0" file="Source/Native_Plugins/UtilityPlugin.h"/>
       </GROUP>
       <GROUP id="{721FC522-4CF1-05D4-BC36-D97CDC4B59FC}" name="UI">
+        <FILE id="arQwvG" name="MidiPatternStyles.h" compile="0" resource="0"
+              file="Source/UI/MidiPatternStyles.h"/>
         <GROUP id="{B6357D25-D9E2-3C4A-AA66-543D29690500}" name="Loudness">
           <FILE id="nhC3ZN" name="LoudnessMeter.h" compile="0" resource="0" file="Source/UI/Loudness/LoudnessMeter.h"/>
         </GROUP>
@@ -130,8 +132,6 @@
         <GROUP id="{40222405-9D28-4BAE-EA86-5F09BF1D9754}" name="Nodes">
           <FILE id="y7s4xb" name="MetronomeProcessor.h" compile="0" resource="0"
                 file="Source/Engine/Nodes/MetronomeProcessor.h"/>
-          <FILE id="P2VdhR" name="MidiPatternEngine.h" compile="0" resource="0"
-                file="Source/Engine/Nodes/MidiPatternEngine.h"/>
           <FILE id="pAxzFs" name="TrackProcessor.h" compile="0" resource="0"
                 file="Source/Engine/Nodes/TrackProcessor.h"/>
         </GROUP>

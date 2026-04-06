@@ -7,6 +7,7 @@
 #include "../Engine/SimpleBalance.h"
 #include "../Engine/SimpleMidSide.h"
 #include "AudioClipData.h"
+#include "../UI/MidiPatternStyles.h"
 #include <juce_dsp/juce_dsp.h>
 #include <map>
 #include <map>
@@ -39,6 +40,7 @@ struct MidiClipData {
     bool isSelected = false;
     std::vector<Note> notes;
     juce::Colour color;
+    MidiStyleType style = MidiStyleType::Classic;
 
     AutoLane autoVol;
     AutoLane autoPan;
@@ -61,9 +63,10 @@ struct AudioClipSnapshot {
 };
 
 struct MidiNoteSnapshot {
-    int   pitch = 0;
-    int   x     = 0;
-    int   width = 0;
+    int    pitch     = 0;
+    int    x         = 0;
+    int    width     = 0;
+    double frequency = 0.0;
 };
 
 struct MidiClipSnapshot {
@@ -71,6 +74,7 @@ struct MidiClipSnapshot {
     float width   = 320.0f;
     float offsetX = 0.0f;
     bool  isMuted = false;
+    MidiStyleType style = MidiStyleType::Classic;
     std::vector<MidiNoteSnapshot> notes;
 };
 
@@ -378,16 +382,17 @@ public:
             mcs.width   = mc->width;
             mcs.offsetX = mc->offsetX;
             mcs.isMuted = mc->isMuted;
+            mcs.style   = mc->style;
             mcs.notes.reserve(mc->notes.size());
             for (const auto& n : mc->notes) {
-                mcs.notes.push_back({ n.pitch, n.x, n.width });
+                mcs.notes.push_back({ n.pitch, n.x, n.width, n.frequency });
             }
             snap->midiClips.push_back(std::move(mcs));
         }
 
         snap->notes.reserve(notes.size());
         for (const auto& n : notes) {
-            snap->notes.push_back({ n.pitch, n.x, n.width });
+            snap->notes.push_back({ n.pitch, n.x, n.width, n.frequency });
         }
 
         snap->automations.reserve(automationClips.size());

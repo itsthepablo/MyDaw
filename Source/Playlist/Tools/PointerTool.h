@@ -92,6 +92,14 @@ public:
                 if (linkedMidi != nullptr) {
                     m.addItem(1, "Make Unique");
                     m.addItem(2, "Rename");
+                    
+                    juce::PopupMenu styleMenu;
+                    styleMenu.addItem(10, "Classic (Colored BG)", true, linkedMidi->style == MidiStyleType::Classic);
+                    styleMenu.addItem(11, "Modern (Dark BG)", true, linkedMidi->style == MidiStyleType::Modern);
+                    styleMenu.addItem(12, "Minimal (Transparent)", true, linkedMidi->style == MidiStyleType::Minimal);
+                    styleMenu.addItem(13, "Gradient (Neon Round)", true, linkedMidi->style == MidiStyleType::Gradient);
+                    m.addSubMenu("Midi Style", styleMenu);
+
                     m.addSeparator();
                 }
                 m.addItem(3, "Eliminar Clip");
@@ -159,6 +167,11 @@ public:
                                 juce::MessageManager::callAsync([alert]() { delete alert; });
                                 }));
                             });
+                    }
+                    else if (result >= 10 && result <= 13 && sourceMidi) {
+                        sourceMidi->style = (MidiStyleType)(result - 10);
+                        if (targetTrack) targetTrack->commitSnapshot();
+                        p.repaint();
                     }
                     });
                 return;

@@ -1,6 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include "../Tracks/Track.h"
+#include "MidiPatternStyles.h"
 #include <algorithm>
 #include <cmath>
 #include <vector>
@@ -10,15 +11,47 @@ public:
     static void drawMidiClip(juce::Graphics& g,
         const MidiClipData& clipData,
         juce::Rectangle<int> clipRect,
-        juce::Colour baseColor,
+        juce::Colour trackColor,
+        juce::String name,
         bool isInlineEditingActive,
         float hZoom,
         float hS)
     {
         g.saveState();
-        g.reduceClipRegion(clipRect);
+        
+        MidiStyleRecipe recipe = MidiStyleRegistry::getRecipe(clipData.style, trackColor);
 
-        // --- 1. FONDO DE EDICIÓN INLINE ---
+        // --- 1. FONDO DEL CLIP (Sólido o Degradado) ---
+        if (recipe.drawBackground) {
+            if (recipe.useBackgroundGradient) {
+                juce::ColourGradient cg(trackColor.darker(0.6f), (float)clipRect.getX(), (float)clipRect.getY(),
+                                        juce::Colour(10, 10, 10), (float)clipRect.getX(), (float)clipRect.getBottom(), false);
+                g.setGradientFill(cg);
+            } else {
+                g.setColour(recipe.backgroundColor);
+            }
+            g.fillRoundedRectangle(clipRect.toFloat(), 5.0f);
+        }
+
+        // --- 2. CABECERA (Header) y NOMBRE ---
+        juce::Rectangle<float> headerRect = clipRect.withHeight(14.0f).toFloat();
+        if (recipe.drawHeaderBackground) {
+            g.setColour(recipe.backgroundColor.withAlpha(0.4f)); 
+            g.fillRoundedRectangle(headerRect, 5.0f);
+            
+            g.setColour(juce::Colours::black.withAlpha(0.15f));
+            g.drawHorizontalLine((int)headerRect.getBottom(), (float)clipRect.getX(), (float)clipRect.getRight());
+        }
+
+        // Texto del nombre (Premium: sincronizado con el color de nota del estilo)
+        g.setColour(recipe.noteColor);
+        g.setFont(juce::Font(11.0f, juce::Font::bold));
+        g.drawText(" " + name, headerRect.reduced(3.0f, 0.0f).toNearestInt(),
+                   juce::Justification::centredLeft, true);
+
+        // --- 3. ÁREA INTERNA (Notas y Automatización) ---
+        g.reduceClipRegion(clipRect); // Culling
+
         if (isInlineEditingActive) {
             g.setColour(juce::Colours::white.withAlpha(0.1f));
             g.fillRoundedRectangle(clipRect.toFloat(), 4.0f);
@@ -114,19 +147,21 @@ public:
 
                 juce::Rectangle<float> miniNoteRect((float)noteScreenX, noteY, (float)noteScreenW, 5.0f);
 
-                g.setColour(baseColor.brighter(0.5f));
-                g.fillRoundedRectangle(miniNoteRect, 1.0f);
+                if (recipe.useGradient) {
+                    juce::ColourGradient cg(recipe.noteColor.brighter(0.4f), miniNoteRect.getX(), miniNoteRect.getY(),
+                                            recipe.noteColor.darker(0.1f), miniNoteRect.getX(), miniNoteRect.getBottom(), false);
+                    g.setGradientFill(cg);
+                } else {
+                    g.setColour(recipe.noteColor);
+                }
+                
+                g.fillRoundedRectangle(miniNoteRect, recipe.noteCornerRadius);
 
-                g.setColour(juce::Colours::black.withAlpha(0.8f));
-                g.drawRoundedRectangle(miniNoteRect, 1.0f, 1.0f);
+                g.setColour(recipe.noteBorder);
+                g.drawRoundedRectangle(miniNoteRect, recipe.noteCornerRadius, 1.0f);
             }
         }
-        else {
-            g.setColour(baseColor.withAlpha(0.3f));
-            for (int j = 6; j < clipRect.getHeight(); j += 10) {
-                g.drawHorizontalLine(clipRect.getY() + j, (float)clipRect.getX() + 2.0f, (float)clipRect.getRight() - 2.0f);
-            }
-        }
+        
         g.restoreState();
     }
 

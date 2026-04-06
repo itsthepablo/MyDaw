@@ -2,6 +2,7 @@
 #include "../Theme/CustomTheme.h"
 #include "../UI/AutomationRenderer.h"
 #include "../UI/MidiClipRenderer.h"
+#include "../UI/MidiPatternStyles.h"
 #include "../UI/WaveformRenderer.h"
 #include "PlaylistActionHandler.h"
 #include "PlaylistDropHandler.h"
@@ -523,38 +524,36 @@ void PlaylistComponent::paint(juce::Graphics &g) {
     float alphaMult = isMutedLocally ? 0.3f : 1.0f;
     g.setOpacity(alphaMult);
 
-    // 1. Fondo completo del clip (muy oscuro)
-    g.setColour(trackColor.darker(0.8f).withAlpha(1.0f));
-    g.fillRoundedRectangle(clipRectF, 5.0f);
-
-    // 2. Cabecera superior (Header) solo para el texto sin oscurecer base
-    juce::Rectangle<float> headerRectF = clipRectF.withHeight(18.0f);
-    g.setColour(trackColor.darker(0.8f).withAlpha(1.0f));
-    g.fillRoundedRectangle(headerRectF, 5.0f);
-    if (headerRectF.getHeight() > 5.0f)
-      g.fillRect(headerRectF.withTop(headerRectF.getBottom() - 5.0f));
-
-    // 3. Renderizar Onda o MIDI debajo del header
-    juce::Rectangle<float> innerAreaF = clipRectF.withTrimmedTop(18.0f);
-
+    // 1. Dibujar el Clip
     if (clip.linkedAudio != nullptr) {
-      double clipUnits = (double)clip.startX;
-      double viewUnits = (double)hS / hZoom;
-      WaveformRenderer::drawWaveform(
-          g, *clip.linkedAudio, innerAreaF, trackColor,
-          clip.trackPtr->getWaveformViewMode(), hZoom, clipUnits, viewUnits);
+        // --- LÓGICA DE AUDIO (Shell estándar) ---
+        g.setColour(trackColor.darker(0.8f).withAlpha(1.0f));
+        g.fillRoundedRectangle(clipRectF, 5.0f);
+
+        juce::Rectangle<float> headerRectF = clipRectF.withHeight(14.0f);
+        g.setColour(trackColor.darker(0.8f).withAlpha(0.4f)); 
+        g.fillRoundedRectangle(headerRectF, 5.0f);
+        
+        g.setColour(juce::Colours::white);
+        g.setFont(juce::Font(11.0f, juce::Font::bold));
+        g.drawText(" " + clip.name, headerRectF.reduced(3.0f, 0.0f).toNearestInt(),
+                   juce::Justification::centredLeft, true);
+
+        juce::Rectangle<float> innerAreaF = clipRectF.withTrimmedTop(18.0f);
+        double clipUnits = (double)clip.startX;
+        double viewUnits = (double)hS / hZoom;
+        WaveformRenderer::drawWaveform(
+            g, *clip.linkedAudio, innerAreaF, trackColor,
+            clip.trackPtr->getWaveformViewMode(), hZoom, clipUnits, viewUnits);
     }
-    if (clip.linkedMidi != nullptr) {
-      MidiClipRenderer::drawMidiClip(
-          g, *clip.linkedMidi, innerAreaF.toNearestInt(), trackColor,
-          clip.trackPtr->isInlineEditingActive, hZoom, hS);
+    else if (clip.linkedMidi != nullptr) {
+        // --- LÓGICA DE MIDI (Delegación total al Renderer basado en Estilos) ---
+        MidiClipRenderer::drawMidiClip(
+            g, *clip.linkedMidi, clipRectF.toNearestInt(), trackColor, clip.name,
+            clip.trackPtr->isInlineEditingActive, hZoom, hS);
     }
 
-    // 4. Escribir texto en su cabecera exclusiva
-    g.setColour(juce::Colours::white);
-    g.drawText(" " + clip.name, headerRectF.reduced(3.0f, 0.0f).toNearestInt(),
-               juce::Justification::centredLeft, true);
-
+    // 4. Indicador de selección (Universal)
     if (std::find(selectedClipIndices.begin(), selectedClipIndices.end(), i) !=
         selectedClipIndices.end()) {
       g.setColour(juce::Colours::yellow);
