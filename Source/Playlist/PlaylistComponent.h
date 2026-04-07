@@ -11,6 +11,7 @@
 #include "ScrollBar/PlaylistNavigator.h" 
 #include "ScrollBar/VerticalNavigator.h" 
 #include "../UI/Knobs/FloatingValueSlider.h"
+#include "../Native_Plugins/ChannelEQ/ChannelEQ_GUI.h"
 
 
 class PlaylistComponent : public juce::Component,
@@ -137,6 +138,8 @@ public:
     void mouseUp(const juce::MouseEvent& e) override;
     void mouseMove(const juce::MouseEvent& e) override;
     void mouseDoubleClick(const juce::MouseEvent& e) override;
+    
+    void setSelectedTrack(Track* t);
     void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override;
 
     bool keyPressed(const juce::KeyPress& key, juce::Component* originatingComponent) override;
@@ -168,6 +171,7 @@ public:
 
 private:
     std::unique_ptr<PlaylistTool> activeTool;
+    Track* currentVisualTrack = nullptr; // Guardia de recursión infinita
 
     float playheadAbsPos = 0.0f;
     double bpm = 120.0;
@@ -181,6 +185,8 @@ private:
     juce::TextButton masterMuteBtn;
     juce::TextButton masterSoloBtn;
     juce::Label masterLabel;
+
+    ChannelEQ_Editor eqEditor;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PlaylistComponent)
 };

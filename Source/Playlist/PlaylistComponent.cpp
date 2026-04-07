@@ -98,6 +98,8 @@ PlaylistComponent::PlaylistComponent() {
   masterPanSlider.setValue(0.0);
   masterPanSlider.setDoubleClickReturnValue(true, 0.0);
 
+  addAndMakeVisible(eqEditor);
+
   startTimerHz(60);
 }
 
@@ -129,6 +131,9 @@ void PlaylistComponent::setMasterTrack(Track *mt) {
       if (masterTrackPtr)
         masterTrackPtr->isSoloed = masterSoloBtn.getToggleState();
     };
+
+    // Vincular el EQ al Master por defecto
+    eqEditor.setDSP(&(mt->inlineEQ));
   }
 }
 
@@ -353,6 +358,18 @@ void PlaylistComponent::resized() {
   masterPanSlider.setBounds(masterArea.removeFromLeft(40).withSizeKeepingCentre(40, 40));
   masterVolSlider.setBounds(masterArea.removeFromLeft(40).withSizeKeepingCentre(40, 40));
 
+  // --- EQ EDITOR (CENTRO) ---
+  // Ocupa el espacio central entre el label/mute y los sliders de vol
+  // Reservamos 280px a la izquierda para los controles y 150 a la derecha para faders/vBar
+  int eqX = 280;
+  int eqW = juce::jmin(450, getWidth() - eqX - 150);
+  if (eqW > 100) {
+      eqEditor.setVisible(true);
+      eqEditor.setBounds(eqX, getHeight() - masterTrackH + 5, eqW, masterTrackH - 10);
+  } else {
+      eqEditor.setVisible(false);
+  }
+
   updateScrollBars();
 }
 
@@ -422,6 +439,7 @@ int PlaylistComponent::getClipAt(int x, int y) const {
 
 
 void PlaylistComponent::mouseDown(const juce::MouseEvent &e) {
+  // 1. Manejo del Timeline
   if (e.y >= menuBarH + navigatorH && e.y < menuBarH + navigatorH + timelineH) {
     isDraggingTimeline = true;
     float newPos = juce::jmax(0.0f, getAbsoluteXFromMouse(e.x));
@@ -430,6 +448,14 @@ void PlaylistComponent::mouseDown(const juce::MouseEvent &e) {
       onPlayheadSeekRequested(newPos);
     return;
   }
+
+  // 2. Selección de Track Automática (Hacer clic en el carril de la pista)
+  int trackIdx = getTrackAtY(e.y);
+  if (trackIdx != -1 && tracksRef != nullptr && trackIdx < tracksRef->size()) {
+       setSelectedTrack((*tracksRef)[trackIdx]);
+  }
+
+  // 3. Delegar al Tool activo (Clips, Automation, etc.)
   if (activeTool)
     activeTool->mouseDown(e, *this);
 }
@@ -520,4 +546,14 @@ void PlaylistComponent::itemDropped(
     const juce::DragAndDropTarget::SourceDetails &dragSourceDetails) {
   isInternalDragging = false;
   PlaylistDropHandler::processInternalItem(dragSourceDetails, *this);
+}
+
+void PlaylistComponent::setSelectedTrack(Track* t) {
+    if (t != nullptr && t != currentVisualTrack) {
+        currentVisualTrack = t; // Marcar para evitar recursión infinita
+        eqEditor.setDSP(&(t->inlineEQ));
+        eqEditor.setTrackName(t->getName());
+        if (onClipSelected) onClipSelected(t);
+        repaint();
+    }
 }

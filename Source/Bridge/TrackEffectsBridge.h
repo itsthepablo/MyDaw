@@ -2,6 +2,7 @@
 #include <JuceHeader.h>
 #include "../Tracks/TrackContainer.h"
 #include "../Effects/EffectsPanel.h"
+#include "../Playlist/PlaylistComponent.h"
 #include "../Native_Plugins/UtilityPlugin.h" 
 #include "../Native_Plugins/Orion/OrionPlugin.h"
 
@@ -18,7 +19,8 @@ public:
         double& sampleRate,
         int& blockSize,
         AudioEngine& engine, 
-        std::function<void()> onEffectsOpened)
+        std::function<void()> onEffectsOpened,
+        PlaylistComponent* playlist = nullptr)
     {
         // --- HELPER PARA SINCRONIZAR TODAS LAS UIs ---
         auto refreshUIs = [&ui, &mixerUI, &miniMixerUI, masterChannelUI]() {
@@ -33,8 +35,9 @@ public:
             if (onEffectsOpened) onEffectsOpened();
         };
 
-        container.onActiveTrackChanged = [&ui](Track* t) {
+        container.onActiveTrackChanged = [&ui, playlist](Track* t) {
             ui.setTrack(t);
+            if (playlist) playlist->setSelectedTrack(t);
         };
 
         // --- LÓGICA COMPARTIDA DE CARGA VST3 ---

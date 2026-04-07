@@ -9,6 +9,7 @@
 #include "AudioClipData.h"
 #include "../UI/MidiPatternStyles.h"
 #include <juce_dsp/juce_dsp.h>
+#include "../Native_Plugins/ChannelEQ/ChannelEQ_DSP.h"
 #include <map>
 #include <map>
 #include <vector>
@@ -203,6 +204,8 @@ public:
 
         panSmoother.reset(sampleRate, 0.05);
         panSmoother.setCurrentAndTargetValue(balance);
+
+        inlineEQ.prepare(sampleRate, samplesPerBlock, 2);
     }
 
     WaveformViewMode getWaveformViewMode() const { return waveformViewMode; }
@@ -285,6 +288,9 @@ public:
     SimpleLoudness postLoudness;
     SimpleBalance  postBalance;
     SimpleMidSide  postMidSide;
+    
+    ChannelEQ_DSP inlineEQ;
+
     bool isAnalyzersPrepared = false;
 
     // --- LOUDNESS/ANALYSIS TRACK SPECIFIC ---

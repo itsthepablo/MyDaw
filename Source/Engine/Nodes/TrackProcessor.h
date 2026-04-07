@@ -190,7 +190,6 @@ public:
         }
 
         juce::AudioBuffer<float> mainProxyBuffer(track->audioBuffer.getArrayOfWritePointers(), track->audioBuffer.getNumChannels(), numSamples);
-        GainStationDSP::processPreFX(track, mainProxyBuffer);
 
         int numChannels = track->audioBuffer.getNumChannels();
         int safeChannels = juce::jmin(numChannels, 2);
@@ -241,6 +240,17 @@ public:
                 track->audioBuffer.addFrom(ch, 0, track->instrumentMixBuffer, ch, 0, numSamples);
             }
         }
+
+        // --- CHANNEL EQ (INLINE SOUND DESIGN) ---
+        // Se aplica inmediatamente como moldeado base del track (Audio + Sintetizador)
+        {
+            juce::dsp::AudioBlock<float> eqBlock(mainProxyBuffer);
+            track->inlineEQ.process(eqBlock);
+        }
+
+        // --- PRE-FX & GAIN STATION ---
+        // Medimos el sonido 'crudo' ecualizado antes de enviarlo a los plugins de inserción.
+        GainStationDSP::processPreFX(track, mainProxyBuffer);
 
         for (auto* p : track->plugins) {
             if (p != nullptr && p->isLoaded() && !p->getIsInstrument()) {
@@ -302,6 +312,8 @@ public:
             }
         }
 
+        // --- POST-FX & GAIN STATION ---
+        // Usamos mainProxyBuffer para medir unicamente los samples validos de este bloque.
         GainStationDSP::processPostFX(track, mainProxyBuffer);
 
         if (numChannels > 2) {

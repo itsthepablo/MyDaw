@@ -1,178 +1,308 @@
 #pragma once
 #include <JuceHeader.h>
-#include "PatternInlineEQ_DSP.h"
+#include "ChannelEQ_DSP.h"
+
+#include <cmath>
 
 /**
- * @class PatternInlineEQ_GUI
- * Clase estática de utilidad para renderizar el EQ y el FFT sobre los clips MIDI.
+ * @class ChannelEQ_Editor
+ * Interfaz de usuario de Grado Profesional (Estilo Serum) para el Channel EQ.
  */
-class PatternInlineEQ_GUI {
+class ChannelEQ_Editor : public juce::Component, public juce::Timer {
 public:
-    /**
-     * Dibuja el analizador FFT de fondo (Sombra espectral)
-     */
-    static void drawFFTAnalysis(juce::Graphics& g, 
-        const PatternInlineEQ_DSP& dsp, 
-        juce::Rectangle<int> bounds, 
-        juce::Colour trackColor)
+    ChannelEQ_Editor()
+        : b1HP("HP", juce::Colours::grey, juce::Colours::grey, juce::Colours::grey),
+          b1Bell("Bell", juce::Colours::grey, juce::Colours::grey, juce::Colours::grey),
+          b1LS("LS", juce::Colours::grey, juce::Colours::grey, juce::Colours::grey),
+          b2LP("LP", juce::Colours::grey, juce::Colours::grey, juce::Colours::grey),
+          b2Bell("Bell", juce::Colours::grey, juce::Colours::grey, juce::Colours::grey),
+          b2HS("HS", juce::Colours::grey, juce::Colours::grey, juce::Colours::grey)
     {
-        const auto& magnitudes = dsp.getMagnitudes();
-        if (magnitudes.empty()) return;
+        startTimerHz(60);
 
-        juce::Path fftPath;
-        const float width = (float)bounds.getWidth();
-        const float height = (float)bounds.getHeight();
-        const float bottom = (float)bounds.getBottom();
+        // --- CONFIGURACIÓN DE KNOBS (Estilo Cyan) ---
+        auto setupKnob = [this](juce::Slider& s, juce::Label& l, const juce::String& name, float min, float max, float def) {
+            s.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+            s.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+            s.setRange(min, max);
+            s.setValue(def);
+            s.setDoubleClickReturnValue(true, def);
+            s.setPopupDisplayEnabled(true, true, this); // Burbuja flotante nativa
+            s.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(0, 220, 255));
+            s.setColour(juce::Slider::thumbColourId, juce::Colours::white);
+            s.setColour(juce::Slider::textBoxTextColourId, juce::Colours::white);
+            addAndMakeVisible(s);
 
-        fftPath.startNewSubPath((float)bounds.getX(), bottom);
+            l.setText(name, juce::dontSendNotification);
+            l.setJustificationType(juce::Justification::centred);
+            l.setFont(juce::Font(10.0f, juce::Font::bold));
+            l.setColour(juce::Label::textColourId, juce::Colours::grey);
+            addAndMakeVisible(l);
 
-        for (int i = 0; i < (int)magnitudes.size(); ++i)
-        {
-            float skew = 1.0f; 
-            float xPercent = std::pow((float)i / (float)magnitudes.size(), 1.0f / 2.0f); // Mapeo Logarítmico simple
-            float x = (float)bounds.getX() + xPercent * width;
-            
-            float mag = magnitudes[i];
-            float y = bottom - (juce::jlimit(0.0f, 1.0f, mag * 2.0f) * height); // Ganancia visual boost x2
-
-            if (i == 0) fftPath.startNewSubPath(x, y);
-            else fftPath.lineTo(x, y);
-        }
-
-        fftPath.lineTo((float)bounds.getRight(), bottom);
-        fftPath.closeSubPath();
-
-        g.setColour(trackColor.withAlpha(0.15f));
-        g.fillPath(fftPath);
-        
-        g.setColour(trackColor.withAlpha(0.3f));
-        g.strokePath(fftPath, juce::PathStrokeType(1.0f));
-    }
-
-    /**
-     * Dibuja la curva de respuesta del EQ (Overlay interactivo)
-     */
-    static void drawEQCurve(juce::Graphics& g, 
-        const PatternInlineEQ_DSP& dsp, 
-        juce::Rectangle<int> bounds, 
-        juce::Colour trackColor)
-    {
-        const float width = (float)bounds.getWidth();
-        const float height = (float)bounds.getHeight();
-        const float midY = bounds.getCentreY();
-        const float gainRange = 18.0f; // +-18dB
-
-        // 1. DIBUJAR CURVA (Respuesta en magnitud aproximada)
-        g.setColour(juce::Colours::white.withAlpha(0.6f));
-        juce::Path curvePath;
-        
-        for (int x = 0; x <= (int)width; x += 3)
-        {
-            float freq = xToFrequency((float)x, width);
-            
-            // Aproximación rápida para la Playlist:
-            float totalGain = 0.0f;
-            
-            // Bell
-            float bellDist = std::abs(std::log10(freq) - std::log10(dsp.getBellFreq()));
-            if (bellDist < 0.3f) totalGain += dsp.getBellGain() * (1.0f - bellDist / 0.3f);
-            
-            // Shelfs
-            if (freq < dsp.getLSFreq()) totalGain += dsp.getLSGain();
-            if (freq > dsp.getHSFreq()) totalGain += dsp.getHSGain();
-            
-            // HP / LP (Visualización radical)
-            if (freq < dsp.getHP()) totalGain -= 60.0f;
-            if (freq > dsp.getLP()) totalGain -= 60.0f;
-
-            float y = midY - (juce::jlimit(-18.0f, 18.0f, totalGain) / gainRange) * (height / 2.0f);
-            
-            if (x == 0) curvePath.startNewSubPath((float)bounds.getX() + x, y);
-            else curvePath.lineTo((float)bounds.getX() + x, y);
-        }
-        g.strokePath(curvePath, juce::PathStrokeType(1.5f));
-
-        // 2. DIBUJAR NODOS INTERACTIVOS (5 Puntos)
-        struct NodeInfo { float f; float g; juce::Colour c; };
-        std::vector<NodeInfo> nodes = {
-            { dsp.getHP(), 0.0f, juce::Colours::red },
-            { dsp.getLSFreq(), dsp.getLSGain(), juce::Colours::orange },
-            { dsp.getBellFreq(), dsp.getBellGain(), juce::Colours::cyan },
-            { dsp.getHSFreq(), dsp.getHSGain(), juce::Colours::yellow },
-            { dsp.getLP(), 0.0f, juce::Colours::blue }
+            s.onValueChange = [this] { if (targetDSP) updateDSPFromUI(); };
         };
 
-        for (const auto& n : nodes)
-        {
-            float nx = (float)bounds.getX() + frequencyToX(n.f, width);
-            float ny = midY - (n.g / gainRange) * (height / 2.0f);
+        setupKnob(lowFreq, lowFreqLabel, "FREQ", 20.0f, 20000.0f, 150.0f);
+        lowFreq.setSkewFactorFromMidPoint(1000.0f);
+        setupKnob(lowQ, lowQLabel, "Q", 0.1f, 10.0f, 0.707f);
+        setupKnob(lowGain, lowGainLabel, "GAIN", -24.0f, 24.0f, 0.0f);
+
+        setupKnob(highFreq, highFreqLabel, "FREQ", 20.0f, 20000.0f, 5000.0f);
+        highFreq.setSkewFactorFromMidPoint(1000.0f);
+        setupKnob(highQ, highQLabel, "Q", 0.1f, 10.0f, 0.707f);
+        setupKnob(highGain, highGainLabel, "GAIN", -24.0f, 24.0f, 0.0f);
+
+        // --- BOTONES DE TIPO ---
+        auto setupTypeBtn = [this](juce::ShapeButton& b, int id, bool isBand1) {
+            b.setClickingTogglesState(true);
+            b.setRadioGroupId(isBand1 ? 100 : 200);
+            b.setColour(juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
             
-            g.setColour(juce::Colours::white);
-            g.fillEllipse(nx - 4.5f, ny - 4.5f, 9.0f, 9.0f);
-            g.setColour(n.c.withAlpha(0.8f));
-            g.drawEllipse(nx - 4.5f, ny - 4.5f, 9.0f, 9.0f, 1.5f);
-        }
-    }
-    
-    /**
-     * Mapea una frecuencia (Hz) a una posición X (píxel) dentro del clip
-     */
-    static float frequencyToX(float frequency, float width)
-    {
-        float logMin = std::log10(20.0f);
-        float logMax = std::log10(20000.0f);
-        float logFreq = std::log10(juce::jlimit(20.0f, 20000.0f, frequency));
-        return ((logFreq - logMin) / (logMax - logMin)) * width;
-    }
-
-    /**
-     * Mapea una posición X (píxel) a una frecuencia (Hz)
-     */
-    static float xToFrequency(float x, float width)
-    {
-        float logMin = std::log10(20.0f);
-        float logMax = std::log10(20000.0f);
-        float logFreq = logMin + (x / width) * (logMax - logMin);
-        return std::pow(10.0f, logFreq);
-    }
-
-    /**
-     * Dibuja el espectro completo (FFT + Curva) en el clip
-     */
-    static void drawInlineFFT(juce::Graphics& g, juce::Rectangle<int> bounds, const PatternInlineEQ_DSP& dsp)
-    {
-        drawFFTAnalysis(g, dsp, bounds, juce::Colours::white);
-        drawEQCurve(g, dsp, bounds, juce::Colours::white);
-    }
-
-    /**
-     * Detecta si el ratón ha pulsado sobre un nodo de EQ
-     */
-    static int hitTestEQNodes(juce::Point<int> pos, juce::Rectangle<int> bounds, const PatternInlineEQ_DSP& dsp)
-    {
-        const float width = (float)bounds.getWidth();
-        const float height = (float)bounds.getHeight();
-        const float midY = (float)bounds.getCentreY();
-        const float gainRange = 18.0f;
-
-        struct NodeInfo { float f; float g; };
-        std::vector<NodeInfo> nodes = {
-            { dsp.getHP(), 0.0f },
-            { dsp.getLSFreq(), dsp.getLSGain() },
-            { dsp.getBellFreq(), dsp.getBellGain() },
-            { dsp.getHSFreq(), dsp.getHSGain() },
-            { dsp.getLP(), 0.0f }
+            // DAR UNA FORMA PARA QUE SEA HIT-TESTABLE (Regla de oro: El usuario debe poder clickear)
+            juce::Path p;
+            p.addEllipse(0, 0, 10, 10);
+            b.setShape(p, true, true, false);
+            
+            addAndMakeVisible(b);
+            b.onClick = [this] { if (targetDSP) updateDSPFromUI(); };
         };
 
-        for (int i = 0; i < (int)nodes.size(); ++i)
-        {
-            float nx = (float)bounds.getX() + frequencyToX(nodes[i].f, width);
-            float ny = midY - (nodes[i].g / gainRange) * (height / 2.0f);
+        setupTypeBtn(b1HP, 0, true);
+        setupTypeBtn(b1Bell, 2, true);
+        setupTypeBtn(b1LS, 1, true);
+        b1Bell.setToggleState(true, juce::dontSendNotification);
+
+        setupTypeBtn(b2LP, 4, false);
+        setupTypeBtn(b2Bell, 2, false);
+        setupTypeBtn(b2HS, 3, false);
+        b2Bell.setToggleState(true, juce::dontSendNotification);
+
+        // --- BYPASS & TRACK NAME ---
+        bypassBtn.setButtonText("PWR");
+        bypassBtn.setClickingTogglesState(true);
+        bypassBtn.setToggleState(true, juce::dontSendNotification); // Default = ON (No bypass)
+        bypassBtn.setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey.withAlpha(0.5f));
+        bypassBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(0, 220, 255).withAlpha(0.6f));
+        bypassBtn.onClick = [this] { 
+            if (targetDSP) {
+                targetDSP->userBypass.store(!bypassBtn.getToggleState(), std::memory_order_relaxed);
+            }
+            repaint();
+        };
+        addAndMakeVisible(bypassBtn);
+
+        trackNameLabel.setJustificationType(juce::Justification::centredLeft);
+        trackNameLabel.setFont(juce::Font(14.0f, juce::Font::bold));
+        trackNameLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+        trackNameLabel.setText("No Track", juce::dontSendNotification);
+        addAndMakeVisible(trackNameLabel);
+    }
+
+    void setTrackName(const juce::String& name) {
+        trackNameLabel.setText(name.toUpperCase(), juce::dontSendNotification);
+    }
+
+    void setDSP(ChannelEQ_DSP* dsp) {
+        targetDSP = dsp;
+        if (dsp) updateUIFromDSP();
+    }
+
+    void paint(juce::Graphics& g) override
+    {
+        // Fondo Oscuro Premium
+        g.fillAll(juce::Colour(17, 20, 24));
+
+        auto r = getLocalBounds().reduced(4);
+        
+        // 1. Dibujar Display Central (Limitado a su nueva área calculada por el layout horizontal)
+        int knobSectionW = juce::jlimit(110, 150, static_cast<int>(r.getWidth() * 0.35f));
+        int btnW = 24;
+        auto displayArea = r.withTrimmedLeft(knobSectionW + btnW).withTrimmedRight(knobSectionW + btnW).reduced(2, 0);
+        
+        g.setColour(juce::Colours::black.withAlpha(0.6f));
+        g.fillRoundedRectangle(displayArea.toFloat(), 4.0f);
+        g.setColour(juce::Colours::white.withAlpha(0.1f));
+        g.drawRoundedRectangle(displayArea.toFloat(), 4.0f, 1.0f);
+
+        // --- ESPECTRO VERDE (FFT) ---
+        if (targetDSP) {
+            g.saveState();
+            g.reduceClipRegion(displayArea);
             
-            if (pos.getDistanceSquaredFrom(juce::Point<float>(nx, ny).roundToInt()) < 100) // 10px radio
-                return i;
+            auto& magnitudes = targetDSP->getMagnitudes();
+            juce::Path fftPath;
+            bool first = true;
+            for (size_t i = 0; i < magnitudes.size(); ++i) {
+                float x = displayArea.getX() + (float)i / magnitudes.size() * displayArea.getWidth();
+                float mag = juce::jlimit(0.0f, 1.0f, magnitudes[i] * 10.0f);
+                float y = displayArea.getBottom() - (mag * displayArea.getHeight() * 0.8f);
+                
+                if (first) { fftPath.startNewSubPath(x, y); first = false; }
+                else fftPath.lineTo(x, y);
+            }
+            g.setColour(juce::Colour(80, 200, 120).withAlpha(0.4f));
+            g.strokePath(fftPath, juce::PathStrokeType(1.0f));
+            
+            // --- CURVA CIAN (IIR) ---
+            drawResponseCurve(g, displayArea);
+            g.restoreState();
         }
 
-        return -1;
+        // --- DIBUJAR ICONOS DE FILTRO ---
+        drawFilterIcons(g);
     }
+
+    void resized() override
+    {
+        auto r = getLocalBounds().reduced(2);
+
+        int knobSectionW = juce::jlimit(110, 150, static_cast<int>(r.getWidth() * 0.35f));
+        int btnW = 24; // Para los botones ShapeButton (HP, LP, etc)
+
+        // --- BANDA 1 ---
+        auto leftKnobs = r.removeFromLeft(knobSectionW);
+        auto b1Area = r.removeFromLeft(btnW);
+        
+        // --- BANDA 2 ---
+        auto rightKnobs = r.removeFromRight(knobSectionW);
+        auto b2Area = r.removeFromRight(btnW);
+        
+        // --- PANEL DE INFORMACIÓN (Izquierda/Arriba) ---
+        // Colocamos la info flotando arriba, usando el espacio que antes era del texto.
+        auto infoArea = leftKnobs.removeFromTop(20);
+        bypassBtn.setBounds(infoArea.removeFromLeft(40).reduced(2, 2));
+        trackNameLabel.setBounds(infoArea);
+
+        // Layout Banda 1 Knobs (Horizontal)
+        int kSize = juce::jmin(42, knobSectionW / 3); // Tamaño proporcional dinámico del rotary
+        // Dejamos un margen pequeño para que respiren.
+        auto lkArea = leftKnobs.withTrimmedTop(5).withTrimmedBottom(5);
+        
+        auto placeKnob = [&](juce::Slider& s, juce::Label& l, juce::Rectangle<int> area) {
+            s.setBounds(area.withSizeKeepingCentre(kSize, kSize));
+            // Label de nombre (FREQ, Q, GAIN) va debajo
+            l.setBounds(area.getX(), s.getBottom(), area.getWidth(), 15);
+        };
+        
+        placeKnob(lowFreq, lowFreqLabel, lkArea.removeFromLeft(knobSectionW / 3));
+        placeKnob(lowQ, lowQLabel, lkArea.removeFromLeft(knobSectionW / 3));
+        placeKnob(lowGain, lowGainLabel, lkArea.removeFromLeft(knobSectionW / 3));
+
+        // Botones Banda 1 (Vertical)
+        int b1H = b1Area.getHeight() / 3;
+        b1HP.setBounds(b1Area.removeFromTop(b1H).withSizeKeepingCentre(16, 16));
+        b1Bell.setBounds(b1Area.removeFromTop(b1H).withSizeKeepingCentre(16, 16));
+        b1LS.setBounds(b1Area.removeFromTop(b1H).withSizeKeepingCentre(16, 16));
+
+        // Layout Banda 2 Knobs (Horizontal)
+        auto rkArea = rightKnobs.withTrimmedTop(15).withTrimmedBottom(5);
+        placeKnob(highFreq, highFreqLabel, rkArea.removeFromLeft(knobSectionW / 3));
+        placeKnob(highQ, highQLabel, rkArea.removeFromLeft(knobSectionW / 3));
+        placeKnob(highGain, highGainLabel, rkArea.removeFromLeft(knobSectionW / 3));
+
+        // Botones Banda 2 (Vertical)
+        int b2H = b2Area.getHeight() / 3;
+        b2LP.setBounds(b2Area.removeFromTop(b2H).withSizeKeepingCentre(16, 16));
+        b2Bell.setBounds(b2Area.removeFromTop(b2H).withSizeKeepingCentre(16, 16));
+        b2HS.setBounds(b2Area.removeFromTop(b2H).withSizeKeepingCentre(16, 16));
+    }
+
+    void timerCallback() override { repaint(); }
+
+private:
+    void drawResponseCurve(juce::Graphics& g, juce::Rectangle<int> bounds)
+    {
+        juce::Path p;
+        bool first = true;
+        float midY = (float)bounds.getCentreY();
+        
+        for (int x = 0; x <= bounds.getWidth(); x += 1) {
+            float freq = 20.0f * std::pow(1000.0f, (float)x / (float)bounds.getWidth());
+            float mag = targetDSP->getMagnitudeForFrequency(freq);
+            float db = juce::Decibels::gainToDecibels(mag);
+            float y = midY - (db / 24.0f) * (bounds.getHeight() / 2.0f);
+            
+            y = juce::jlimit((float)bounds.getY(), (float)bounds.getBottom(), y);
+            
+            if (first) { p.startNewSubPath((float)bounds.getX() + x, y); first = false; }
+            else p.lineTo((float)bounds.getX() + x, y);
+        }
+
+        bool isBypassed = bypassBtn.getToggleState() == false;
+
+        g.setColour(isBypassed ? juce::Colours::grey.withAlpha(0.2f) : juce::Colour(0, 200, 255).withAlpha(0.2f));
+        g.strokePath(p, juce::PathStrokeType(3.0f));
+        g.setColour(isBypassed ? juce::Colours::grey : juce::Colour(0, 220, 255));
+        g.strokePath(p, juce::PathStrokeType(1.5f));
+    }
+
+    void drawFilterIcons(juce::Graphics& g) {
+        auto drawIcon = [&](juce::Rectangle<int> b, int type, bool active) {
+            g.setColour(active ? juce::Colour(0, 220, 255) : juce::Colours::grey.withAlpha(0.4f));
+            juce::Path p;
+            float x = (float)b.getX(), y = (float)b.getY(), w = (float)b.getWidth(), h = (float)b.getHeight();
+            if (type == 0) { p.startNewSubPath(x, y+h); p.lineTo(x+w*0.7f, y+h); p.lineTo(x+w, y); } // HP
+            else if (type == 1) { p.startNewSubPath(x, y+h*0.7f); p.lineTo(x+w*0.3f, y+h*0.7f); p.lineTo(x+w, y+h*0.3f); } // LS
+            else if (type == 2) { p.startNewSubPath(x, y+h*0.5f); p.quadraticTo(x+w*0.5f, y, x+w, y+h*0.5f); } // Bell
+            else if (type == 3) { p.startNewSubPath(x, y+h*0.3f); p.lineTo(x+w*0.7f, y+h*0.3f); p.lineTo(x+w, y+h*0.7f); } // HS
+            else if (type == 4) { p.startNewSubPath(x, y); p.lineTo(x+w*0.3f, y); p.lineTo(x+w, y+h); } // LP
+            g.strokePath(p, juce::PathStrokeType(1.5f));
+        };
+
+        drawIcon(b1HP.getBounds().reduced(5), 0, b1HP.getToggleState());
+        drawIcon(b1Bell.getBounds().reduced(5), 2, b1Bell.getToggleState());
+        drawIcon(b1LS.getBounds().reduced(5), 1, b1LS.getToggleState());
+
+        drawIcon(b2LP.getBounds().reduced(5), 4, b2LP.getToggleState());
+        drawIcon(b2Bell.getBounds().reduced(5), 2, b2Bell.getToggleState());
+        drawIcon(b2HS.getBounds().reduced(5), 3, b2HS.getToggleState());
+    }
+
+    void updateDSPFromUI() {
+        if (!targetDSP) return;
+        targetDSP->setBand1Freq((float)lowFreq.getValue());
+        targetDSP->setBand1Q((float)lowQ.getValue());
+        targetDSP->setBand1Gain((float)lowGain.getValue());
+        if (b1HP.getToggleState()) targetDSP->setBand1Type(ChannelEQ_DSP::HighPass);
+        else if (b1LS.getToggleState()) targetDSP->setBand1Type(ChannelEQ_DSP::LowShelf);
+        else targetDSP->setBand1Type(ChannelEQ_DSP::Bell);
+
+        targetDSP->setBand2Freq((float)highFreq.getValue());
+        targetDSP->setBand2Q((float)highQ.getValue());
+        targetDSP->setBand2Gain((float)highGain.getValue());
+        if (b2LP.getToggleState()) targetDSP->setBand2Type(ChannelEQ_DSP::LowPass);
+        else if (b2HS.getToggleState()) targetDSP->setBand2Type(ChannelEQ_DSP::HighShelf);
+        else targetDSP->setBand2Type(ChannelEQ_DSP::Bell);
+    }
+
+    void updateUIFromDSP() {
+        lowFreq.setValue(targetDSP->getBand1Freq(), juce::dontSendNotification);
+        lowQ.setValue(targetDSP->getBand1Q(), juce::dontSendNotification);
+        lowGain.setValue(targetDSP->getBand1Gain(), juce::dontSendNotification);
+        auto t1 = targetDSP->getBand1Type();
+        b1HP.setToggleState(t1 == ChannelEQ_DSP::HighPass, juce::dontSendNotification);
+        b1LS.setToggleState(t1 == ChannelEQ_DSP::LowShelf, juce::dontSendNotification);
+        b1Bell.setToggleState(t1 == ChannelEQ_DSP::Bell, juce::dontSendNotification);
+
+        highFreq.setValue(targetDSP->getBand2Freq(), juce::dontSendNotification);
+        highQ.setValue(targetDSP->getBand2Q(), juce::dontSendNotification);
+        highGain.setValue(targetDSP->getBand2Gain(), juce::dontSendNotification);
+        auto t2 = targetDSP->getBand2Type();
+        b2LP.setToggleState(t2 == ChannelEQ_DSP::LowPass, juce::dontSendNotification);
+        b2HS.setToggleState(t2 == ChannelEQ_DSP::HighShelf, juce::dontSendNotification);
+        b2Bell.setToggleState(t2 == ChannelEQ_DSP::Bell, juce::dontSendNotification);
+        
+        bypassBtn.setToggleState(!targetDSP->userBypass.load(std::memory_order_relaxed), juce::dontSendNotification);
+
+        repaint();
+    }
+
+    juce::Slider lowFreq, lowQ, lowGain, highFreq, highQ, highGain;
+    juce::Label lowFreqLabel, lowQLabel, lowGainLabel, highFreqLabel, highQLabel, highGainLabel;
+    juce::ShapeButton b1HP, b1Bell, b1LS, b2LP, b2Bell, b2HS;
+    juce::TextButton bypassBtn;
+    juce::Label trackNameLabel;
+
+    ChannelEQ_DSP* targetDSP = nullptr;
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ChannelEQ_Editor)
 };

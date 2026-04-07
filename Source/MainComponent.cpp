@@ -74,6 +74,8 @@ void MainComponent::setupCallbacks() {
                 targetTrack->postLoudness.prepare(currentSR, 512);
                 targetTrack->postBalance.prepare(currentSR, 512);
                 targetTrack->postMidSide.prepare(currentSR);
+                targetTrack->prepare(currentSR, 4096); // INYECCIÓN: PREPARAR ENGINE PARA QUE SUENE (Regla #1)
+                
                 if (type == TrackType::Loudness) { targetTrack->setColor(juce::Colours::orange); targetTrack->setName("Loudness Track"); }
                 else if (type == TrackType::Balance) { targetTrack->setColor(juce::Colours::cyan); targetTrack->setName("Balance Track"); }
                 else if (type == TrackType::MidSide) { targetTrack->setColor(juce::Colours::magenta); targetTrack->setName("Mid-Side Track"); }
@@ -143,6 +145,11 @@ void MainComponent::setupCallbacks() {
             newTrack->instrumentMixBuffer.setSize(2, maxSamples, false, true, false);
             newTrack->tempSynthBuffer.setSize(2, maxSamples, false, true, false);
             newTrack->midSideBuffer.setSize(1, maxSamples, false, true, false);
+            
+            // INYECCIÓN VITAL: Preparar el track y el onlineEQ para que no se bypassen (Regla #1)
+            double currentSR = audioEngine.currentSampleRate > 0 ? audioEngine.currentSampleRate : 44100.0;
+            newTrack->prepare(currentSR, 4096);
+            
             // pdcBuffer se aloca bajo demanda en commitSnapshot() cuando el track
             // recibe contenido (clips, patterns o plugins). Tracks vacios no lo necesitan.
             // DOUBLE BUFFER: inicializar snapshot vacio antes de exponer el track al audio thread
