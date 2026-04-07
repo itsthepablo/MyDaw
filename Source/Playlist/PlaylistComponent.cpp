@@ -106,9 +106,8 @@ void PlaylistComponent::updateScrollBars() {
 
   int topOffset = menuBarH + navigatorH + timelineH;
 
-  // RESTAMOS 60px DE ALTURA PARA QUE LA ÚLTIMA PISTA NO QUEDE DETRÁS DEL MASTER
-  // STRIP
-  double visibleH = (double)getHeight() - topOffset - 60.0;
+  // RESTAMOS LA ALTURA DEL MASTER TRACK PARA QUE LA ÚLTIMA PISTA NO QUEDE DETRÁS
+  double visibleH = (double)getHeight() - topOffset - (double)masterTrackH;
 
   vBar.setRangeLimits(0.0, (double)totalH);
   vBar.setCurrentRange(vBar.getCurrentRangeStart(), visibleH);
@@ -205,8 +204,13 @@ void PlaylistComponent::paint(juce::Graphics &g) {
   float hS = (float)hNavigator.getCurrentRangeStart();
   float vS = (float)vBar.getCurrentRangeStart();
   int topOffset = menuBarH + navigatorH + timelineH;
-  int viewAreaH = getHeight() - topOffset;
+  int viewAreaH = getHeight() - topOffset - masterTrackH; // Descontar el Master Lane fijo
 
+  // 1. Dibujar el fondo alternado y la rejilla vertical (TODO EL PROYECTO)
+  PlaylistGridRenderer::drawVerticalGrid(g, topOffset, getHeight(), getWidth(), 
+                                         hS, hZoom, snapPixels, getTimelineLength(), getLookAndFeel());
+
+  // --- RECORTE PARA CONTENIDO QUE HACE SCROLL (Pistas normales) ---
   g.saveState();
   juce::Rectangle<int> playlistBounds(0, topOffset, 
                                       getWidth() - (vBar.isVisible() ? vBarWidth : 0), 
@@ -225,10 +229,9 @@ void PlaylistComponent::paint(juce::Graphics &g) {
     }
   }
 
-  // 1. Dibujar el fondo alternado y la rejilla
-  PlaylistGridRenderer::drawGrid(g, topOffset, viewAreaH, getWidth(), getHeight(), 
-                                 hS, hZoom, snapPixels, getTimelineLength(), getLookAndFeel(),
-                                 tracksRef, vS, trackHeight);
+  // 2. Dibujar separadores de pistas (SÓLO DENTRO DEL CLIP REGION)
+  PlaylistGridRenderer::drawHorizontalSeparators(g, topOffset, viewAreaH, getWidth(), 
+                                                tracksRef, vS, trackHeight);
 
   // Preparar el contexto para el renderizado de clips y otros elementos
   PlaylistViewContext ctx = {
@@ -237,30 +240,35 @@ void PlaylistComponent::paint(juce::Graphics &g) {
     isExternalFileDragging, isInternalDragging
   };
 
-  // 2. Dibujar resúmenes de carpeta (Reaper style)
+  // 3. Dibujar resúmenes de carpeta (Reaper style)
   PlaylistRenderer::drawFolderSummaries(g, ctx, trackYCache);
 
-  // 3. Dibujar clips de audio y MIDI
+  // 4. Dibujar clips de audio y MIDI
   PlaylistRenderer::drawTracksAndClips(g, ctx, trackYCache);
 
-  // 4. Dibujar pistas de análisis (Loudness, Balance, MidSide)
+  // 5. Dibujar pistas de análisis (Loudness, Balance, MidSide)
   PlaylistRenderer::drawSpecialAnalysisTracks(g, ctx, trackYCache);
 
-  // 5. Dibujar capas de automatización (Ableton Style)
+  // 6. Dibujar capas de automatización (Ableton Style)
   PlaylistRenderer::drawAutomationOverlays(g, ctx, trackYCache);
 
   g.restoreState();
 
-  // 6. Dibujar la regla de tiempos (Ruler)
+  // 7. Dibujar la regla de tiempos (Ruler)
   PlaylistGridRenderer::drawTimelineRuler(g, menuBarH, navigatorH, timelineH, getWidth(), 
                                           hS, hZoom, getTimelineLength());
 
-  // 7. Dibujar el cabezal de reproducción (Playhead)
+  // 8. Dibujar el cabezal de reproducción (Playhead)
   PlaylistGridRenderer::drawPlayhead(g, playheadAbsPos, hZoom, hS, menuBarH, navigatorH, 
                                      getWidth(), getHeight());
 
-  // 8. Dibujar overlays de arrastre (Drag & Drop)
+  // 9. Dibujar overlays de arrastre (Drag & Drop)
   PlaylistRenderer::drawDragOverlays(g, ctx);
+
+  // 10. Dibujar Línea Divisoria del Master (Diseño Integrado)
+  g.setColour(juce::Colours::white.withAlpha(0.15f));
+  float masterY = (float)getHeight() - (float)masterTrackH;
+  g.drawHorizontalLine((int)masterY, 0.0f, (float)getWidth());
 }
 
 
@@ -319,11 +327,11 @@ void PlaylistComponent::mouseWheelMove(const juce::MouseEvent &e,
     }
     int topOffset = menuBarH + navigatorH + timelineH;
     double newStart =
-        juce::jlimit(0.0,
-                     juce::jmax(0.0, (double)totalH - ((double)getHeight() -
-                                                       topOffset - 60.0)),
-                     vBar.getCurrentRangeStart() - (w.deltaY * 100.0));
-    vBar.setCurrentRange(newStart, (double)(getHeight() - topOffset - 60.0));
+        juce::jlimit<double>(0.0,
+                             juce::jmax<double>(0.0, (double)totalH - ((double)getHeight() -
+                                                               topOffset - (double)masterTrackH)),
+                             vBar.getCurrentRangeStart() - (w.deltaY * 100.0));
+    vBar.setCurrentRange(newStart, (double)getHeight() - topOffset - (double)masterTrackH);
     updateScrollBars();
     repaint();
   }

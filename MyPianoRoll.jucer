@@ -212,6 +212,7 @@
         </GROUP>
         <GROUP id="{361B1AF3-F0CC-2376-25A1-51065AF40789}" name="Tools">
           <FILE id="eNp0RM" name="EraserTool.h" compile="0" resource="0" file="Source/Playlist/Tools/EraserTool.h"/>
+          <FILE id="oo2gcJ" name="MuteTool.h" compile="0" resource="0" file="Source/Playlist/Tools/MuteTool.h"/>
           <FILE id="BIHoRJ" name="PlaylistTool.h" compile="0" resource="0" file="Source/Playlist/Tools/PlaylistTool.h"/>
           <FILE id="Rb4h8T" name="PointerTool.h" compile="0" resource="0" file="Source/Playlist/Tools/PointerTool.h"/>
           <FILE id="a71jBQ" name="ScissorTool.h" compile="0" resource="0" file="Source/Playlist/Tools/ScissorTool.h"/>

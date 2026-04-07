@@ -82,6 +82,7 @@ public:
     const int navigatorH = 51;
     const int timelineH = 35;
     const int vBarWidth = 32;
+    const int masterTrackH = 100;
 
     float trackHeight = 100.0f;
     double snapPixels = 80.0;

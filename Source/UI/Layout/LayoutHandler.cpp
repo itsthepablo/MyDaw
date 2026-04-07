@@ -81,12 +81,18 @@ void LayoutHandler::performLayout(LayoutDependencies d) {
                 d.sidebarResizer.setVisible(false);
             }
 
-            // --- MASTER TRACK (SIDEBAR VERTICAL DERECHO) ---
+            // --- DISEÑO INTEGRADO: Playlist completa, TrackContainer con espacio para Master ---
+            auto trackArea = area.removeFromLeft(250);
+            auto masterHeaderArea = trackArea.removeFromBottom(100);
+            
             d.masterStrip.setVisible(true);
-            d.masterStrip.setBounds(area.removeFromRight(80));
+            d.masterStrip.setBounds(masterHeaderArea);
+            
+            d.trackContainer.setVisible(true);
+            d.trackContainer.setBounds(trackArea);
 
-            d.trackContainer.setBounds(area.removeFromLeft(250));
-            d.playlistUI.setBounds(area);
+            d.playlistUI.setVisible(true);
+            d.playlistUI.setBounds(area); // La Playlist toma el resto del alto total
         }
     }
 }

@@ -10,19 +10,31 @@ public:
      * Se encarga de dibujar el fondo alternado y las líneas de la rejilla.
      * Incluye los separadores horizontales de pistas.
      */
-    static void drawGrid(juce::Graphics& g, 
-                         int topOffset, 
-                         int viewAreaH, 
-                         int width, 
-                         int height, 
-                         float hS, 
-                         float hZoom, 
-                         double snapPixels, 
-                         double timelineLength,
-                         juce::LookAndFeel& lnf,
-                         const juce::OwnedArray<Track>* tracksRef,
-                         float vS,
-                         float trackHeight);
+    /**
+     * drawVerticalGrid
+     * Fondo alternado y líneas verticales. Independiente del scroll vertical.
+     */
+    static void drawVerticalGrid(juce::Graphics& g, 
+                                 int topOffset, 
+                                 int height, 
+                                 int width, 
+                                 float hS, 
+                                 float hZoom, 
+                                 double snapPixels, 
+                                 double timelineLength,
+                                 juce::LookAndFeel& lnf);
+
+    /**
+     * drawHorizontalSeparators
+     * Líneas entre pistas. Sujeto al scroll vertical (vS).
+     */
+    static void drawHorizontalSeparators(juce::Graphics& g, 
+                                         int topOffset, 
+                                         int viewAreaH, 
+                                         int width, 
+                                         const juce::OwnedArray<Track>* tracksRef,
+                                         float vS,
+                                         float trackHeight);
 
     /**
      * drawTimelineRuler

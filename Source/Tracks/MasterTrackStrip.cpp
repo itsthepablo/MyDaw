@@ -2,21 +2,12 @@
 
 MasterTrackStrip::MasterTrackStrip()
 {
-    // --- Paneo (Knob arriba del todo) ---
-    addAndMakeVisible(panKnob);
-    panKnob.setName("TrackKnob");
-    panKnob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    panKnob.setRange(-1.0, 1.0);
-    panKnob.setValue(0.0);
-    panKnob.setDoubleClickReturnValue(true, 0.0);
-    panKnob.onValueChange = [this] { if (masterTrack) masterTrack->setBalance((float)panKnob.getValue()); };
-
     // --- Label MASTER ---
     addAndMakeVisible(masterLabel);
     masterLabel.setText("MASTER", juce::dontSendNotification);
-    masterLabel.setFont(juce::Font("Inter", 12.0f, juce::Font::bold));
+    masterLabel.setFont(juce::Font("Inter", 14.0f, juce::Font::bold));
     masterLabel.setColour(juce::Label::textColourId, juce::Colour(255, 200, 80));
-    masterLabel.setJustificationType(juce::Justification::centred);
+    masterLabel.setJustificationType(juce::Justification::centredLeft);
 
     // --- Mute ("M") ---
     addAndMakeVisible(muteBtn);
@@ -35,45 +26,56 @@ MasterTrackStrip::MasterTrackStrip()
     soloBtn.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
     soloBtn.onClick = [this] { if (masterTrack) masterTrack->isSoloed = soloBtn.getToggleState(); };
 
-    // --- Effects Button ("FX") ---
+    // --- Paneo ---
+    addAndMakeVisible(panKnob);
+    panKnob.setName("TrackKnob");
+    panKnob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+    panKnob.setRange(-1.0, 1.0);
+    panKnob.setValue(0.0);
+    panKnob.setDoubleClickReturnValue(true, 0.0);
+    panKnob.onValueChange = [this] { if (masterTrack) masterTrack->setBalance((float)panKnob.getValue()); };
+
+    panKnob.valueToTextFormattingCallback = [](double value) -> juce::String {
+        if (std::abs(value) < 0.01) return "Center";
+        int percent = (int)(std::abs(value) * 100.0);
+        return juce::String(percent) + (value < 0.0 ? "% L" : "% R");
+    };
+
+    // --- Volumen ---
+    addAndMakeVisible(volKnob);
+    volKnob.setName("TrackKnob");
+    volKnob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+    volKnob.setRange(0.0, 1.5);
+    volKnob.setValue(1.0);
+    volKnob.setDoubleClickReturnValue(true, 1.0);
+    volKnob.onValueChange = [this] { if (masterTrack) masterTrack->setVolume((float)volKnob.getValue()); };
+
+    volKnob.valueToTextFormattingCallback = [](double rawGain) -> juce::String {
+        float db = juce::Decibels::gainToDecibels((float)rawGain, -100.0f);
+        return db <= -100.0f ? "-inf dB" : juce::String(db, 1) + " dB";
+    };
+
+    // --- Effects Button ---
     addAndMakeVisible(effectsBtn);
-    effectsBtn.setButtonText("FX");
+    effectsBtn.setButtonText("Effects");
     effectsBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(60, 65, 70));
     effectsBtn.onClick = [this] { if (onTrackSelected) onTrackSelected(masterTrack); };
 
-    // --- Medidor de pico (vertical) ---
+    // --- Medidor de pico (Horizontal en el master track header) ---
     addAndMakeVisible(levelMeter);
     levelMeter.setHorizontal(false);
 
-    // --- Volume Slider (OVERLAY sobre medidor) ---
-    addAndMakeVisible(volSlider);
-    volSlider.setSliderStyle(juce::Slider::LinearVertical);
-    volSlider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-    volSlider.setRange(0.0, 1.5);
-    volSlider.setValue(1.0);
-    volSlider.setDoubleClickReturnValue(true, 1.0);
-    // Hacer el slider "invisible" pero interactivo para que se vea el medidor debajo
-    volSlider.setAlpha(0.7f); // Un poco de alpha para ver el handle pero no tapar todo
-    volSlider.onValueChange = [this] { if (masterTrack) masterTrack->setVolume((float)volSlider.getValue()); };
-
     // --- Mouse Interception ---
     setInterceptsMouseClicks(true, true);
-    masterLabel.setInterceptsMouseClicks(false, false);
     
-    // Listeners for selection
     panKnob.addMouseListener(this, false);
+    volKnob.addMouseListener(this, false);
     muteBtn.addMouseListener(this, false);
     soloBtn.addMouseListener(this, false);
     effectsBtn.addMouseListener(this, false);
-    volSlider.addMouseListener(this, false);
-    levelMeter.addMouseListener(this, false);
-
-    levelMeter.addMouseListener(this, false);
 }
 
-MasterTrackStrip::~MasterTrackStrip()
-{
-}
+MasterTrackStrip::~MasterTrackStrip() {}
 
 void MasterTrackStrip::setMasterTrack(Track* t)
 {
@@ -81,79 +83,72 @@ void MasterTrackStrip::setMasterTrack(Track* t)
     levelMeter.setTrack(t);
     
     if (masterTrack != nullptr) {
-        volSlider.setValue(masterTrack->getVolume(), juce::dontSendNotification);
+        volKnob.setValue(masterTrack->getVolume(), juce::dontSendNotification);
         panKnob.setValue(masterTrack->getBalance(), juce::dontSendNotification);
         muteBtn.setToggleState(masterTrack->isMuted, juce::dontSendNotification);
         soloBtn.setToggleState(masterTrack->isSoloed, juce::dontSendNotification);
     }
 }
 
-Track* MasterTrackStrip::getMasterTrack() const
-{
-    return masterTrack;
-}
-
-// timerCallback eliminado - LevelMeter se auto-actualiza
+Track* MasterTrackStrip::getMasterTrack() const { return masterTrack; }
 
 void MasterTrackStrip::paint(juce::Graphics& g)
 {
-    auto bounds = getLocalBounds().toFloat();
+    // Fondo sólido similar a TrackControlPanel
+    g.fillAll(juce::Colour(25, 27, 30));
+    auto area = getLocalBounds();
     
-    // Background premium vertical
-    juce::ColourGradient bg(
-        juce::Colour(30, 28, 22), bounds.getTopLeft(),
-        juce::Colour(20, 18, 15), bounds.getTopRight(), false);
-    g.setGradientFill(bg);
-    g.fillAll();
+    // --- Indicador de Color Master (Dorado/Naranja) ---
+    auto colorBarArea = area.removeFromLeft(6).reduced(0, 4).translated(4, 0);
+    juce::Colour masterColor = juce::Colour(255, 180, 50);
+    g.setColour(masterColor);
+    g.fillRoundedRectangle(colorBarArea.toFloat(), 3.0f);
 
-    // Accent line (top)
-    g.setColour(juce::Colour(255, 200, 80));
-    g.fillRect(0.0f, 0.0f, bounds.getWidth(), 3.0f);
+    // --- Fondo de Contenido ---
+    auto contentArea = area.withTrimmedLeft(8).reduced(4, 2);
+    g.setColour(masterColor.withAlpha(0.12f));
+    g.fillRoundedRectangle(contentArea.toFloat(), 4.0f);
 
     if (isSelected) {
-        g.setColour(juce::Colour(255, 200, 80).withAlpha(0.05f));
-        g.fillAll();
-        g.setColour(juce::Colour(255, 200, 80).withAlpha(0.3f));
-        g.drawRect(bounds.reduced(1.0f), 1.0f);
+        g.setColour(masterColor.withAlpha(0.2f));
+        g.fillRoundedRectangle(contentArea.toFloat(), 4.0f);
+        g.setColour(masterColor.withAlpha(0.5f));
+        g.drawRoundedRectangle(contentArea.toFloat(), 4.0f, 1.5f);
     }
+
+    // --- Línea Divisoria Superior (Integración con Playlist) ---
+    g.setColour(juce::Colours::white.withAlpha(0.15f));
+    g.drawHorizontalLine(0, 0.0f, (float)getWidth());
 }
 
 void MasterTrackStrip::resized()
 {
-    auto area = getLocalBounds().reduced(5, 5);
+    auto area = getLocalBounds();
+    // Margen para el indicador
+    auto contentArea = area.withTrimmedLeft(18).reduced(4, 2);
 
-    // 1. Pan en el tope
-    panKnob.setBounds(area.removeFromTop(40).reduced(5, 0));
+    auto leftCol = contentArea.removeFromLeft(125);
+    auto topRow = leftCol.removeFromTop(20);
+    masterLabel.setBounds(topRow);
+    
+    leftCol.removeFromTop(2);
+    
+    auto kRow = leftCol.removeFromTop(28);
+    muteBtn.setBounds(kRow.removeFromLeft(20).reduced(1));
+    soloBtn.setBounds(kRow.removeFromLeft(20).reduced(1));
+    panKnob.setBounds(kRow.removeFromLeft(35));
+    volKnob.setBounds(kRow.removeFromLeft(35));
+    
+    auto botRow = leftCol.removeFromTop(18);
+    effectsBtn.setBounds(botRow.reduced(2, 0));
 
-    // 2. Label MASTER
-    masterLabel.setBounds(area.removeFromTop(20));
-
-    area.removeFromTop(5);
-
-    // 3. Botones M / S (en fila)
-    auto btnRow = area.removeFromTop(30);
-    muteBtn.setBounds(btnRow.removeFromLeft(btnRow.getWidth() / 2).reduced(2));
-    soloBtn.setBounds(btnRow.reduced(2));
-
-    area.removeFromTop(5);
-
-    // 4. Botón FX
-    effectsBtn.setBounds(area.removeFromTop(30).reduced(2, 0));
-
-    area.removeFromTop(10);
-
-    // 5. Volume & Meter (OVERLAY)
-    // El Slider se pone exactamente encima del Meter
-    auto meterArea = area; 
-    levelMeter.setBounds(meterArea);
-    volSlider.setBounds(meterArea);
+    auto meterArea = contentArea.removeFromRight(12);
+    levelMeter.setBounds(meterArea.reduced(0, 2));
 }
 
 void MasterTrackStrip::mouseDown(const juce::MouseEvent& e)
 {
-    if (onTrackSelected)
-        onTrackSelected(masterTrack);
-    
+    if (onTrackSelected) onTrackSelected(masterTrack);
     isSelected = true;
     repaint();
 }

@@ -5,10 +5,10 @@
 #include "../UI/Knobs/FloatingValueSlider.h"
 
 // ==============================================================================
-// MasterTrackStrip — Sidebar vertical de Master
+// MasterTrackStrip — Panel de Control del Master (Anclado al fondo)
 //
-// Rediseñado para ser un sidebar vertical a la derecha.
-// Incluye Paneo (top), Mute/Solo/FX y un Slider de Volumen sobre el Medidor.
+// Rediseñado para ser una fila horizontal de 100px de altura,
+// anclada bajo la lista de tracks y la playlist.
 // ==============================================================================
 class MasterTrackStrip : public juce::Component
 {
@@ -25,7 +25,6 @@ public:
     void setSelected(bool selected) { isSelected = selected; repaint(); }
     bool getSelected() const { return isSelected; }
 
-    // Eliminado timerCallback - LevelMeter se auto-actualiza
     void paint(juce::Graphics& g) override;
     void resized() override;
     void mouseDown(const juce::MouseEvent& e) override;
@@ -37,7 +36,7 @@ private:
     juce::Label      masterLabel;
     juce::TextButton muteBtn, soloBtn, effectsBtn;
     FloatingValueSlider panKnob;
-    juce::Slider        volSlider; 
+    FloatingValueSlider volKnob; 
     LevelMeter       levelMeter;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MasterTrackStrip)
