@@ -73,7 +73,7 @@ void PlaylistGridRenderer::drawHorizontalSeparators(juce::Graphics& g,
             if (!t->isShowingInChildren)
                 continue;
             
-            g.setColour(juce::Colours::black.withAlpha(0.8f)); 
+            g.setColour(juce::Colours::black); 
             g.fillRect(0.0f, (float)(currentY + (int)trackHeight - 2),
                        (float)width, 2.0f); 
             currentY += (int)trackHeight;

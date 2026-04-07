@@ -66,7 +66,70 @@ PlaylistComponent::PlaylistComponent() {
   };
 
   updateScrollBars();
+
+  // --- CONFIGURACIÓN CONTROLES MASTER ---
+  addAndMakeVisible(masterLabel);
+  masterLabel.setText("MASTER", juce::dontSendNotification);
+  masterLabel.setFont(juce::Font("Inter", 13.0f, juce::Font::bold));
+  masterLabel.setColour(juce::Label::textColourId, juce::Colour(255, 200, 80));
+
+  addAndMakeVisible(masterMuteBtn);
+  masterMuteBtn.setButtonText("M");
+  masterMuteBtn.setClickingTogglesState(true);
+  masterMuteBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(45, 48, 52));
+  masterMuteBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colours::red.darker(0.2f));
+
+  addAndMakeVisible(masterSoloBtn);
+  masterSoloBtn.setButtonText("S");
+  masterSoloBtn.setClickingTogglesState(true);
+  masterSoloBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(45, 48, 52));
+  masterSoloBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colours::yellow.darker(0.2f));
+  masterSoloBtn.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
+
+  addAndMakeVisible(masterVolSlider);
+  masterVolSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+  masterVolSlider.setRange(0.0, 1.5);
+  masterVolSlider.setValue(1.0);
+  masterVolSlider.setDoubleClickReturnValue(true, 1.0);
+
+  addAndMakeVisible(masterPanSlider);
+  masterPanSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+  masterPanSlider.setRange(-1.0, 1.0);
+  masterPanSlider.setValue(0.0);
+  masterPanSlider.setDoubleClickReturnValue(true, 0.0);
+
   startTimerHz(60);
+}
+
+void PlaylistComponent::setExternalMutex(juce::CriticalSection *mutex) {
+  audioMutex = mutex;
+}
+
+void PlaylistComponent::setMasterTrack(Track *mt) {
+  masterTrackPtr = mt;
+  if (mt) {
+    masterVolSlider.setValue(mt->getVolume(), juce::dontSendNotification);
+    masterPanSlider.setValue(mt->getBalance(), juce::dontSendNotification);
+    masterMuteBtn.setToggleState(mt->isMuted, juce::dontSendNotification);
+    masterSoloBtn.setToggleState(mt->isSoloed, juce::dontSendNotification);
+
+    masterVolSlider.onValueChange = [this, mt] {
+      if (masterTrackPtr)
+        masterTrackPtr->setVolume((float)masterVolSlider.getValue());
+    };
+    masterPanSlider.onValueChange = [this, mt] {
+      if (masterTrackPtr)
+        masterTrackPtr->setBalance((float)masterPanSlider.getValue());
+    };
+    masterMuteBtn.onClick = [this, mt] {
+      if (masterTrackPtr)
+        masterTrackPtr->isMuted = masterMuteBtn.getToggleState();
+    };
+    masterSoloBtn.onClick = [this, mt] {
+      if (masterTrackPtr)
+        masterTrackPtr->isSoloed = masterSoloBtn.getToggleState();
+    };
+  }
 }
 
 PlaylistComponent::~PlaylistComponent() {
@@ -266,9 +329,9 @@ void PlaylistComponent::paint(juce::Graphics &g) {
   PlaylistRenderer::drawDragOverlays(g, ctx);
 
   // 10. Dibujar Línea Divisoria del Master (Diseño Integrado)
-  g.setColour(juce::Colours::white.withAlpha(0.15f));
+  g.setColour(juce::Colours::black);
   float masterY = (float)getHeight() - (float)masterTrackH;
-  g.drawHorizontalLine((int)masterY, 0.0f, (float)getWidth());
+  g.fillRect(0.0f, masterY, (float)getWidth(), 2.0f);
 }
 
 
@@ -277,6 +340,19 @@ void PlaylistComponent::resized() {
   hNavigator.setBounds(0, menuBarH, getWidth() - vBarWidth, navigatorH);
   vBar.setBounds(getWidth() - vBarWidth, menuBarH + navigatorH, vBarWidth,
                  getHeight() - (menuBarH + navigatorH));
+
+  // --- POSICIONAMIENTO CONTROLES MASTER (Fondo Fijo) ---
+  auto masterArea = getLocalBounds().removeFromBottom(masterTrackH).reduced(10, 5);
+  masterLabel.setBounds(masterArea.removeFromLeft(80).withSizeKeepingCentre(80, 20));
+  
+  masterArea.removeFromLeft(20); // Espacio
+  masterMuteBtn.setBounds(masterArea.removeFromLeft(25).withSizeKeepingCentre(22, 22));
+  masterSoloBtn.setBounds(masterArea.removeFromLeft(25).withSizeKeepingCentre(22, 22));
+  
+  masterArea.removeFromLeft(20);
+  masterPanSlider.setBounds(masterArea.removeFromLeft(40).withSizeKeepingCentre(40, 40));
+  masterVolSlider.setBounds(masterArea.removeFromLeft(40).withSizeKeepingCentre(40, 40));
+
   updateScrollBars();
 }
 

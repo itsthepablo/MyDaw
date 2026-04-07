@@ -10,6 +10,7 @@
 #include "PlaylistMenuBar/PlaylistMenuBar.h" 
 #include "ScrollBar/PlaylistNavigator.h" 
 #include "ScrollBar/VerticalNavigator.h" 
+#include "../UI/Knobs/FloatingValueSlider.h"
 
 
 class PlaylistComponent : public juce::Component,
@@ -93,8 +94,8 @@ public:
         repaint();
     }
 
-    void setExternalMutex(juce::CriticalSection* mutex) { audioMutex = mutex; }
-    void setMasterTrack(Track* mt) { masterTrackPtr = mt; }
+    void setExternalMutex(juce::CriticalSection* mutex);
+    void setMasterTrack(Track* mt);
     void addMidiClipToView(Track* targetTrack, MidiClipData* newClip);
     void addAudioClipToView(Track* targetTrack, AudioClipData* newClip);
     void updateScrollBars();
@@ -173,6 +174,13 @@ private:
     bool isExternalFileDragging = false;
     bool isInternalDragging = false;
     bool isDraggingTimeline = false;
+
+    // --- CONTROLES MASTER EN PLAYLIST ---
+    FloatingValueSlider masterVolSlider;
+    FloatingValueSlider masterPanSlider;
+    juce::TextButton masterMuteBtn;
+    juce::TextButton masterSoloBtn;
+    juce::Label masterLabel;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PlaylistComponent)
 };
