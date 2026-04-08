@@ -216,6 +216,8 @@
                 file="Source/Mixer/UI/MixerChannelUI.cpp"/>
           <FILE id="vgMem8" name="MixerChannelUI.h" compile="0" resource="0"
                 file="Source/Mixer/UI/MixerChannelUI.h"/>
+          <FILE id="eJ9Mxr" name="MixerRacks.cpp" compile="1" resource="0" file="Source/Mixer/UI/MixerRacks.cpp"/>
+          <FILE id="BApen4" name="MixerRacks.h" compile="0" resource="0" file="Source/Mixer/UI/MixerRacks.h"/>
         </GROUP>
         <FILE id="CBlPLC" name="MixerComponent.cpp" compile="1" resource="0"
               file="Source/Mixer/MixerComponent.cpp"/>
