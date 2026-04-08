@@ -202,6 +202,8 @@
         <GROUP id="{9FF6F501-CF73-A904-735C-68B41B9F3577}" name="LookAndFeel">
           <FILE id="abW52C" name="MixerLevelMeterLF.h" compile="0" resource="0"
                 file="Source/Mixer/LookAndFeel/MixerLevelMeterLF.h"/>
+          <FILE id="kuKjeQ" name="MixerLookAndFeel.cpp" compile="1" resource="0"
+                file="Source/Mixer/LookAndFeel/MixerLookAndFeel.cpp"/>
           <FILE id="I8pA1W" name="MixerLookAndFeel.h" compile="0" resource="0"
                 file="Source/Mixer/LookAndFeel/MixerLookAndFeel.h"/>
         </GROUP>
