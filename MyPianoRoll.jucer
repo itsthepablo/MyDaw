@@ -192,6 +192,9 @@
           <FILE id="I8pA1W" name="MixerLookAndFeel.h" compile="0" resource="0"
                 file="Source/Mixer/LookAndFeel/MixerLookAndFeel.h"/>
         </GROUP>
+        <GROUP id="{53E40755-50BC-896A-FFB1-644243DCEC78}" name="UI">
+          <FILE id="pMHzoa" name="MixerRacks.h" compile="0" resource="0" file="Source/Mixer/UI/MixerRacks.h"/>
+        </GROUP>
         <FILE id="QuB7TA" name="MasterChannelUI.h" compile="0" resource="0"
               file="Source/Mixer/MasterChannelUI.h"/>
         <FILE id="RcTW5A" name="MixerChannelUI.h" compile="0" resource="0"
