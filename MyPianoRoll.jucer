@@ -207,13 +207,16 @@
           <FILE id="I8pA1W" name="MixerLookAndFeel.h" compile="0" resource="0"
                 file="Source/Mixer/LookAndFeel/MixerLookAndFeel.h"/>
         </GROUP>
-        <GROUP id="{53E40755-50BC-896A-FFB1-644243DCEC78}" name="UI">
-          <FILE id="pMHzoa" name="MixerRacks.h" compile="0" resource="0" file="Source/Mixer/UI/MixerRacks.h"/>
+        <GROUP id="{3BB1C387-7DB7-BC37-ADCF-CE880E617B13}" name="UI">
+          <FILE id="hrdNq2" name="MasterChannelUI.cpp" compile="1" resource="0"
+                file="Source/Mixer/UI/MasterChannelUI.cpp"/>
+          <FILE id="OE5SF2" name="MasterChannelUI.h" compile="0" resource="0"
+                file="Source/Mixer/UI/MasterChannelUI.h"/>
+          <FILE id="LeMQuG" name="MixerChannelUI.cpp" compile="1" resource="0"
+                file="Source/Mixer/UI/MixerChannelUI.cpp"/>
+          <FILE id="vgMem8" name="MixerChannelUI.h" compile="0" resource="0"
+                file="Source/Mixer/UI/MixerChannelUI.h"/>
         </GROUP>
-        <FILE id="QuB7TA" name="MasterChannelUI.h" compile="0" resource="0"
-              file="Source/Mixer/MasterChannelUI.h"/>
-        <FILE id="RcTW5A" name="MixerChannelUI.h" compile="0" resource="0"
-              file="Source/Mixer/MixerChannelUI.h"/>
         <FILE id="CBlPLC" name="MixerComponent.cpp" compile="1" resource="0"
               file="Source/Mixer/MixerComponent.cpp"/>
         <FILE id="uNkpr9" name="MixerComponent.h" compile="0" resource="0"

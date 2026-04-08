@@ -1,7 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include "../Tracks/Track.h"
-#include "MixerChannelUI.h" 
+#include "UI/MixerChannelUI.h" 
 
 // ==============================================================================
 // VIEWPORT SIN INTERCEPCION DE DRAG

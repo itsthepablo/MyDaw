@@ -1,6 +1,6 @@
 #pragma once
 #include <JuceHeader.h>
-#include "../Tracks/Track.h"
+#include "../../Tracks/Track.h"
 
 // ==============================================================================
 // SLOTS Y RACKS (Componentes Auxiliares Aislados)
