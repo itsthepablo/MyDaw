@@ -3,6 +3,7 @@
 #include "Knobs/FloatingValueBox.h"
 #include "../Tracks/Track.h"
 #include "../Mixer/Bridges/MixerParameterBridge.h"
+#include "../Mixer/LookAndFeel/MixerLevelMeterLF.h"
 
 /**
  * LevelMeter — Componente Unificado Hi-Fi
@@ -102,6 +103,13 @@ public:
     }
 
     void paint(juce::Graphics& g) override {
+        // --- DELEGACIÓN AL LOOK AND FEEL PERSONALIZADO ---
+        if (auto* lf = dynamic_cast<LevelMeterLookAndFeel*>(&getLookAndFeel())) {
+            lf->drawLevelMeter(g, getLocalBounds().toFloat(), dispL, dispR, peakL, peakR, isClipping, isHorizontal);
+            return;
+        }
+
+        // --- DIBUJO CLÁSICO (Fallback para Playlist / Otros) ---
         auto bounds = getLocalBounds().toFloat();
         const float floorDB = -80.0f;
 

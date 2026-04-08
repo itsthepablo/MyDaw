@@ -195,15 +195,13 @@
         <GROUP id="{AB9B764C-E8C6-CA27-F277-C51137DA6454}" name="Data">
           <FILE id="iDsna4" name="MixerChannelData.h" compile="0" resource="0"
                 file="Source/Mixer/Data/MixerChannelData.h"/>
-          <FILE id="MjwLHZ" name="MixerChannelState.cpp" compile="1" resource="0"
-                file="Source/Mixer/Data/MixerChannelState.cpp"/>
-          <FILE id="gpu8hf" name="MixerChannelState.h" compile="0" resource="0"
-                file="Source/Mixer/Data/MixerChannelState.h"/>
         </GROUP>
         <GROUP id="{766B6889-7BAD-C92D-7290-2F533B5E5E8E}" name="DSP">
           <FILE id="HhijLP" name="MixerDSP.h" compile="0" resource="0" file="Source/Mixer/DSP/MixerDSP.h"/>
         </GROUP>
         <GROUP id="{9FF6F501-CF73-A904-735C-68B41B9F3577}" name="LookAndFeel">
+          <FILE id="abW52C" name="MixerLevelMeterLF.h" compile="0" resource="0"
+                file="Source/Mixer/LookAndFeel/MixerLevelMeterLF.h"/>
           <FILE id="I8pA1W" name="MixerLookAndFeel.h" compile="0" resource="0"
                 file="Source/Mixer/LookAndFeel/MixerLookAndFeel.h"/>
         </GROUP>

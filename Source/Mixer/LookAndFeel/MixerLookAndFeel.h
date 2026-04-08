@@ -1,11 +1,12 @@
 #pragma once
 #include <JuceHeader.h>
+#include "MixerLevelMeterLF.h"
 
 // ==============================================================================
 // 1. LOOK AND FEEL PROFESIONAL PARA EL MIXER
 // Esta clase ahora vive en su propio archivo. Solo dibuja, no procesa audio.
 // ==============================================================================
-class MixerLookAndFeel : public juce::LookAndFeel_V4 {
+class MixerLookAndFeel : public juce::LookAndFeel_V4, public LevelMeterLookAndFeel {
 public:
     MixerLookAndFeel() {
         setColour(juce::Slider::thumbColourId, juce::Colour(200, 200, 200));
@@ -86,5 +87,15 @@ public:
 
         g.setColour(juce::Colours::black.withAlpha(0.5f));
         g.drawRoundedRectangle(handle, 3.0f, 1.0f);
+    }
+
+    // --- IMPLEMENTACIÓN DEL MEDIDOR DE PICOS (Desde MixerLevelMeterLF.h) ---
+    void drawLevelMeter(juce::Graphics& g, 
+                        juce::Rectangle<float> bounds, 
+                        float levelL, float levelR, 
+                        float peakL, float peakR, 
+                        bool isClipping, bool isHorizontal) override 
+    {
+        MixerLevelMeterDesigner::draw(g, bounds, levelL, levelR, peakL, peakR, isClipping, isHorizontal);
     }
 };
