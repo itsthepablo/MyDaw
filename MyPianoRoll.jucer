@@ -188,6 +188,10 @@
         <FILE id="hpmdn9" name="SendDevice.h" compile="0" resource="0" file="Source/Effects/SendDevice.h"/>
       </GROUP>
       <GROUP id="{57A16124-0184-7C27-B886-F155C0B20BDF}" name="Mixer">
+        <GROUP id="{9FF6F501-CF73-A904-735C-68B41B9F3577}" name="LookAndFeel">
+          <FILE id="I8pA1W" name="MixerLookAndFeel.h" compile="0" resource="0"
+                file="Source/Mixer/LookAndFeel/MixerLookAndFeel.h"/>
+        </GROUP>
         <FILE id="QuB7TA" name="MasterChannelUI.h" compile="0" resource="0"
               file="Source/Mixer/MasterChannelUI.h"/>
         <FILE id="RcTW5A" name="MixerChannelUI.h" compile="0" resource="0"
