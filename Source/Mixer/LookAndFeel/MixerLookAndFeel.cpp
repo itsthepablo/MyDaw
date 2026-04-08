@@ -1,10 +1,22 @@
 #include "MixerLookAndFeel.h"
 
 MixerLookAndFeel::MixerLookAndFeel() {
+    // --- COLORES ESTÁNDAR JUCE ---
     setColour(juce::Slider::thumbColourId, juce::Colour(200, 200, 200));
     setColour(juce::Slider::trackColourId, juce::Colour(30, 30, 30));
     setColour(juce::ScrollBar::thumbColourId, juce::Colour(60, 60, 60));
     setColour(juce::ScrollBar::backgroundColourId, juce::Colours::transparentBlack);
+
+    // --- TEMAS PERSONALIZADOS DEL MIXER (CENTRALISED) ---
+    setColour(MixerColours::mainBackground,    juce::Colour(25, 28, 31));
+    setColour(MixerColours::channelBackground, juce::Colour(35, 38, 42));
+    setColour(MixerColours::masterBackground,  juce::Colour(30, 33, 37));
+    setColour(MixerColours::meterBackground,   juce::Colour(10, 12, 14));
+    setColour(MixerColours::accentOrange,      juce::Colours::orange);
+    
+    setColour(MixerColours::slotEmpty,          juce::Colour(25, 25, 25));
+    setColour(MixerColours::pluginActive,       juce::Colour(45, 50, 60));
+    setColour(MixerColours::sendActive,         juce::Colour(35, 60, 45));
 }
 
 void MixerLookAndFeel::drawScrollbarButton(juce::Graphics&, juce::ScrollBar&, int, int, int, bool, bool, bool) {}
@@ -43,7 +55,8 @@ void MixerLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int wid
     p.addRectangle(-pointerThickness * 0.5f, -radius, pointerThickness, pointerLength);
     p.applyTransform(juce::AffineTransform::rotation(angle).translated(toX, toY));
 
-    g.setColour(juce::Colours::orange.withAlpha(0.9f));
+    // Usar color del tema
+    g.setColour(findColour(MixerColours::accentOrange).withAlpha(0.9f));
     g.fillPath(p);
 }
 
@@ -72,7 +85,7 @@ void MixerLookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, int wid
     g.setColour(juce::Colour(60, 60, 65));
     g.fillRoundedRectangle(handle, 3.0f);
 
-    g.setColour(juce::Colours::orange);
+    g.setColour(findColour(MixerColours::accentOrange));
     if (isVertical)
         g.fillRect(handle.getX(), handle.getCentreY() - 1.0f, handle.getWidth(), 2.0f);
     else

@@ -1,4 +1,5 @@
 #include "MasterChannelUI.h"
+#include "../LookAndFeel/MixerColours.h"
 
 MasterChannelUI::MasterChannelUI(std::function<float()> getVol, std::function<void(float)> setVol) 
     : getVolumeCallback(getVol), setVolumeCallback(setVol)
@@ -31,7 +32,7 @@ MasterChannelUI::~MasterChannelUI() {
 
 void MasterChannelUI::paint(juce::Graphics& g) {
     auto b = getLocalBounds();
-    g.fillAll(juce::Colour(30, 33, 37)); 
+    g.fillAll(getLookAndFeel().findColour(MixerColours::masterBackground)); 
     
     g.setColour(juce::Colours::black.withAlpha(0.5f));
     g.drawRect(b, 2);

@@ -1,4 +1,5 @@
 #include "MixerChannelUI.h"
+#include "../LookAndFeel/MixerColours.h"
 
 // --- FXRack Implementation ---
 MixerChannelUI::FXRack::FXRack(Track* t, MixerChannelUI* p) : track(t), parent(p) {}
@@ -161,7 +162,7 @@ void MixerChannelUI::updateUI() {
 }
 
 void MixerChannelUI::paint(juce::Graphics& g) {
-    g.fillAll(juce::Colour(35, 38, 42));
+    g.fillAll(getLookAndFeel().findColour(MixerColours::channelBackground));
     g.setColour(juce::Colours::black.withAlpha(0.3f)); 
     g.drawRect(getLocalBounds(), 1);
     g.setColour(track->getColor()); 

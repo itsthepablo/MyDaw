@@ -1,6 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include "MixerLevelMeterLF.h"
+#include "MixerColours.h"
 
 // ==============================================================================
 // 1. LOOK AND FEEL PROFESIONAL PARA EL MIXER

@@ -1,4 +1,5 @@
 #include "MixerRacks.h"
+#include "../LookAndFeel/MixerColours.h"
 
 // ==============================================================================
 // PluginSlot Implementation
@@ -27,7 +28,10 @@ void PluginSlot::paint(juce::Graphics& g) {
     bool hasPlugin = track && index < track->plugins.size();
     bool bypassed = hasPlugin && track->plugins[index]->isBypassed();
 
-    g.setColour(hasPlugin ? (bypassed ? juce::Colour(35, 35, 35) : juce::Colour(45, 50, 60)) : juce::Colour(25, 25, 25));
+    auto activeCol = findColour(MixerColours::pluginActive);
+    auto emptyCol = findColour(MixerColours::slotEmpty);
+
+    g.setColour(hasPlugin ? (bypassed ? activeCol.darker(0.3f) : activeCol) : emptyCol);
     g.fillRoundedRectangle(b.toFloat(), 2.0f);
     g.setColour(juce::Colours::black.withAlpha(0.4f));
     g.drawRoundedRectangle(b.toFloat(), 2.0f, 1.0f);
@@ -72,7 +76,11 @@ SendSlot::SendSlot(Track* t, int idx) : track(t), index(idx) {}
 void SendSlot::paint(juce::Graphics& g) {
     auto b = getLocalBounds().reduced(2);
     bool hasSend = track && index < track->sends.size();
-    g.setColour(hasSend ? juce::Colour(35, 60, 45) : juce::Colour(20, 25, 20));
+    
+    auto activeCol = findColour(MixerColours::sendActive);
+    auto emptyCol = findColour(MixerColours::slotEmpty);
+
+    g.setColour(hasSend ? activeCol : emptyCol);
     g.fillRoundedRectangle(b.toFloat(), 2.0f);
     if (hasSend) {
         g.setColour(juce::Colours::white.withAlpha(0.7f)); g.setFont(9.0f);
