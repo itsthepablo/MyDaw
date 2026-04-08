@@ -1,6 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include "../../Tracks/Track.h"
+#include "../../Mixer/Bridges/MixerParameterBridge.h"
 
 class GainStationDSP {
 public:
@@ -9,7 +10,7 @@ public:
         buffer.applyGain(track->getPreGain());
 
         // 2. INVERSIÓN DE POLARIDAD (Phase)
-        if (track->isPhaseInverted) {
+        if (MixerParameterBridge::isPhaseInverted(track)) {
             buffer.applyGain(-1.0f);
         }
 

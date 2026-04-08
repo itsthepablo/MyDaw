@@ -1,6 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include "../../Tracks/Track.h"
+#include "../../Mixer/Bridges/MixerParameterBridge.h"
 #include "../Knobs/FloatingValueSlider.h"
 #include "GainStationMeter.h"
 
@@ -33,7 +34,7 @@ public:
         phaseBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colours::red.darker(0.2f));
         phaseBtn.setTooltip("Invertir Polaridad (Fase)");
         phaseBtn.onClick = [this] {
-            if (activeTrack) activeTrack->isPhaseInverted = phaseBtn.getToggleState();
+            if (activeTrack) MixerParameterBridge::setPhaseInverted(activeTrack, phaseBtn.getToggleState());
             };
 
         addAndMakeVisible(monoBtn);
@@ -42,7 +43,7 @@ public:
         monoBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colours::orange.darker(0.2f));
         monoBtn.setTooltip("Sumar a Mono (L+R)");
         monoBtn.onClick = [this] {
-            if (activeTrack) activeTrack->isMonoActive = monoBtn.getToggleState();
+            if (activeTrack) MixerParameterBridge::setMonoActive(activeTrack, monoBtn.getToggleState());
             };
 
         addAndMakeVisible(matchBtn);
@@ -58,8 +59,8 @@ public:
         if (activeTrack) {
             preGainKnob.setValue(activeTrack->getPreGain(), juce::dontSendNotification);
             postGainKnob.setValue(activeTrack->getPostGain(), juce::dontSendNotification);
-            phaseBtn.setToggleState(activeTrack->isPhaseInverted, juce::dontSendNotification);
-            monoBtn.setToggleState(activeTrack->isMonoActive, juce::dontSendNotification);
+            phaseBtn.setToggleState(MixerParameterBridge::isPhaseInverted(activeTrack), juce::dontSendNotification);
+            monoBtn.setToggleState(MixerParameterBridge::isMonoActive(activeTrack), juce::dontSendNotification);
         }
         repaint();
     }

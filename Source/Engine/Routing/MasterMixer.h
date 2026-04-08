@@ -11,7 +11,7 @@ public:
     // ============================================================
     static void applyGainAndPan(Track* track, int numSamples, int hardwareOutChannels) noexcept
     {
-        if (track->isMuted) {
+        if (track->mixerData.isMuted.load(std::memory_order_relaxed)) {
             track->audioBuffer.clear();
             return;
         }
@@ -21,18 +21,18 @@ public:
             float* lData = track->audioBuffer.getWritePointer(0);
             float* rData = track->audioBuffer.getWritePointer(1);
 
-            if (track->panningModeDual.load(std::memory_order_relaxed)) 
+            if (track->mixerData.panningModeDual.load(std::memory_order_relaxed)) 
             {
                 // DUAL PANNING - Linear Balance (0dB Unity) + Smoothed (Rule #18)
-                const float pL = track->panL.load(std::memory_order_relaxed);
-                const float pR = track->panR.load(std::memory_order_relaxed);
+                const float pL = track->mixerData.panL.load(std::memory_order_relaxed);
+                const float pR = track->mixerData.panR.load(std::memory_order_relaxed);
 
                 // Mapeamos de [-1, 1] a [0, 1] (0 = Hard Left, 1 = Hard Right)
                 const float posL = (pL + 1.0f) * 0.5f;
                 const float posR = (pR + 1.0f) * 0.5f;
 
                 for (int i = 0; i < numSamples; ++i) {
-                    const float smoothV = track->volumeSmoother.getNextValue();
+                    const float smoothV = track->mixerData.volumeSmoother.getNextValue();
                     const float inL = lData[i];
                     const float inR = rData[i];
 
@@ -40,14 +40,14 @@ public:
                     lData[i] = (inL * (1.0f - posL) + inR * (1.0f - posR)) * smoothV;
                     rData[i] = (inL * posL          + inR * posR)          * smoothV;
                 }
-                track->panSmoother.skip(numSamples);
+                track->mixerData.panSmoother.skip(numSamples);
             }
             else 
             {
                 // STANDARD PANNING - Linear Balance (0dB Unity) + Smoothed (Commercial Grade)
                 for (int i = 0; i < numSamples; ++i) {
-                    const float v = track->volumeSmoother.getNextValue();
-                    const float pan = track->panSmoother.getNextValue();
+                    const float v = track->mixerData.volumeSmoother.getNextValue();
+                    const float pan = track->mixerData.panSmoother.getNextValue();
 
                     // Ley de Balance Lineal: 0dB en el centro, 0dB en los extremos.
                     const float gainL = juce::jmin(1.0f, 1.0f - pan);
@@ -62,17 +62,17 @@ public:
         {
             float* data = track->audioBuffer.getWritePointer(0);
             for (int i = 0; i < numSamples; ++i)
-                data[i] *= track->volumeSmoother.getNextValue();
+                data[i] *= track->mixerData.volumeSmoother.getNextValue();
             
-            track->panSmoother.skip(numSamples);
+            track->mixerData.panSmoother.skip(numSamples);
         }
 
         // 3. VU-METER Update (Post-Fader / Post-Pan)
         if (track->audioBuffer.getNumChannels() > 0) {
-            track->currentPeakLevelL = track->audioBuffer.getMagnitude(0, 0, numSamples);
-            track->currentPeakLevelR = track->audioBuffer.getNumChannels() > 1
+            track->mixerData.currentPeakLevelL.store(track->audioBuffer.getMagnitude(0, 0, numSamples), std::memory_order_relaxed);
+            track->mixerData.currentPeakLevelR.store(track->audioBuffer.getNumChannels() > 1
                 ? track->audioBuffer.getMagnitude(1, 0, numSamples)
-                : track->currentPeakLevelL;
+                : track->mixerData.currentPeakLevelL.load(), std::memory_order_relaxed);
         }
     }
 

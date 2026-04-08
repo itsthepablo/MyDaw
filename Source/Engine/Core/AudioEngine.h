@@ -9,6 +9,7 @@
 #include "../Nodes/TrackProcessor.h"
 #include "../Nodes/MetronomeProcessor.h"
 #include "../Threading/AudioThreadPool.h"
+#include "../../Mixer/Bridges/MixerParameterBridge.h"
 
 // ==============================================================================
 // AudioEngine — Motor central de procesamiento de audio multihilo.
@@ -175,14 +176,12 @@ public:
         // Limpiar buffers y vumétros de todos los tracks (sequentially — rapido)
         for (auto* track : topo->activeTracks) {
             track->audioBuffer.clear();
-            track->currentPeakLevelL = 0.0f;
-            track->currentPeakLevelR = 0.0f;
+            MixerParameterBridge::resetPeakLevels(track);
         }
 
         if (masterTrack != nullptr) {
             masterTrack->audioBuffer.clear();
-            masterTrack->currentPeakLevelL = 0.0f;
-            masterTrack->currentPeakLevelR = 0.0f;
+            MixerParameterBridge::resetPeakLevels(masterTrack);
         }
 
         clock.update(bufferToFill.numSamples, transportState);

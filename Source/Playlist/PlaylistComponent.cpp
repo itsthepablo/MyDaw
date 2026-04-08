@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <cmath>
 #include <unordered_map>
+#include "../Mixer/Bridges/MixerParameterBridge.h"
 
 
 
@@ -112,8 +113,8 @@ void PlaylistComponent::setMasterTrack(Track *mt) {
   if (mt) {
     masterVolSlider.setValue(mt->getVolume(), juce::dontSendNotification);
     masterPanSlider.setValue(mt->getBalance(), juce::dontSendNotification);
-    masterMuteBtn.setToggleState(mt->isMuted, juce::dontSendNotification);
-    masterSoloBtn.setToggleState(mt->isSoloed, juce::dontSendNotification);
+    masterMuteBtn.setToggleState(MixerParameterBridge::isMuted(mt), juce::dontSendNotification);
+    masterSoloBtn.setToggleState(MixerParameterBridge::isSoloed(mt), juce::dontSendNotification);
 
     masterVolSlider.onValueChange = [this, mt] {
       if (masterTrackPtr)
@@ -125,11 +126,11 @@ void PlaylistComponent::setMasterTrack(Track *mt) {
     };
     masterMuteBtn.onClick = [this, mt] {
       if (masterTrackPtr)
-        masterTrackPtr->isMuted = masterMuteBtn.getToggleState();
+        MixerParameterBridge::setMuted(masterTrackPtr, masterMuteBtn.getToggleState());
     };
     masterSoloBtn.onClick = [this, mt] {
       if (masterTrackPtr)
-        masterTrackPtr->isSoloed = masterSoloBtn.getToggleState();
+        MixerParameterBridge::setSoloed(masterTrackPtr, masterSoloBtn.getToggleState());
     };
 
     // Vincular el EQ al Master por defecto

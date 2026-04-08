@@ -180,8 +180,8 @@ public:
 private:
     void timerCallback() override {
         if (track != nullptr) {
-            float l = track->currentPeakLevelL.load(std::memory_order_relaxed);
-            float r = track->currentPeakLevelR.load(std::memory_order_relaxed);
+            float l = track->mixerData.currentPeakLevelL.load(std::memory_order_relaxed);
+            float r = track->mixerData.currentPeakLevelR.load(std::memory_order_relaxed);
             setLevel(l, r);
         }
     }

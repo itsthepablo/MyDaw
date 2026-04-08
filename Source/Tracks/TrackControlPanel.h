@@ -1,6 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include "Track.h"
+#include "../Mixer/Bridges/MixerParameterBridge.h"
 #include "../PluginHost/VSTHost.h" 
 #include "../UI/Knobs/FloatingValueSlider.h" 
 #include "../UI/LevelMeter.h"
@@ -28,18 +29,18 @@ public:
 
         muteBtn.setButtonText("M");
         muteBtn.setClickingTogglesState(true);
-        muteBtn.setToggleState(track.isMuted, juce::dontSendNotification);
+        muteBtn.setToggleState(MixerParameterBridge::isMuted(&track), juce::dontSendNotification);
         muteBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(45, 48, 52));
         muteBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colours::red.darker(0.2f));
-        muteBtn.onClick = [this] { track.isMuted = muteBtn.getToggleState(); };
+        muteBtn.onClick = [this] { MixerParameterBridge::setMuted(&track, muteBtn.getToggleState()); };
 
         soloBtn.setButtonText("S");
         soloBtn.setClickingTogglesState(true);
-        soloBtn.setToggleState(track.isSoloed, juce::dontSendNotification);
+        soloBtn.setToggleState(MixerParameterBridge::isSoloed(&track), juce::dontSendNotification);
         soloBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(45, 48, 52));
         soloBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colours::yellow.darker(0.2f));
         soloBtn.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
-        soloBtn.onClick = [this] { track.isSoloed = soloBtn.getToggleState(); };
+        soloBtn.onClick = [this] { MixerParameterBridge::setSoloed(&track, soloBtn.getToggleState()); };
 
         volKnob.setName("TrackKnob");
         volKnob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
@@ -206,12 +207,12 @@ public:
 
     void timerCallback() override {
         if (track.getType() == TrackType::Loudness || track.getType() == TrackType::Balance || track.getType() == TrackType::MidSide) return; 
-        if (track.isMuted) { levelMeter.setLevel(0.0f, 0.0f); return; }
-        float vol = track.getVolume();
-        float pan = track.getBalance();
+        if (track.mixerData.isMuted.load()) { levelMeter.setLevel(0.0f, 0.0f); return; }
+        float vol = MixerParameterBridge::getVolume(&track);
+        float pan = MixerParameterBridge::getBalance(&track);
         float leftGain = vol * (pan < 0.0f ? 1.0f : 1.0f - pan);
         float rightGain = vol * (pan > 0.0f ? 1.0f : 1.0f + pan);
-        levelMeter.setLevel(track.currentPeakLevelL * leftGain, track.currentPeakLevelR * rightGain);
+        levelMeter.setLevel(MixerParameterBridge::getPeakLevelL(&track) * leftGain, MixerParameterBridge::getPeakLevelR(&track) * rightGain);
     }
 
     void updateFolderBtnVisuals() {

@@ -1,6 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include "../Tracks/Track.h"
+#include "../Mixer/Bridges/MixerParameterBridge.h"
 #include "../UI/LevelMeter.h"
 #include "LookAndFeel/MixerLookAndFeel.h"
 #include "UI/MixerRacks.h" // <-- Aquí conectamos los Slots auxiliares aislados
@@ -92,7 +93,7 @@ public:
             panToggle.onClick = [this] {
                 bool dual = panToggle.getToggleState();
                 panToggle.setButtonText(dual ? "DUAL" : "NORM");
-                track->panningModeDual.store(dual);
+                MixerParameterBridge::setPanningModeDual(track, dual);
                 updatePanVisibility();
                 };
             addAndMakeVisible(panToggle);
@@ -100,13 +101,13 @@ public:
             panL.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
             panL.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
             panL.setRange(-1.0, 1.0);
-            panL.onValueChange = [this] { track->panL.store((float)panL.getValue()); };
+            panL.onValueChange = [this] { MixerParameterBridge::setPanL(track, (float)panL.getValue()); };
             addChildComponent(panL);
 
             panR.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
             panR.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
             panR.setRange(-1.0, 1.0);
-            panR.onValueChange = [this] { track->panR.store((float)panR.getValue()); };
+            panR.onValueChange = [this] { MixerParameterBridge::setPanR(track, (float)panR.getValue()); };
             addChildComponent(panR);
         }
 
@@ -119,11 +120,11 @@ public:
         addAndMakeVisible(fader);
 
         setupButton(muteBtn, "M", juce::Colours::red);
-        muteBtn.onClick = [this] { track->isMuted = muteBtn.getToggleState(); };
+        muteBtn.onClick = [this] { MixerParameterBridge::setMuted(track, muteBtn.getToggleState()); };
         setupButton(soloBtn, "S", juce::Colours::yellow);
-        soloBtn.onClick = [this] { track->isSoloed = soloBtn.getToggleState(); };
+        soloBtn.onClick = [this] { MixerParameterBridge::setSoloed(track, soloBtn.getToggleState()); };
         setupButton(phaseBtn, "PHS", juce::Colours::cyan);
-        phaseBtn.onClick = [this] { track->isPhaseInverted = phaseBtn.getToggleState(); };
+        phaseBtn.onClick = [this] { MixerParameterBridge::setPhaseInverted(track, phaseBtn.getToggleState()); };
         setupButton(recBtn, "R", juce::Colours::red.brighter());
 
         trackName.setJustificationType(juce::Justification::centred);
@@ -145,20 +146,20 @@ public:
         panKnob.setValue(track->getBalance(), juce::dontSendNotification);
 
         if (!isMiniMode) {
-            bool dual = track->panningModeDual.load();
+            bool dual = MixerParameterBridge::isPanningModeDual(track);
             bool uiDual = panToggle.getToggleState();
             if (dual != uiDual) {
                 panToggle.setToggleState(dual, juce::dontSendNotification);
                 panToggle.setButtonText(dual ? "DUAL" : "NORM");
                 updatePanVisibility();
             }
-            panL.setValue(track->panL.load(), juce::dontSendNotification);
-            panR.setValue(track->panR.load(), juce::dontSendNotification);
+            panL.setValue(MixerParameterBridge::getPanL(track), juce::dontSendNotification);
+            panR.setValue(MixerParameterBridge::getPanR(track), juce::dontSendNotification);
         }
 
-        muteBtn.setToggleState(track->isMuted, juce::dontSendNotification);
-        soloBtn.setToggleState(track->isSoloed, juce::dontSendNotification);
-        phaseBtn.setToggleState(track->isPhaseInverted, juce::dontSendNotification);
+        muteBtn.setToggleState(MixerParameterBridge::isMuted(track), juce::dontSendNotification);
+        soloBtn.setToggleState(MixerParameterBridge::isSoloed(track), juce::dontSendNotification);
+        phaseBtn.setToggleState(MixerParameterBridge::isPhaseInverted(track), juce::dontSendNotification);
         if (trackName.getText() != track->getName()) trackName.setText(track->getName(), juce::dontSendNotification);
         if (!isMiniMode) {
             fxRack.syncSlots();
@@ -183,7 +184,7 @@ public:
             auto panToggleArea = topArea.removeFromTop(20);
             panToggle.setBounds(panToggleArea.withSizeKeepingCentre(40, 18));
 
-            if (track->panningModeDual.load()) {
+            if (track->mixerData.panningModeDual.load()) {
                 panL.setBounds(topArea.removeFromLeft(topArea.getWidth() / 2).reduced(5));
                 panR.setBounds(topArea.reduced(5));
             }
@@ -257,7 +258,7 @@ private:
 
     void updatePanVisibility() {
         if (isMiniMode) return;
-        bool dual = track->panningModeDual.load();
+        bool dual = MixerParameterBridge::isPanningModeDual(track);
         panKnob.setVisible(!dual);
         panL.setVisible(dual);
         panR.setVisible(dual);

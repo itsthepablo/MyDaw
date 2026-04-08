@@ -10,6 +10,7 @@
 #include "../UI/MidiPatternStyles.h"
 #include <juce_dsp/juce_dsp.h>
 #include "../Native_Plugins/ChannelEQ/ChannelEQ_DSP.h"
+#include "../Mixer/Data/MixerChannelData.h"
 #include <map>
 #include <map>
 #include <vector>
@@ -166,12 +167,6 @@ public:
         color = juce::Colour(juce::Random::getSystemRandom().nextFloat(), 0.6f, 0.8f, 1.0f);
         if (t == TrackType::Folder) color = juce::Colour(60, 65, 75);
         thumbnailFormatManager.registerBasicFormats();
-
-        // Inicialización segura de faders para evitar silencio (Rule #18)
-        volumeSmoother.reset(44100.0, 0.05);
-        volumeSmoother.setCurrentAndTargetValue(1.0f);
-        panSmoother.reset(44100.0, 0.05);
-        panSmoother.setCurrentAndTargetValue(balance);
     }
 
     ~Track() {
@@ -186,25 +181,16 @@ public:
     juce::Colour getColor() const { return color; }
     void setColor(juce::Colour c) { color = c; }
 
-    float getVolume() const { return volume; }
-    void setVolume(float v) { 
-        volume = v; 
-        volumeSmoother.setTargetValue(v);
-    }
-    float getBalance() const { return balance; }
-    void setBalance(float b) { 
-        balance = b; 
-        panSmoother.setTargetValue(b);
-    }
+    float getVolume() const { return mixerData.volume; }
+    void setVolume(float v) { mixerData.setVolume(v); }
+    float getBalance() const { return mixerData.balance; }
+    void setBalance(float b) { mixerData.setBalance(b); }
+    
+    MixerChannelData mixerData;
 
     void prepare(double sampleRate, int samplesPerBlock)
     {
-        volumeSmoother.reset(sampleRate, 0.05); // 50ms ramp for professional feel
-        volumeSmoother.setCurrentAndTargetValue(volume);
-
-        panSmoother.reset(sampleRate, 0.05);
-        panSmoother.setCurrentAndTargetValue(balance);
-
+        mixerData.prepare(sampleRate, samplesPerBlock);
         inlineEQ.prepare(sampleRate, samplesPerBlock, 2);
     }
 
@@ -220,12 +206,8 @@ public:
     float getPostGain() const { return postGain; }
     void setPostGain(float v) { postGain = v; }
 
-    bool isPhaseInverted = false;
+    // bool isPhaseInverted -> MOVIDO A mixerData
     bool isMonoActive = false;
-
-    std::atomic<bool> panningModeDual { false };
-    std::atomic<float> panL { -1.0f };
-    std::atomic<float> panR { 1.0f };
 
     std::vector<Note> notes;
     juce::OwnedArray<BaseEffect> plugins;
@@ -254,8 +236,8 @@ public:
     bool isCollapsed = false;
     bool isShowingInChildren = true;
 
-    bool isMuted = false;
-    bool isSoloed = false;
+    // bool isMuted -> MOVIDO A mixerData
+    // bool isSoloed -> MOVIDO A mixerData
     bool isSelected = false;
     bool isInlineEditingActive = false;
 
@@ -281,8 +263,7 @@ public:
         pdcWritePtr = 0;
     }
 
-    std::atomic<float> currentPeakLevelL { 0.0f };
-    std::atomic<float> currentPeakLevelR { 0.0f };
+    // currentPeakLevelL/R -> MOVIDO A mixerData
 
     SimpleLoudness preLoudness;
     SimpleLoudness postLoudness;
@@ -421,13 +402,8 @@ private:
     juce::String name;
     TrackType type;
     juce::Colour color;
-    float volume = 1.0f;
-    float balance = 0.0f;
-
-public:
-    juce::LinearSmoothedValue<float> volumeSmoother;
-    juce::LinearSmoothedValue<float> panSmoother;
-private:
+    float volume_legacy = 1.0f; // TODO: Migrar completamente a mixerData
+    float balance_legacy = 0.0f;
 
     float preGain = 1.0f;
     float postGain = 1.0f;

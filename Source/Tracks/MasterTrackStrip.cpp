@@ -1,4 +1,5 @@
 #include "MasterTrackStrip.h"
+#include "../Mixer/Bridges/MixerParameterBridge.h"
 
 MasterTrackStrip::MasterTrackStrip()
 {
@@ -15,7 +16,7 @@ MasterTrackStrip::MasterTrackStrip()
     muteBtn.setClickingTogglesState(true);
     muteBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(45, 48, 52));
     muteBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colours::red.darker(0.2f));
-    muteBtn.onClick = [this] { if (masterTrack) masterTrack->isMuted = muteBtn.getToggleState(); };
+    muteBtn.onClick = [this] { if (masterTrack) MixerParameterBridge::setMuted(masterTrack, muteBtn.getToggleState()); };
 
     // --- Solo ("S") ---
     addAndMakeVisible(soloBtn);
@@ -24,7 +25,7 @@ MasterTrackStrip::MasterTrackStrip()
     soloBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(45, 48, 52));
     soloBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colours::yellow.darker(0.2f));
     soloBtn.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
-    soloBtn.onClick = [this] { if (masterTrack) masterTrack->isSoloed = soloBtn.getToggleState(); };
+    soloBtn.onClick = [this] { if (masterTrack) MixerParameterBridge::setSoloed(masterTrack, soloBtn.getToggleState()); };
 
     // --- Paneo ---
     addAndMakeVisible(panKnob);
@@ -83,10 +84,10 @@ void MasterTrackStrip::setMasterTrack(Track* t)
     levelMeter.setTrack(t);
     
     if (masterTrack != nullptr) {
-        volKnob.setValue(masterTrack->getVolume(), juce::dontSendNotification);
-        panKnob.setValue(masterTrack->getBalance(), juce::dontSendNotification);
-        muteBtn.setToggleState(masterTrack->isMuted, juce::dontSendNotification);
-        soloBtn.setToggleState(masterTrack->isSoloed, juce::dontSendNotification);
+        volKnob.setValue(MixerParameterBridge::getVolume(masterTrack), juce::dontSendNotification);
+        panKnob.setValue(MixerParameterBridge::getBalance(masterTrack), juce::dontSendNotification);
+        muteBtn.setToggleState(MixerParameterBridge::isMuted(masterTrack), juce::dontSendNotification);
+        soloBtn.setToggleState(MixerParameterBridge::isSoloed(masterTrack), juce::dontSendNotification);
     }
 }
 
