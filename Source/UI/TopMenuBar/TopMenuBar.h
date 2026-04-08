@@ -5,16 +5,17 @@
 #include "WindowControlButton.h"
 #include "BpmDragControl.h"
 #include "RecordButton.h"
+#include "SvgToggleButton.h"
 #include "../../Theme/CustomTheme.h"
 
 class TopMenuBar : public juce::Component, public juce::Timer {
 public:
     juce::TextButton viewToggleBtn;
     juce::TextButton playlistToggleBtn;
-    juce::TextButton playBtn;
-    juce::TextButton stopBtn;
+    SvgToggleButton playBtn{ "PLAY", "PAUSE" };
+    juce::TextButton stopBtn{ "STOP" };
     BpmDragControl bpmControl;
-    juce::TextButton metronomeBtn;
+    juce::TextButton metronomeBtn{ "MET" };
     RecordButton recordBtn;
 
     juce::TextButton pickerBtn{ "Pick" };
@@ -41,12 +42,39 @@ public:
         addAndMakeVisible(btnHelp);
 
         btnFile.setTriggeredOnMouseDown(true);
+        btnFile.getProperties().set("isMenuBarItem", true);
+        btnFile.setColour(juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
+        btnFile.setColour(juce::TextButton::buttonOnColourId, juce::Colours::transparentBlack);
+
         btnEdit.setTriggeredOnMouseDown(true);
+        btnEdit.getProperties().set("isMenuBarItem", true);
+        btnEdit.setColour(juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
+        btnEdit.setColour(juce::TextButton::buttonOnColourId, juce::Colours::transparentBlack);
+
         btnCreate.setTriggeredOnMouseDown(true);
+        btnCreate.getProperties().set("isMenuBarItem", true);
+        btnCreate.setColour(juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
+        btnCreate.setColour(juce::TextButton::buttonOnColourId, juce::Colours::transparentBlack);
+
         btnView.setTriggeredOnMouseDown(true);
+        btnView.getProperties().set("isMenuBarItem", true);
+        btnView.setColour(juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
+        btnView.setColour(juce::TextButton::buttonOnColourId, juce::Colours::transparentBlack);
+
         btnOptions.setTriggeredOnMouseDown(true);
+        btnOptions.getProperties().set("isMenuBarItem", true);
+        btnOptions.setColour(juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
+        btnOptions.setColour(juce::TextButton::buttonOnColourId, juce::Colours::transparentBlack);
+
         btnTools.setTriggeredOnMouseDown(true);
+        btnTools.getProperties().set("isMenuBarItem", true);
+        btnTools.setColour(juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
+        btnTools.setColour(juce::TextButton::buttonOnColourId, juce::Colours::transparentBlack);
+
         btnHelp.setTriggeredOnMouseDown(true);
+        btnHelp.getProperties().set("isMenuBarItem", true);
+        btnHelp.setColour(juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
+        btnHelp.setColour(juce::TextButton::buttonOnColourId, juce::Colours::transparentBlack);
 
         btnFile.onClick = [this] { showDropdownMenu("FILE", btnFile); };
         btnEdit.onClick = [this] { showDropdownMenu("EDIT", btnEdit); };
@@ -65,12 +93,8 @@ public:
         playlistToggleBtn.setColour(juce::TextButton::buttonColourId, juce::Colours::blue);
 
         addAndMakeVisible(playBtn);
-        playBtn.setButtonText("P");
-        playBtn.setColour(juce::TextButton::buttonColourId, juce::Colours::green);
 
         addAndMakeVisible(stopBtn);
-        stopBtn.setButtonText(u8"\u25B2");
-        stopBtn.setColour(juce::TextButton::buttonColourId, juce::Colours::red);
 
         addAndMakeVisible(timeDisplayLabel);
         timeDisplayLabel.setText("00:00:00", juce::dontSendNotification);
@@ -83,10 +107,9 @@ public:
         addAndMakeVisible(bpmControl);
 
         addAndMakeVisible(metronomeBtn);
-        metronomeBtn.setButtonText("MET");
         metronomeBtn.setClickingTogglesState(true);
-        metronomeBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(40, 45, 50));
-        metronomeBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colours::orange);
+        metronomeBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colours::limegreen);
+        metronomeBtn.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
 
         addAndMakeVisible(recordBtn);
 
@@ -227,7 +250,6 @@ private:
             
             // Botones de modo
             viewToggleBtn.setColour(juce::TextButton::buttonColourId, bg.brighter(0.1f));
-            metronomeBtn.setColour(juce::TextButton::buttonOnColourId, accent);
             
             // Botones de panel
             pickerBtn.setColour(juce::TextButton::buttonColourId, bg.brighter(0.1f));
@@ -252,34 +274,38 @@ private:
         } else {
             g.fillAll(juce::Colour(20, 22, 25));
         }
+
+        // DISEÑO: Hint Panel (Zona Baja con bordes redondeados)
+        g.setColour(juce::Colours::black);
+        g.fillRoundedRectangle(12.0f, 48.0f, 432.0f, 36.0f, 10.0f);
     }
 
     void resized() override {
         auto area = getLocalBounds();
 
-        minBtn.setBounds(5, 15, 24, 24);
-        maxBtn.setBounds(30, 15, 24, 24);
-        closeBtn.setBounds(55, 15, 24, 24);
+        minBtn.setBounds(12, 12, 24, 24);
+        maxBtn.setBounds(36, 12, 24, 24);
+        closeBtn.setBounds(60, 12, 24, 24);
 
-        btnFile.setBounds(90, 6, 40, 40);
-        btnEdit.setBounds(132, 6, 40, 40);
-        btnCreate.setBounds(173, 6, 54, 40);
-        btnView.setBounds(226, 6, 45, 40);
-        btnOptions.setBounds(272, 6, 62, 40);
-        btnTools.setBounds(334, 6, 50, 40);
-        btnHelp.setBounds(383, 6, 45, 40);
+        btnFile.setBounds(96, 12, 30, 24);
+        btnEdit.setBounds(138, 12, 30, 24);
+        btnCreate.setBounds(180, 12, 48, 24);
+        btnView.setBounds(240, 12, 36, 24);
+        btnOptions.setBounds(288, 12, 54, 24);
+        btnTools.setBounds(354, 12, 42, 24);
+        btnHelp.setBounds(408, 12, 36, 24);
 
         viewToggleBtn.setBounds(area.removeFromRight(150).reduced(5));
 
         int cx = getWidth() / 2;
         playlistToggleBtn.setBounds(cx - 463, 6, 40, 40);
-        playBtn.setBounds(cx - 423, 6, 40, 40);
-        stopBtn.setBounds(cx - 383, 6, 40, 40);
+        playBtn.setBounds(cx - 423, 12, 30, 30);
+        stopBtn.setBounds(cx - 383, 12, 30, 30);
         timeDisplayLabel.setBounds(cx - 179, 6, 163, 40);
 
         recordBtn.setBounds(622, 6, 40, 40);
         bpmControl.setBounds(665, 12, 70, 30);
-        metronomeBtn.setBounds(738, 6, 40, 40);
+        metronomeBtn.setBounds(738, 12, 30, 30);
 
         int currentX = 950;
         pickerBtn.setBounds(currentX, 6, 55, 32); currentX += 58;

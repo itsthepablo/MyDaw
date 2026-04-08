@@ -1,4 +1,5 @@
 #include "CustomTheme.h"
+#include "../Assets/IconAssets.h"
 
 CustomTheme::CustomTheme()
 {
@@ -284,6 +285,8 @@ void CustomTheme::drawButtonBackground(juce::Graphics& g, juce::Button& button,
     const juce::Colour& backgroundColour,
     bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown)
 {
+    if (button.getComponentID() == "MenuBarItem") return;
+
     auto bounds = button.getLocalBounds().toFloat();
     bool isOn = button.getToggleState();
 
@@ -296,4 +299,62 @@ void CustomTheme::drawButtonBackground(juce::Graphics& g, juce::Button& button,
 
     g.setColour(juce::Colours::white.withAlpha(0.2f));
     g.drawRoundedRectangle(bounds.reduced(0.5f), 4.0f, 1.0f);
+}
+
+void CustomTheme::drawButtonText(juce::Graphics& g, juce::TextButton& button,
+    bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown)
+{
+    auto font = getTextButtonFont(button, button.getHeight());
+    g.setFont(font);
+
+    juce::Colour textColor = button.findColour(juce::TextButton::textColourOffId);
+
+    if (button.getProperties().contains("isMenuBarItem")) {
+        textColor = juce::Colours::white; // Blanco siempre para el menú
+    } else {
+        if (shouldDrawButtonAsHighlighted || shouldDrawButtonAsDown)
+            textColor = button.findColour(juce::TextButton::textColourOnId);
+    }
+
+    g.setColour(textColor);
+
+    const int yIndent = juce::jmin(4, button.proportionOfHeight(0.3f));
+    const int cornerSize = juce::jmin(button.getHeight(), button.getWidth()) / 2;
+    const int fontHeight = juce::roundToInt(font.getHeight() * 0.6f);
+    const int leftIndent = juce::jmin(fontHeight, 2 + cornerSize / (button.isConnectedOnLeft() ? 4 : 2));
+    const int rightIndent = juce::jmin(fontHeight, 2 + cornerSize / (button.isConnectedOnRight() ? 4 : 2));
+
+    g.drawText(button.getButtonText(),
+        leftIndent, 0, button.getWidth() - leftIndent - rightIndent, button.getHeight(),
+        juce::Justification::centred, true);
+}
+
+std::unique_ptr<juce::Drawable> CustomTheme::getIcon(const juce::String& iconName, juce::Colour color)
+{
+    juce::String svgPath;
+
+    if (iconName == "CLOSE")      svgPath = IconAssets::close_svg;
+    else if (iconName == "MAX")   svgPath = IconAssets::maximize_svg;
+    else if (iconName == "MIN")   svgPath = IconAssets::minimize_svg;
+    else if (iconName == "PLAY")  svgPath = IconAssets::play_svg;
+    else if (iconName == "PAUSE") svgPath = IconAssets::pause_svg;
+
+    if (svgPath.isEmpty()) return nullptr;
+
+    // --- PARSEO COMPATIBLE (Senior Architect Pattern) ---
+    // Usamos un wrapper XML para asegurar compatibilidad con todas las versiones de JUCE
+    juce::String svgWrapper = "<svg><path d=\"" + svgPath + "\" fill=\"white\"/></svg>";
+    auto xml = juce::XmlDocument::parse(svgWrapper);
+
+    if (xml != nullptr)
+    {
+        auto drawable = juce::Drawable::createFromSVG(*xml);
+        if (drawable != nullptr) {
+            drawable->replaceColour(juce::Colours::white, color);
+            drawable->replaceColour(juce::Colours::black, color);
+            return drawable;
+        }
+    }
+
+    return nullptr;
 }

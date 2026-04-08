@@ -5,6 +5,9 @@
               companyCopyright="Two Levels Audio" version="1.0.0">
   <MAINGROUP id="OgOeCb" name="FatPuppy Studio">
     <GROUP id="{832B9725-4498-E7CC-3428-6D1D4B31D6DB}" name="Source">
+      <GROUP id="{C4B4A205-E119-6FE9-C7E0-09229B5E0910}" name="Assets">
+        <FILE id="R0gvs4" name="IconAssets.h" compile="0" resource="0" file="Source/Assets/IconAssets.h"/>
+      </GROUP>
       <GROUP id="{5084A00A-956A-36A1-615F-4F83AADCFCE7}" name="Data">
         <FILE id="XkBcIL" name="AutomationData.h" compile="0" resource="0"
               file="Source/Data/AutomationData.h"/>
@@ -60,6 +63,9 @@
           <FILE id="SrXLf0" name="BpmDragControl.h" compile="0" resource="0"
                 file="Source/UI/TopMenuBar/BpmDragControl.h"/>
           <FILE id="AHkCdj" name="RecordButton.h" compile="0" resource="0" file="Source/UI/TopMenuBar/RecordButton.h"/>
+          <FILE id="gpbhzW" name="SvgButton.h" compile="0" resource="0" file="Source/UI/TopMenuBar/SvgButton.h"/>
+          <FILE id="W6CH76" name="SvgToggleButton.h" compile="0" resource="0"
+                file="Source/UI/TopMenuBar/SvgToggleButton.h"/>
           <FILE id="nKVcEQ" name="TopMenuBar.h" compile="0" resource="0" file="Source/UI/TopMenuBar/TopMenuBar.h"/>
           <FILE id="fauvAY" name="TopMenuButton.h" compile="0" resource="0" file="Source/UI/TopMenuBar/TopMenuButton.h"/>
           <FILE id="VMoPm2" name="WindowControlButton.h" compile="0" resource="0"

@@ -4,7 +4,7 @@ void LayoutHandler::performLayout(LayoutDependencies d) {
     auto area = d.area;
     d.masterStrip.setVisible(false);
 
-    auto topMenuArea = area.removeFromTop(46);
+    auto topMenuArea = area.removeFromTop(96); // Unificación de TopMenuBar + TransportBar (Diseño 96px)
     d.topMenuBar.setBounds(topMenuArea);
 
     // --- CORRECCIN: MEDIDOR DESPUS DE LOS EFECTOS ---
@@ -16,8 +16,7 @@ void LayoutHandler::performLayout(LayoutDependencies d) {
 
     d.hintPanel.setBounds(area.removeFromBottom(28));
 
-    auto topArea = area.removeFromTop(45);
-    d.transportBar.setBounds(topArea);
+    // La TransportBar ha sido unificada en la TopMenuBar
 
     if (d.isPianoRollVisible) {
         d.pianoRollUI.setVisible(true);
