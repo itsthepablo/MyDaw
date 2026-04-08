@@ -207,7 +207,7 @@ public:
 
     void timerCallback() override {
         if (track.getType() == TrackType::Loudness || track.getType() == TrackType::Balance || track.getType() == TrackType::MidSide) return; 
-        if (track.mixerData.isMuted.load()) { levelMeter.setLevel(0.0f, 0.0f); return; }
+        if (MixerParameterBridge::isMuted(&track)) { levelMeter.setLevel(0.0f, 0.0f); return; }
         float vol = MixerParameterBridge::getVolume(&track);
         float pan = MixerParameterBridge::getBalance(&track);
         float leftGain = vol * (pan < 0.0f ? 1.0f : 1.0f - pan);

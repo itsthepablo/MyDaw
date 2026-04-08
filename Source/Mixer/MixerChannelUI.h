@@ -184,7 +184,7 @@ public:
             auto panToggleArea = topArea.removeFromTop(20);
             panToggle.setBounds(panToggleArea.withSizeKeepingCentre(40, 18));
 
-            if (track->mixerData.panningModeDual.load()) {
+            if (MixerParameterBridge::isPanningModeDual(track)) {
                 panL.setBounds(topArea.removeFromLeft(topArea.getWidth() / 2).reduced(5));
                 panR.setBounds(topArea.reduced(5));
             }

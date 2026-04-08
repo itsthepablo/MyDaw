@@ -2,6 +2,7 @@
 #include <JuceHeader.h>
 #include "Knobs/FloatingValueBox.h"
 #include "../Tracks/Track.h"
+#include "../Mixer/Bridges/MixerParameterBridge.h"
 
 /**
  * LevelMeter — Componente Unificado Hi-Fi
@@ -180,8 +181,8 @@ public:
 private:
     void timerCallback() override {
         if (track != nullptr) {
-            float l = track->mixerData.currentPeakLevelL.load(std::memory_order_relaxed);
-            float r = track->mixerData.currentPeakLevelR.load(std::memory_order_relaxed);
+            float l = MixerParameterBridge::getPeakLevelL(track);
+            float r = MixerParameterBridge::getPeakLevelR(track);
             setLevel(l, r);
         }
     }

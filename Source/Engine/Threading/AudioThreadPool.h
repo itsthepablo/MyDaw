@@ -6,9 +6,8 @@
 #include <map>
 #include "../Core/AudioClock.h"
 #include "../Routing/RoutingMatrix.h"
-#include "../Routing/MasterMixer.h"
-#include "../Routing/PDCManager.h"
 #include "../Nodes/TrackProcessor.h"
+#include "../../Mixer/DSP/MixerDSP.h"
 
 using TopoState = RoutingMatrix::TopoState;
 enum class TaskState : int { Waiting = 0, Ready = 1, InProgress = 2, Done = 3 };
@@ -207,7 +206,7 @@ private:
         }
 
         // 5. Volumen y pan (resultado queda en track->audioBuffer para Fase 2)
-        MasterMixer::applyGainAndPan(track, ctx.numSamples, ctx.hwOutChannels);
+        MixerDSP::applyGainAndPan(track, ctx.numSamples, ctx.hwOutChannels);
 
         // 6. ENVÍOS POST-FADER (Después de Volumen/Pan)
         midCalculated = false;

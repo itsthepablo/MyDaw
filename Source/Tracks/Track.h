@@ -163,6 +163,8 @@ struct TrackSnapshot {
 
 class Track {
 public:
+    friend class MixerParameterBridge;
+    friend class MixerDSP;
     Track(int id, juce::String n, TrackType t) : trackId(id), name(n), type(t) {
         color = juce::Colour(juce::Random::getSystemRandom().nextFloat(), 0.6f, 0.8f, 1.0f);
         if (t == TrackType::Folder) color = juce::Colour(60, 65, 75);
@@ -185,8 +187,6 @@ public:
     void setVolume(float v) { mixerData.setVolume(v); }
     float getBalance() const { return mixerData.balance; }
     void setBalance(float b) { mixerData.setBalance(b); }
-    
-    MixerChannelData mixerData;
 
     void prepare(double sampleRate, int samplesPerBlock)
     {
@@ -398,12 +398,12 @@ public:
     }
 
 private:
+    MixerChannelData mixerData;
+
     int trackId;
     juce::String name;
     TrackType type;
     juce::Colour color;
-    float volume_legacy = 1.0f; // TODO: Migrar completamente a mixerData
-    float balance_legacy = 0.0f;
 
     float preGain = 1.0f;
     float postGain = 1.0f;
