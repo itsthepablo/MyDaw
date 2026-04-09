@@ -112,6 +112,7 @@ public:
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages, const juce::AudioBuffer<float>* sidechainBuffer) override;
     
     bool supportsSidechain() const override;
+    void refreshSidechainSupport(); // NUEVO: Para actualizar el caché de forma segura
     void reset() override;
     void setNonRealtime(bool isNonRealtime) override;
     juce::String getLoadedPluginName() const override;
@@ -131,6 +132,9 @@ public:
     std::function<void()> onTopologyUpdate;
 
 private:
+    std::atomic<bool> isInitializing { false }; // NUEVO: Bloquea accesos durante la carga
+    std::atomic<bool> sidechainSupported { false }; // Caché de soporte
+    
     juce::AudioPluginFormatManager formatManager;
     std::unique_ptr<juce::AudioPluginInstance> vstPlugin;
     std::unique_ptr<VSTWindow> vstWindow;

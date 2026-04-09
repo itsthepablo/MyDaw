@@ -119,38 +119,36 @@ void VSTHost::loadPluginFromPath(const juce::String& path, double sampleRate, st
             juce::PluginDescription desc = *typesFound[0];
             juce::String errorMessage;
             
-            // Usamos un bloque de samples prudente (512) para la inicialización
-            vstPlugin = formatManager.createPluginInstance(desc, sampleRate, 512, errorMessage);
+            isInitializing = true;
+            
+            // --- BLINDAJE DE CREACIÓN ---
+            // Usamos un bloque de samples prudente (512) y un SR estándar (44100)
+            // para la inicialización, independientemente del motor, para evitar crashes.
+            double safeRate = sampleRate > 8000.0 ? sampleRate : 44100.0;
+            vstPlugin = formatManager.createPluginInstance(desc, safeRate, 512, errorMessage);
 
             if (vstPlugin != nullptr)
             {
                 pluginPath = path;
                 vstPlugin->setPlayHead(&playHead);
 
-                // --- CONFIGURACIÓN DE BUSES (RESTABLECER ESTADO ORIGINAL) ---
+                // --- CONFIGURACIÓN DE BUSES SEGURA EN CUARENTENA ---
                 juce::AudioProcessor::BusesLayout layout = vstPlugin->getBusesLayout();
-                
                 if (layout.inputBuses.size() > 0)
                     layout.inputBuses.getReference(0) = juce::AudioChannelSet::stereo();
                 if (layout.outputBuses.size() > 0)
                     layout.outputBuses.getReference(0) = juce::AudioChannelSet::stereo();
 
-                if (layout.inputBuses.size() > 1) {
-                    layout.inputBuses.getReference(1) = juce::AudioChannelSet::stereo();
-                }
-
-                if (!vstPlugin->setBusesLayout(layout)) {
-                    layout = vstPlugin->getBusesLayout();
-                }
-
+                vstPlugin->setBusesLayout(layout);
                 vstPlugin->enableAllBuses();
-                vstPlugin->releaseResources();
-                vstPlugin->prepareToPlay(sampleRate, 512);
-
-                // Eliminada la creación inmediata de la ventana para que showWindow la cree con el TrackContainer correcto
+                
+                refreshSidechainSupport(); // Cachear una vez estable
+                
+                isInitializing = false; // FIN DE CUARENTENA
                 callback(true);
                 return;
             }
+            isInitializing = false;
         }
     }
     callback(false);
@@ -179,12 +177,21 @@ void VSTHost::showWindow(TrackContainer* container)
 void VSTHost::prepareToPlay(double sampleRate, int maximumExpectedSamplesPerBlock)
 {
     if (vstPlugin != nullptr) {
+        // --- BLINDAJE DE SEGURIDAD ---
+        // Forzar un sample rate válido para evitar crashes inmediatos
+        double safeRate = sampleRate > 0.0 ? sampleRate : 44100.0;
+        int safeBlock = maximumExpectedSamplesPerBlock > 0 ? maximumExpectedSamplesPerBlock : 512;
+
+        // Pre-asignar siempre un margen de canales generoso (mínimo 16)
+        // Algunos plugins (iZotope, Cableguys) pueden cambiar dinámicamente de canales.
         int maxInputChans = vstPlugin->getTotalNumInputChannels();
         int maxOutputChans = vstPlugin->getTotalNumOutputChannels();
-        int totalChansNeeded = juce::jmax(maxInputChans, maxOutputChans, 2);
+        int totalChansNeeded = juce::jmax(maxInputChans, maxOutputChans, 16);
         
-        fallbackBuffer.setSize(totalChansNeeded, juce::jmax(8192, maximumExpectedSamplesPerBlock));
-        vstPlugin->prepareToPlay(sampleRate, maximumExpectedSamplesPerBlock);
+        fallbackBuffer.setSize(totalChansNeeded, juce::jmax(8192, safeBlock));
+        vstPlugin->prepareToPlay(safeRate, safeBlock);
+        
+        refreshSidechainSupport(); // Re-validar tras preparar
     }
 }
 
@@ -213,6 +220,11 @@ void VSTHost::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& m
 
 void VSTHost::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages, const juce::AudioBuffer<float>* sidechainBuffer)
 {
+    if (isInitializing) {
+        buffer.clear();
+        return;
+    }
+
     if (vstPlugin != nullptr && !bypassed) {
         const int numSamples = buffer.getNumSamples();
         const int inCh = vstPlugin->getTotalNumInputChannels();
@@ -231,7 +243,15 @@ void VSTHost::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& m
         }
 
         if (sidechainBuffer != nullptr && hasSidechainBus) {
-            for (int i = 0; i < totalChans; ++i) fallbackBuffer.clear(i, 0, numSamples);
+            // --- GUARDA DE SEGURIDAD (ANTI-CRASH) ---
+            if (totalChans > fallbackBuffer.getNumChannels()) {
+                // Si llegamos aquí, el plugin ha cambiado de buses en caliente más allá de nuestra reserva.
+                // Redimensionamos para salvar el DAW del crash.
+                fallbackBuffer.setSize(totalChans + 4, numSamples, true, true);
+            }
+
+            for (int i = 0; i < juce::jmin(totalChans, fallbackBuffer.getNumChannels()); ++i) 
+                fallbackBuffer.clear(i, 0, numSamples);
 
             int mainInCh = vstPlugin->getBus(true, 0)->getNumberOfChannels();
             int chansToCopyMain = juce::jmin(buffer.getNumChannels(), mainInCh);
@@ -281,12 +301,14 @@ void VSTHost::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& m
 
 juce::String VSTHost::getLoadedPluginName() const
 {
+    if (isInitializing) return "Cargando...";
     if (vstPlugin != nullptr) return vstPlugin->getName();
     return "VST";
 }
 
 int VSTHost::getLatencySamples() const
 {
+    if (isInitializing) return 0;
     if (vstPlugin != nullptr) {
         return vstPlugin->getLatencySamples();
     }
@@ -307,6 +329,14 @@ void VSTHost::setStateInformation(const void* data, int sizeInBytes)
 
 bool VSTHost::supportsSidechain() const
 {
-    if (vstPlugin == nullptr) return false;
-    return vstPlugin->getBusCount(true) > 1;
+    return sidechainSupported;
+}
+
+void VSTHost::refreshSidechainSupport()
+{
+    if (vstPlugin != nullptr) {
+        sidechainSupported = (vstPlugin->getBusCount(true) > 1);
+    } else {
+        sidechainSupported = false;
+    }
 }
