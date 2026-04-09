@@ -6,6 +6,24 @@
   <MAINGROUP id="OgOeCb" name="FatPuppy Studio">
     <GROUP id="{832B9725-4498-E7CC-3428-6D1D4B31D6DB}" name="Source">
       <GROUP id="{F2F6C20B-2317-2419-AF24-5D67676D1368}" name="Modules">
+        <GROUP id="{7481A44C-CCB0-1AB7-B999-3AC310948541}" name="BalanceTrack">
+          <GROUP id="{62F73CB3-B99B-07D6-494A-9A22DD534DD2}" name="Bridges">
+            <FILE id="fTtkLd" name="BalanceTrackBridge.h" compile="0" resource="0"
+                  file="Source/Modules/BalanceTrack/Bridges/BalanceTrackBridge.h"/>
+          </GROUP>
+          <GROUP id="{5B7964E3-7EAF-6310-30E2-CA62742FB825}" name="Data">
+            <FILE id="uX4PKT" name="BalanceTrackData.h" compile="0" resource="0"
+                  file="Source/Modules/BalanceTrack/Data/BalanceTrackData.h"/>
+          </GROUP>
+          <GROUP id="{256CF541-C98B-631F-A236-7941667580A9}" name="DSP">
+            <FILE id="MSxFQX" name="BalanceTrackDSP.h" compile="0" resource="0"
+                  file="Source/Modules/BalanceTrack/DSP/BalanceTrackDSP.h"/>
+          </GROUP>
+          <GROUP id="{8D3248F7-DB29-3082-986F-AD46146E6E16}" name="UI">
+            <FILE id="eQQqBz" name="BalanceTrackRenderer.h" compile="0" resource="0"
+                  file="Source/Modules/BalanceTrack/UI/BalanceTrackRenderer.h"/>
+          </GROUP>
+        </GROUP>
         <GROUP id="{6BDDFC46-D6E3-FC63-9DE7-B37910E6B6D6}" name="GainStation">
           <GROUP id="{CD141FD0-FC7A-5319-CEFA-D0935F758745}" name="Bridges">
             <FILE id="i3NuuX" name="GainStationBridge.h" compile="0" resource="0"
@@ -30,6 +48,48 @@
                   file="Source/Modules/GainStation/UI/GainStationPanel.cpp"/>
             <FILE id="b6FMwC" name="GainStationPanel.h" compile="0" resource="0"
                   file="Source/Modules/GainStation/UI/GainStationPanel.h"/>
+          </GROUP>
+        </GROUP>
+        <GROUP id="{EC705200-0077-C594-EDDE-37ACBEDF3136}" name="LoudnessTrack">
+          <GROUP id="{C14DC941-DF67-D877-4555-967213CB8AC9}" name="Bridges">
+            <FILE id="hGAZnN" name="LoudnessTrackBridge.h" compile="0" resource="0"
+                  file="Source/Modules/LoudnessTrack/Bridges/LoudnessTrackBridge.h"/>
+          </GROUP>
+          <GROUP id="{73EFF174-E216-0D92-0C5F-9246481473CA}" name="Data">
+            <FILE id="zMDDh2" name="LoudnessTrackData.h" compile="0" resource="0"
+                  file="Source/Modules/LoudnessTrack/Data/LoudnessTrackData.h"/>
+          </GROUP>
+          <GROUP id="{EE9EC310-1AB3-9A61-55BA-6A0FE35D5EFC}" name="DSP">
+            <FILE id="hYkue7" name="LoudnessTrackDSP.cpp" compile="1" resource="0"
+                  file="Source/Modules/LoudnessTrack/DSP/LoudnessTrackDSP.cpp"/>
+            <FILE id="pNuv1P" name="LoudnessTrackDSP.h" compile="0" resource="0"
+                  file="Source/Modules/LoudnessTrack/DSP/LoudnessTrackDSP.h"/>
+          </GROUP>
+          <GROUP id="{70EC0780-2AEF-0ECB-DCBB-1908926AE37F}" name="UI">
+            <FILE id="CZtiPv" name="BalanceRenderer.h" compile="0" resource="0"
+                  file="Source/Modules/LoudnessTrack/UI/BalanceRenderer.h"/>
+            <FILE id="bqEEJg" name="LoudnessTrackRenderer.h" compile="0" resource="0"
+                  file="Source/Modules/LoudnessTrack/UI/LoudnessTrackRenderer.h"/>
+            <FILE id="YiFQ2y" name="MidSideRenderer.h" compile="0" resource="0"
+                  file="Source/Modules/LoudnessTrack/UI/MidSideRenderer.h"/>
+          </GROUP>
+        </GROUP>
+        <GROUP id="{BEED88EB-5413-C0FD-D795-797F0787EB27}" name="MidSideTrack">
+          <GROUP id="{B24DFB54-D41E-4824-7465-7411F8C8B76E}" name="Bridges">
+            <FILE id="WdH2A5" name="MidSideTrackBridge.h" compile="0" resource="0"
+                  file="Source/Modules/MidSideTrack/Bridges/MidSideTrackBridge.h"/>
+          </GROUP>
+          <GROUP id="{F2AAF569-B416-7CE5-5C67-8C52B0015B34}" name="Data">
+            <FILE id="da0VC9" name="MidSideTrackData.h" compile="0" resource="0"
+                  file="Source/Modules/MidSideTrack/Data/MidSideTrackData.h"/>
+          </GROUP>
+          <GROUP id="{52BF57E3-17CF-D212-E5EB-65BE580EDADD}" name="DSP">
+            <FILE id="agzjY6" name="MidSideTrackDSP.h" compile="0" resource="0"
+                  file="Source/Modules/MidSideTrack/DSP/MidSideTrackDSP.h"/>
+          </GROUP>
+          <GROUP id="{ABEB80C7-6715-3DCA-BADE-879903E1481D}" name="UI">
+            <FILE id="qF4Gnn" name="MidSideTrackRenderer.h" compile="0" resource="0"
+                  file="Source/Modules/MidSideTrack/UI/MidSideTrackRenderer.h"/>
           </GROUP>
         </GROUP>
       </GROUP>
@@ -183,6 +243,8 @@
                 file="Source/Engine/Threading/AudioThreadPool.h"/>
         </GROUP>
         <FILE id="c2VdJY" name="SimpleBalance.h" compile="0" resource="0" file="Source/Engine/SimpleBalance.h"/>
+        <FILE id="r41k5y" name="SimpleLoudness.cpp" compile="1" resource="0"
+              file="Source/Engine/SimpleLoudness.cpp"/>
         <FILE id="f8Nvgg" name="SimpleLoudness.h" compile="0" resource="0"
               file="Source/Engine/SimpleLoudness.h"/>
         <FILE id="sj4QAx" name="SimpleMidSide.h" compile="0" resource="0" file="Source/Engine/SimpleMidSide.h"/>

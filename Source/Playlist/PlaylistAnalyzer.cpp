@@ -11,17 +11,17 @@ void PlaylistAnalyzer::recordAnalysisData(const juce::OwnedArray<Track>* tracksR
             if (t->getType() == TrackType::Loudness) {
                 float lufs = masterTrackPtr->postLoudness.getShortTerm();
                 double samplePos = (double)playheadAbsPos; 
-                t->loudnessHistory.addPoint(samplePos, lufs);
+                t->loudnessTrackData.history.addPoint(samplePos, lufs);
             } else if (t->getType() == TrackType::Balance) {
                 float bal = masterTrackPtr->postBalance.getBalance();
                 double samplePos = (double)playheadAbsPos;
-                t->balanceHistory.addPoint(samplePos, bal);
+                t->balanceTrackData.history.addPoint(samplePos, bal);
             } else if (t->getType() == TrackType::MidSide) {
                 float m = masterTrackPtr->postMidSide.getMid();
                 float s = masterTrackPtr->postMidSide.getSide();
                 float c = masterTrackPtr->postMidSide.getPhaseCorrelation();
                 double samplePos = (double)playheadAbsPos;
-                t->midSideHistory.addPoint(samplePos, m, s, c);
+                t->midSideTrackData.history.addPoint(samplePos, m, s, c);
             }
         }
     }

@@ -12,7 +12,10 @@
 #include "../Native_Plugins/ChannelEQ/ChannelEQ_DSP.h"
 #include "../Mixer/Data/MixerChannelData.h"
 #include "../Modules/GainStation/Data/GainStationData.h"
-#include <map>
+#include "../Modules/GainStation/Data/GainStationData.h"
+#include "../Modules/LoudnessTrack/Data/LoudnessTrackData.h"
+#include "../Modules/BalanceTrack/Data/BalanceTrackData.h"
+#include "../Modules/MidSideTrack/Data/MidSideTrackData.h"
 #include <map>
 #include <vector>
 #include <algorithm>
@@ -84,73 +87,9 @@ struct MidiClipSnapshot {
 // ============================================================
 // LOUDNESS HISTORY — Almacenamiento de la curva para la pista
 // ============================================================
-struct LoudnessPoint {
-    double samplePos = 0.0;
-    float shortTermLUFS = -70.0f;
-};
+// Estructuras de historial movidas a LoudnessTrackData.h
 
-struct BalanceHistory {
-    std::map<double, float> points; // samplePos -> balanceDB (-12 a +12)
-    float referenceScaleDB = 12.0f; // Escala vertical (6.0 o 12.0)
-    bool isActive = true;
-
-    void clear() { points.clear(); }
-    
-    // High-Fidelity Recording (Precisión de Muestra)
-    void addPoint(double pos, float val) {
-        // Forward Erase de 10ms
-        auto it = points.lower_bound(pos);
-        auto itEnd = points.upper_bound(pos + 500.0);
-        if (it != points.end()) {
-            points.erase(it, itEnd);
-        }
-        points[pos] = val;
-    }
-};
-
-struct LoudnessHistory {
-    std::map<double, float> points; // samplePos -> shortTermLUFS
-    float referenceLUFS = -23.0f;
-    bool isActive = true;
-
-    void clear() { points.clear(); }
-    
-    // High-Fidelity Recording (Precisión de Muestra)
-    void addPoint(double pos, float val) {
-        // 1. Limpieza de Vecindad (Forward Erase):
-        // Borramos los puntos en un rango pequeño de 20 muestras adelante
-        // para asegurar que al sobreescribir no queden "restos" del pasado.
-        auto it = points.lower_bound(pos);
-        auto itEnd = points.upper_bound(pos + 500.0); // ~10ms de borrado adelante
-        if (it != points.end()) {
-            points.erase(it, itEnd);
-        }
-
-        // 2. Inserción Directa: Sin promedios ni rejillas que quiten precisión.
-        points[pos] = val;
-    }
-};
-
-struct MidSidePoint {
-    float mid, side, correlation;
-};
-
-struct MidSideHistory {
-    std::map<double, MidSidePoint> points; 
-    float referenceScaleDB = 1.0f; // Default 1x Zoom
-    int displayMode = 0; // 0=Overlay, 1=Mid, 2=Side
-
-    void clear() { points.clear(); }
-
-    void addPoint(double pos, float m, float s, float c) {
-        auto it = points.lower_bound(pos);
-        auto itEnd = points.upper_bound(pos + 500.0);
-        if (it != points.end()) {
-            points.erase(it, itEnd);
-        }
-        points[pos] = { m, s, c };
-    }
-};
+// Histories movidas a LoudnessTrackData.h
 
 // ============================================================
 struct TrackSnapshot {
@@ -166,6 +105,9 @@ class Track {
 public:
     GainStationData gainStationData;
     MixerChannelData mixerData;
+    LoudnessTrackData loudnessTrackData;
+    BalanceTrackData  balanceTrackData;
+    MidSideTrackData  midSideTrackData;
 
     friend class MixerParameterBridge;
     friend class MixerDSP;
@@ -281,9 +223,6 @@ public:
     bool isAnalyzersPrepared = false;
 
     // --- LOUDNESS/ANALYSIS TRACK SPECIFIC ---
-    LoudnessHistory loudnessHistory;
-    BalanceHistory  balanceHistory;
-    MidSideHistory  midSideHistory;
     std::atomic<bool> isLoudnessRecording { true };
 
     AudioClipData* loadAndAddAudioClip(const juce::File& file, float startX)

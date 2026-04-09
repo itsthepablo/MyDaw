@@ -3,9 +3,12 @@
 #include "../../UI/MidiClipRenderer.h"
 #include "../../UI/MidiPatternStyles.h"
 #include "../../UI/WaveformRenderer.h"
-#include "../../UI/Playlist/LoudnessRenderer.h"
-#include "../../UI/Playlist/BalanceRenderer.h"
-#include "../../UI/Playlist/MidSideRenderer.h"
+#include "../../Modules/LoudnessTrack/Bridges/LoudnessTrackBridge.h"
+#include "../../Modules/LoudnessTrack/UI/LoudnessTrackRenderer.h"
+#include "../../Modules/BalanceTrack/Bridges/BalanceTrackBridge.h"
+#include "../../Modules/BalanceTrack/UI/BalanceTrackRenderer.h"
+#include "../../Modules/MidSideTrack/Bridges/MidSideTrackBridge.h"
+#include "../../Modules/MidSideTrack/UI/MidSideTrackRenderer.h"
 
 void PlaylistRenderer::drawFolderSummaries(juce::Graphics& g, 
                                            const PlaylistViewContext& ctx,
@@ -205,24 +208,21 @@ void PlaylistRenderer::drawSpecialAnalysisTracks(juce::Graphics& g,
     if (!ctx.tracksRef) return;
 
     for (auto* t : *ctx.tracksRef) {
+        int yPos = trackYCache.count(t) ? trackYCache.at(t) : -1;
+        if (yPos == -1) continue;
+
         if (t->getType() == TrackType::Loudness) {
-            int yPos = trackYCache.count(t) ? trackYCache.at(t) : -1;
-            if (yPos == -1) continue;
-
             juce::Rectangle<float> loudnessArea(0.0f, (float)(yPos + 2), (float)ctx.width, (float)(ctx.trackHeight - 4));
-            LoudnessRenderer::drawLoudnessTrack(g, loudnessArea, t, (float)ctx.hZoom, (float)ctx.hS);
+            LoudnessTrackBridge bridge(t->loudnessTrackData);
+            LoudnessTrackRenderer::drawLoudnessTrack(g, loudnessArea, &bridge, (float)ctx.hZoom, (float)ctx.hS);
         } else if (t->getType() == TrackType::Balance) {
-            int yPos = trackYCache.count(t) ? trackYCache.at(t) : -1;
-            if (yPos == -1) continue;
-
             juce::Rectangle<int> balanceArea(0, yPos + 2, ctx.width, (int)ctx.trackHeight - 4);
-            BalanceRenderer::drawBalanceTrack(g, t->balanceHistory, balanceArea, ctx.hZoom, (double)ctx.hS);
+            BalanceTrackBridge bridge(t->balanceTrackData);
+            BalanceTrackRenderer::drawBalanceTrack(g, &bridge, balanceArea, ctx.hZoom, (double)ctx.hS);
         } else if (t->getType() == TrackType::MidSide) {
-            int yPos = trackYCache.count(t) ? trackYCache.at(t) : -1;
-            if (yPos == -1) continue;
-
             juce::Rectangle<int> midSideArea(0, yPos + 2, ctx.width, (int)ctx.trackHeight - 4);
-            MidSideRenderer::drawMidSideTrack(g, t->midSideHistory, midSideArea, ctx.hZoom, (double)ctx.hS);
+            MidSideTrackBridge bridge(t->midSideTrackData);
+            MidSideTrackRenderer::drawMidSideTrack(g, &bridge, midSideArea, ctx.hZoom, (double)ctx.hS);
         }
     }
 }

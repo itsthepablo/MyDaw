@@ -94,16 +94,16 @@ public:
             loudnessMeter = std::make_unique<LoudnessMeter>(track);
             addAndMakeVisible(*loudnessMeter);
             
-            if (track.loudnessHistory.referenceLUFS == -23.0f) targetLufsCombo.setSelectedId(1, juce::dontSendNotification);
-            else if (track.loudnessHistory.referenceLUFS == -14.0f) targetLufsCombo.setSelectedId(2, juce::dontSendNotification);
-            else if (track.loudnessHistory.referenceLUFS == -5.0f) targetLufsCombo.setSelectedId(3, juce::dontSendNotification);
-            else targetLufsCombo.setText(juce::String((int)track.loudnessHistory.referenceLUFS) + " LUFS", juce::dontSendNotification);
+            if (track.loudnessTrackData.history.referenceLUFS == -23.0f) targetLufsCombo.setSelectedId(1, juce::dontSendNotification);
+            else if (track.loudnessTrackData.history.referenceLUFS == -14.0f) targetLufsCombo.setSelectedId(2, juce::dontSendNotification);
+            else if (track.loudnessTrackData.history.referenceLUFS == -5.0f) targetLufsCombo.setSelectedId(3, juce::dontSendNotification);
+            else targetLufsCombo.setText(juce::String((int)track.loudnessTrackData.history.referenceLUFS) + " LUFS", juce::dontSendNotification);
 
             targetLufsCombo.onChange = [this] {
                 int id = targetLufsCombo.getSelectedId();
-                if (id == 1) track.loudnessHistory.referenceLUFS = -23.0f;
-                else if (id == 2) track.loudnessHistory.referenceLUFS = -14.0f;
-                else if (id == 3) track.loudnessHistory.referenceLUFS = -5.0f;
+                if (id == 1) track.loudnessTrackData.history.referenceLUFS = -23.0f;
+                else if (id == 2) track.loudnessTrackData.history.referenceLUFS = -14.0f;
+                else if (id == 3) track.loudnessTrackData.history.referenceLUFS = -5.0f;
                 repaint();
                 if (onWaveformViewChanged) onWaveformViewChanged();
             };
@@ -116,21 +116,21 @@ public:
             balanceScaleCombo.addItem("6x (2 dB)", 4);
             
             // Sincronización Inicial: Asegurar que el UI refleje el valor real (Default 1x/12dB)
-            if      (track.balanceHistory.referenceScaleDB == 12.0f) balanceScaleCombo.setSelectedId(1, juce::dontSendNotification);
-            else if (track.balanceHistory.referenceScaleDB == 6.0f)  balanceScaleCombo.setSelectedId(2, juce::dontSendNotification);
-            else if (track.balanceHistory.referenceScaleDB == 3.0f)  balanceScaleCombo.setSelectedId(3, juce::dontSendNotification);
-            else if (track.balanceHistory.referenceScaleDB == 2.0f)  balanceScaleCombo.setSelectedId(4, juce::dontSendNotification);
+            if      (track.balanceTrackData.history.referenceScaleDB == 12.0f) balanceScaleCombo.setSelectedId(1, juce::dontSendNotification);
+            else if (track.balanceTrackData.history.referenceScaleDB == 6.0f)  balanceScaleCombo.setSelectedId(2, juce::dontSendNotification);
+            else if (track.balanceTrackData.history.referenceScaleDB == 3.0f)  balanceScaleCombo.setSelectedId(3, juce::dontSendNotification);
+            else if (track.balanceTrackData.history.referenceScaleDB == 2.0f)  balanceScaleCombo.setSelectedId(4, juce::dontSendNotification);
             else {
-                track.balanceHistory.referenceScaleDB = 12.0f; // Forzar default si hay discrepancia
+                track.balanceTrackData.history.referenceScaleDB = 12.0f; // Forzar default si hay discrepancia
                 balanceScaleCombo.setSelectedId(1, juce::dontSendNotification);
             }
             
             balanceScaleCombo.onChange = [this] {
                 int id = balanceScaleCombo.getSelectedId();
-                if      (id == 1) track.balanceHistory.referenceScaleDB = 12.0f;
-                else if (id == 2) track.balanceHistory.referenceScaleDB = 6.0f;
-                else if (id == 3) track.balanceHistory.referenceScaleDB = 3.0f;
-                else if (id == 4) track.balanceHistory.referenceScaleDB = 2.0f;
+                if      (id == 1) track.balanceTrackData.history.referenceScaleDB = 12.0f;
+                else if (id == 2) track.balanceTrackData.history.referenceScaleDB = 6.0f;
+                else if (id == 3) track.balanceTrackData.history.referenceScaleDB = 3.0f;
+                else if (id == 4) track.balanceTrackData.history.referenceScaleDB = 2.0f;
                 repaint();
                 if (onWaveformViewChanged) onWaveformViewChanged();
             };
@@ -143,18 +143,18 @@ public:
             midSideScaleCombo.addItem("8x (+18dB)", 4);
             
             // Sincronización Inicial
-            if      (track.midSideHistory.referenceScaleDB == 1.0f) midSideScaleCombo.setSelectedId(1, juce::dontSendNotification);
-            else if (track.midSideHistory.referenceScaleDB == 2.0f) midSideScaleCombo.setSelectedId(2, juce::dontSendNotification);
-            else if (track.midSideHistory.referenceScaleDB == 4.0f) midSideScaleCombo.setSelectedId(3, juce::dontSendNotification);
-            else if (track.midSideHistory.referenceScaleDB == 8.0f) midSideScaleCombo.setSelectedId(4, juce::dontSendNotification);
+            if      (track.midSideTrackData.history.referenceScaleDB == 1.0f) midSideScaleCombo.setSelectedId(1, juce::dontSendNotification);
+            else if (track.midSideTrackData.history.referenceScaleDB == 2.0f) midSideScaleCombo.setSelectedId(2, juce::dontSendNotification);
+            else if (track.midSideTrackData.history.referenceScaleDB == 4.0f) midSideScaleCombo.setSelectedId(3, juce::dontSendNotification);
+            else if (track.midSideTrackData.history.referenceScaleDB == 8.0f) midSideScaleCombo.setSelectedId(4, juce::dontSendNotification);
             else midSideScaleCombo.setSelectedId(1, juce::dontSendNotification);
 
             midSideScaleCombo.onChange = [this] {
                 int id = midSideScaleCombo.getSelectedId();
-                if      (id == 1) track.midSideHistory.referenceScaleDB = 1.0f;
-                else if (id == 2) track.midSideHistory.referenceScaleDB = 2.0f;
-                else if (id == 3) track.midSideHistory.referenceScaleDB = 4.0f;
-                else if (id == 4) track.midSideHistory.referenceScaleDB = 8.0f;
+                if      (id == 1) track.midSideTrackData.history.referenceScaleDB = 1.0f;
+                else if (id == 2) track.midSideTrackData.history.referenceScaleDB = 2.0f;
+                else if (id == 3) track.midSideTrackData.history.referenceScaleDB = 4.0f;
+                else if (id == 4) track.midSideTrackData.history.referenceScaleDB = 8.0f;
                 repaint();
                 if (onWaveformViewChanged) onWaveformViewChanged();
             };
@@ -163,9 +163,9 @@ public:
             midSideModeCombo.addItem("Overlay (Both)", 1);
             midSideModeCombo.addItem("Mid Only", 2);
             midSideModeCombo.addItem("Side Only", 3);
-            midSideModeCombo.setSelectedId(track.midSideHistory.displayMode + 1, juce::dontSendNotification);
+            midSideModeCombo.setSelectedId(track.midSideTrackData.history.displayMode + 1, juce::dontSendNotification);
             midSideModeCombo.onChange = [this] {
-                track.midSideHistory.displayMode = midSideModeCombo.getSelectedId() - 1;
+                track.midSideTrackData.history.displayMode = midSideModeCombo.getSelectedId() - 1;
                 repaint();
                 if (onWaveformViewChanged) onWaveformViewChanged();
             };
@@ -381,7 +381,7 @@ public:
                     cs->setCurrentColour(track.getColor()); cs->addChangeListener(this); cs->setSize(300, 400);
                     juce::CallOutBox::launchAsynchronously(std::unique_ptr<juce::Component>(cs), getScreenBounds(), nullptr);
                 } else if (r >= 2 && r <= 5 && onWaveformViewChanged) { track.setWaveformViewMode((WaveformViewMode)(r-2)); onWaveformViewChanged(); }
-                else if (r == 10) { track.loudnessHistory.clear(); if (onWaveformViewChanged) onWaveformViewChanged(); }
+                else if (r == 10) { track.loudnessTrackData.history.clear(); if (onWaveformViewChanged) onWaveformViewChanged(); }
             });
         }
     }

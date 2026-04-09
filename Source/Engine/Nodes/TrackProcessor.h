@@ -3,6 +3,9 @@
 #include "../Core/AudioClock.h"
 #include "../../Tracks/Track.h"
 #include "../../Modules/GainStation/DSP/GainStationDSP.h"
+#include "../../Modules/LoudnessTrack/DSP/LoudnessTrackDSP.h"
+#include "../../Modules/BalanceTrack/DSP/BalanceTrackDSP.h"
+#include "../../Modules/MidSideTrack/DSP/MidSideTrackDSP.h"
 #include "../../Effects/EffectsPanel.h" 
 #include "../Routing/RoutingMatrix.h" // NUEVO: Para TopoState
 
@@ -313,6 +316,13 @@ public:
 
         // --- POST-FX & GAIN STATION ---
         GainStationDSP::processPostFX(track->gainStationData, track, mainProxyBuffer);
+
+        // --- RECORD ANALYSIS HISTORY ---
+        if (isPlayingNow && track->isLoudnessRecording) {
+            LoudnessTrackDSP::recordAnalysis(track->loudnessTrackData, track->postLoudness, clock.currentSamplePos);
+            BalanceTrackDSP::recordAnalysis(track->balanceTrackData, track->postBalance, clock.currentSamplePos);
+            MidSideTrackDSP::recordAnalysis(track->midSideTrackData, track->postMidSide, clock.currentSamplePos);
+        }
 
         if (numChannels > 2) {
             for (int ch = 2; ch < numChannels; ++ch) {
