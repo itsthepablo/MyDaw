@@ -131,7 +131,7 @@ void PlaylistComponent::setMasterTrack(Track *mt) {
     };
 
     // Vincular el EQ al Master por defecto
-    eqEditor.setDSP(&(mt->inlineEQ));
+    eqEditor.setDSP(&(mt->dsp.inlineEQ));
   }
 }
 
@@ -549,7 +549,7 @@ void PlaylistComponent::itemDropped(
 void PlaylistComponent::setSelectedTrack(Track* t) {
     if (t != nullptr && t != currentVisualTrack) {
         currentVisualTrack = t; // Marcar para evitar recursión infinita
-        eqEditor.setDSP(&(t->inlineEQ));
+        eqEditor.setDSP(&(t->dsp.inlineEQ));
         eqEditor.setTrackName(t->getName());
         if (onClipSelected) onClipSelected(t);
         repaint();

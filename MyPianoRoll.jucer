@@ -116,6 +116,8 @@
       <GROUP id="{5084A00A-956A-36A1-615F-4F83AADCFCE7}" name="Data">
         <FILE id="XkBcIL" name="AutomationData.h" compile="0" resource="0"
               file="Source/Data/AutomationData.h"/>
+        <FILE id="H2n5m1" name="Track.cpp" compile="1" resource="0" file="Source/Data/Track.cpp"/>
+        <FILE id="QSBRZT" name="Track.h" compile="0" resource="0" file="Source/Data/Track.h"/>
       </GROUP>
       <GROUP id="{C1405057-646F-29F2-ADE5-EE3D759DC311}" name="Project">
         <FILE id="VvWl44" name="ProjectManager.cpp" compile="1" resource="0"
@@ -388,6 +390,9 @@
       <GROUP id="{F98E9492-EAA4-A856-6CC6-2352DAB93A59}" name="Tracks">
         <GROUP id="{A1B2C3D4-E5F6-4A5B-8C7D-9E0F1A2B3C4D}" name="Data">
           <FILE id="i43p2y" name="AudioClipData.h" compile="0" resource="0" file="Source/Tracks/Data/AudioClipData.h"/>
+          <FILE id="jX8mN1" name="MidiClipData.h" compile="0" resource="0" file="Source/Tracks/Data/MidiClipData.h"/>
+          <FILE id="tD9p2X" name="TrackData.h" compile="0" resource="0" file="Source/Tracks/Data/TrackData.h"/>
+          <FILE id="sN3p1Q" name="TrackSnapshots.h" compile="0" resource="0" file="Source/Tracks/Data/TrackSnapshots.h"/>
         </GROUP>
         <GROUP id="{B2C3D4E5-F6A7-4B8C-9D0E-1F2A3B4C5D6E}" name="UI">
           <FILE id="LJbzpQ" name="MasterTrackStrip.cpp" compile="1" resource="0"
@@ -400,14 +405,13 @@
                 file="Source/Tracks/UI/TrackControlPanel.h"/>
         </GROUP>
         <GROUP id="{C3D4E5F6-A7B8-4C9D-0E1F-2A3B4C5D6E7F}" name="DSP">
+          <FILE id="bH7mK1" name="TrackDSP.cpp" compile="1" resource="0" file="Source/Tracks/DSP/TrackDSP.cpp"/>
           <FILE id="vX8mN2" name="TrackDSP.h" compile="0" resource="0" file="Source/Tracks/DSP/TrackDSP.h"/>
         </GROUP>
         <GROUP id="{D4E5F6A7-B8C9-4D0E-1F2A-3B4C5D6E7F8A}" name="LookAndFeel">
           <FILE id="kRy9G1" name="TrackLookAndFeel.h" compile="0" resource="0"
                 file="Source/Tracks/LookAndFeel/TrackLookAndFeel.h"/>
         </GROUP>
-        <FILE id="H2n5m1" name="Track.cpp" compile="1" resource="0" file="Source/Tracks/Track.cpp"/>
-        <FILE id="QSBRZT" name="Track.h" compile="0" resource="0" file="Source/Tracks/Track.h"/>
       </GROUP>
       <GROUP id="{9F2E0E2B-DA67-CB81-440A-F014789C271E}" name="Theme">
         <FILE id="vwtk4p" name="CustomTheme.cpp" compile="1" resource="0" file="Source/Theme/CustomTheme.cpp"/>

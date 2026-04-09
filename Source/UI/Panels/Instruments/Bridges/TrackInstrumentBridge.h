@@ -39,7 +39,7 @@ public:
                     {
                         const juce::ScopedLock sl(audioMutex);
                         t.plugins.add(newPlugin);
-                        t.allocatePdcBuffer(); // RAM: alocar PDC buffer ahora que hay un instrumento
+                        t.dsp.allocatePdcBuffer(); // RAM: alocar PDC buffer ahora que hay un instrumento
                         t.addPluginName(newPlugin->getLoadedPluginName());
                         newPlugin->setIsInstrument(true);
 
@@ -78,7 +78,7 @@ public:
                 
                 orion->prepareToPlay(currentSR, currentBS);
                 t.plugins.add(orion);
-                t.allocatePdcBuffer();
+                t.dsp.allocatePdcBuffer();
                 orion->setIsInstrument(true);
                 
                 // Refrescar UIs

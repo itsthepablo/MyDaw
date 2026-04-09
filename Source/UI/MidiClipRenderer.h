@@ -1,6 +1,6 @@
 #pragma once
 #include <JuceHeader.h>
-#include "../Tracks/Track.h"
+#include "../Data/Track.h"
 #include "MidiPatternStyles.h"
 #include <algorithm>
 #include <cmath>

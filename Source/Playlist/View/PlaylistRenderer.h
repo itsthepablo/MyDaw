@@ -1,7 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include "../PlaylistComponent.h"
-#include "../../Tracks/Track.h"
+#include "../../Data/Track.h"
 #include <unordered_map>
 
 /**

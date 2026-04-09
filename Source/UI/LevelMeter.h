@@ -1,7 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include "Knobs/FloatingValueBox.h"
-#include "../Tracks/Track.h"
+#include "../Data/Track.h"
 #include "../Mixer/Bridges/MixerParameterBridge.h"
 #include "../Mixer/LookAndFeel/MixerLevelMeterLF.h"
 

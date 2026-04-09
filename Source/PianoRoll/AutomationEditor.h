@@ -3,7 +3,7 @@
 #include <set>
 #include <map>
 #include "../GlobalData.h" 
-#include "../Tracks/Track.h" // <-- REQUERIDO PARA CONOCER MidiClipData
+#include "../Data/Track.h" // <-- REQUERIDO PARA CONOCER MidiClipData
 
 // NO TOCAR NI SIMPLIFICAR HASTA QUE YO LO ORDENE
 struct LinkedNode {

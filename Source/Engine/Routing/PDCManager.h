@@ -27,7 +27,7 @@ public:
                     trackLatency += p->getLatencySamples();
                 }
             }
-            track->currentLatency = trackLatency;
+            track->dsp.currentLatency = trackLatency;
 
             if (trackLatency > maxLatency) {
                 maxLatency = trackLatency;
@@ -38,24 +38,24 @@ public:
         currentGlobalLatency.store(maxLatency, std::memory_order_relaxed);
 
         for (auto* track : state->activeTracks) {
-            track->requiredDelay = maxLatency - track->currentLatency;
+            track->dsp.requiredDelay = maxLatency - track->dsp.currentLatency;
         }
     }
 
     static void applyDelay(Track* track, int numSamples) noexcept {
-        int delay = track->requiredDelay;
-        int bufferSize = track->pdcBuffer.getNumSamples();
+        int delay = track->dsp.requiredDelay;
+        int bufferSize = track->dsp.pdcBuffer.getNumSamples();
 
         if (bufferSize == 0) return;
 
         int numChannels = track->audioBuffer.getNumChannels();
-        int safeChannels = juce::jmin(numChannels, track->pdcBuffer.getNumChannels());
+        int safeChannels = juce::jmin(numChannels, track->dsp.pdcBuffer.getNumChannels());
 
-        int currentWritePtr = track->pdcWritePtr;
+        int currentWritePtr = track->dsp.pdcWritePtr;
 
         for (int ch = 0; ch < safeChannels; ++ch) {
             float* audioData = track->audioBuffer.getWritePointer(ch);
-            float* delayData = track->pdcBuffer.getWritePointer(ch);
+            float* delayData = track->dsp.pdcBuffer.getWritePointer(ch);
 
             for (int i = 0; i < numSamples; ++i) {
                 int writePos = (currentWritePtr + i) % bufferSize;
@@ -70,6 +70,6 @@ public:
             }
         }
 
-        track->pdcWritePtr = (currentWritePtr + numSamples) % bufferSize;
+        track->dsp.pdcWritePtr = (currentWritePtr + numSamples) % bufferSize;
     }
 };

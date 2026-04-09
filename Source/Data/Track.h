@@ -2,19 +2,19 @@
 #include <JuceHeader.h>
 #include "../GlobalData.h" 
 #include "../Native_Plugins/BaseEffect.h"
-#include "../Engine/SimpleLoudness.h"
-#include "../Engine/SimpleBalance.h"
-#include "../Engine/SimpleMidSide.h"
-#include "Data/AudioClipData.h"
-#include "../UI/MidiPatternStyles.h"
-#include <juce_dsp/juce_dsp.h>
-#include "../Native_Plugins/ChannelEQ/ChannelEQ_DSP.h"
+#include "../Tracks/Data/TrackData.h"
+#include "../Tracks/Data/AudioClipData.h"
+#include "../Tracks/Data/MidiClipData.h"
+#include "../Tracks/Data/TrackSnapshots.h"
+#include "../Tracks/DSP/TrackDSP.h"
+
 #include "../Mixer/Data/MixerChannelData.h"
 #include "../Modules/GainStation/Data/GainStationData.h"
 #include "../Modules/LoudnessTrack/Data/LoudnessTrackData.h"
 #include "../Modules/BalanceTrack/Data/BalanceTrackData.h"
 #include "../Modules/MidSideTrack/Data/MidSideTrackData.h"
 #include "../Modules/Routing/Data/RoutingData.h"
+
 #include <vector>
 #include <atomic>
 
@@ -22,68 +22,23 @@
 class BaseEffect;
 struct AutomationClipData;
 
-enum class TrackType { MIDI, Audio, Folder, Loudness, Balance, MidSide };
-enum class WaveformViewMode { Combined, SeparateLR, MidSide, Spectrogram }; 
-
-struct MidiClipData {
-    juce::String name;
-    float startX = 0.0f;
-    float width = 320.0f;
-    float offsetX = 0.0f;
-    bool isMuted = false;
-    bool isSelected = false;
-    std::vector<Note> notes;
-    juce::Colour color;
-    MidiStyleType style = MidiStyleType::Classic;
-
-    AutoLane autoVol;
-    AutoLane autoPan;
-    AutoLane autoPitch;
-    AutoLane autoFilter;
-};
-
-struct AudioClipSnapshot {
-    float startX     = 0.0f;
-    float width      = 0.0f;
-    float offsetX    = 0.0f;
-    bool  isMuted    = false;
-    bool  isLoaded   = true;
-    const juce::AudioBuffer<float>* fileBufferPtr = nullptr;
-    int   numChannels = 0;
-    int   numSamples  = 0;
-};
-
-struct MidiNoteSnapshot {
-    int    pitch     = 0;
-    int    x         = 0;
-    int    width     = 0;
-    double frequency = 0.0;
-};
-
-struct MidiClipSnapshot {
-    float startX  = 0.0f;
-    float width   = 320.0f;
-    float offsetX = 0.0f;
-    bool  isMuted = false;
-    MidiStyleType style = MidiStyleType::Classic;
-    std::vector<MidiNoteSnapshot> notes;
-};
-
-struct TrackSnapshot {
-    std::vector<AudioClipSnapshot> audioClips;
-    std::vector<MidiClipSnapshot>  midiClips;
-    std::vector<MidiNoteSnapshot>  notes; 
-    std::vector<AutomationClipSnapshot> automations;
-};
-
+/**
+ * @class Track
+ * El "God Object" de cada pista. Coordina los datos (Data), el procesado (DSP) 
+ * y actúa como modelo para la interfaz (UI).
+ */
 class Track {
 public:
-    GainStationData gainStationData;
-    MixerChannelData mixerData;
+    // --- MÓDULOS DE DATOS ---
+    GainStationData   gainStationData;
+    MixerChannelData  mixerData;
     LoudnessTrackData loudnessTrackData;
     BalanceTrackData  balanceTrackData;
     MidSideTrackData  midSideTrackData;
     TrackRoutingData  routingData;
+
+    // --- MÓDULO DSP ---
+    TrackDSP dsp;
 
     friend class MixerParameterBridge;
     friend class MixerDSP;
@@ -91,6 +46,7 @@ public:
     Track(int id, juce::String n, TrackType t);
     ~Track();
 
+    // --- GETTERS / SETTERS BÁSICOS ---
     int getId() const { return trackId; }
     juce::String getName() const { return name; }
     void setName(juce::String n) { name = n; }
@@ -121,51 +77,37 @@ public:
     bool isMonoActive() const { return gainStationData.isMonoActive.load(std::memory_order_relaxed); }
     void setMonoActive(bool m) { gainStationData.isMonoActive.store(m, std::memory_order_relaxed); }
 
+    // --- LISTAS DE CONTENIDO ---
     std::vector<Note> notes;
     juce::OwnedArray<BaseEffect> plugins;
-
     juce::OwnedArray<AudioClipData> audioClips;
     juce::OwnedArray<MidiClipData> midiClips;
     std::vector<AutomationClipData*> automationClips;
 
+    // --- ESTADO DE JERARQUÍA ---
     int parentId = -1;
     int folderDepth = 0;
     bool isCollapsed = false;
     bool isShowingInChildren = true;
 
+    // --- ESTADO DE UI ---
     bool isSelected = false;
     bool isInlineEditingActive = false;
 
+    // --- BUFFERS DE TRABAJO ---
     juce::AudioBuffer<float> audioBuffer;
     juce::AudioBuffer<float> instrumentMixBuffer;
     juce::AudioBuffer<float> tempSynthBuffer;
     juce::AudioBuffer<float> midSideBuffer;
-    
     juce::SpinLock bufferLock;
 
-    juce::AudioBuffer<float> pdcBuffer; 
-    int pdcWritePtr = 0;
-    int currentLatency = 0;
-    int requiredDelay = 0;
-
-    void allocatePdcBuffer();
-
-    SimpleLoudness preLoudness;
-    SimpleLoudness postLoudness;
-    SimpleBalance  postBalance;
-    SimpleMidSide  postMidSide;
-    
-    ChannelEQ_DSP inlineEQ;
-
-    bool isAnalyzersPrepared = false;
-
-    std::atomic<bool> isLoudnessRecording { true };
-
+    // --- MÉTODOS DE OPERACIÓN ---
     AudioClipData* loadAndAddAudioClip(const juce::File& file, float startX);
     void migrateMidiToRelative();
     void commitSnapshot();
 
     std::atomic<TrackSnapshot*> snapshot { nullptr };
+    std::atomic<bool> isLoudnessRecording { true };
 
 private:
     int trackId;
@@ -179,4 +121,6 @@ private:
     juce::AudioThumbnailCache thumbnailCache { 10 };
 
     WaveformViewMode waveformViewMode = WaveformViewMode::Combined;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Track)
 };

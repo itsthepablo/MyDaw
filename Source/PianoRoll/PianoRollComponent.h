@@ -4,7 +4,7 @@
 #include <set>
 #include <functional>
 #include "../GlobalData.h" 
-#include "../Tracks/Track.h" 
+#include "../Data/Track.h" 
 #include "AutomationEditor.h" 
 
 enum class ToolMode { Draw, Select };

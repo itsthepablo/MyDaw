@@ -1,6 +1,6 @@
 #pragma once
 #include <JuceHeader.h>
-#include "../../Tracks/Track.h"
+#include "../../Data/Track.h"
 
 /**
  * MixerDSP: Motor de procesamiento de audio para los canales del mixer.

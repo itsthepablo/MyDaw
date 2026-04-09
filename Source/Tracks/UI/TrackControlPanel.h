@@ -1,6 +1,6 @@
 #pragma once
 #include <JuceHeader.h>
-#include "../Track.h"
+#include "../../Data/Track.h"
 #include "../../Mixer/Bridges/MixerParameterBridge.h"
 #include "../../PluginHost/VSTHost.h" 
 #include "../../UI/Knobs/FloatingValueSlider.h" 

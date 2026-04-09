@@ -1,7 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include "../../Theme/CustomTheme.h"
-#include "../../Tracks/Track.h"
+#include "../../Data/Track.h"
 
 class PlaylistGridRenderer {
 public:

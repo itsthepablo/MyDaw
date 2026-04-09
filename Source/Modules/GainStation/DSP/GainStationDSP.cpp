@@ -1,5 +1,5 @@
 #include "GainStationDSP.h"
-#include "../../../Tracks/Track.h"
+#include "../../../Data/Track.h"
 
 void GainStationDSP::processPreFX(GainStationData& data, Track* track, juce::AudioBuffer<float>& buffer) {
     auto snap = data.getSnapshot();
@@ -14,7 +14,7 @@ void GainStationDSP::processPreFX(GainStationData& data, Track* track, juce::Aud
 
     // 3. LECTURA PRE-FX (Análisis)
     // Mantenemos la dependencia temporal con el track hasta modularizar el Loudness
-    if (track) track->preLoudness.process(buffer);
+    if (track) track->dsp.preLoudness.process(buffer);
 }
 
 void GainStationDSP::processPostFX(GainStationData& data, Track* track, juce::AudioBuffer<float>& buffer) {
@@ -37,8 +37,8 @@ void GainStationDSP::processPostFX(GainStationData& data, Track* track, juce::Au
 
     // 3. LECTURA POST-FX (Análisis)
     if (track) {
-        track->postLoudness.process(buffer);
-        track->postBalance.process(buffer);
-        track->postMidSide.process(buffer);
+        track->dsp.postLoudness.process(buffer);
+        track->dsp.postBalance.process(buffer);
+        track->dsp.postMidSide.process(buffer);
     }
 }

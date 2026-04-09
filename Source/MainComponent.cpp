@@ -71,9 +71,9 @@ void MainComponent::setupCallbacks() {
             if (targetTrack == nullptr) {
                 targetTrack = ui.trackContainer.addTrack(type);
                 double currentSR = audioEngine.currentSampleRate > 0 ? audioEngine.currentSampleRate : 44100.0;
-                targetTrack->postLoudness.prepare(currentSR, 512);
-                targetTrack->postBalance.prepare(currentSR, 512);
-                targetTrack->postMidSide.prepare(currentSR);
+                targetTrack->dsp.postLoudness.prepare(currentSR, 512);
+                targetTrack->dsp.postBalance.prepare(currentSR, 512);
+                targetTrack->dsp.postMidSide.prepare(currentSR);
                 targetTrack->prepare(currentSR, 4096); // INYECCIÓN: PREPARAR ENGINE PARA QUE SUENE (Regla #1)
                 
                 if (type == TrackType::Loudness) { targetTrack->setColor(juce::Colours::orange); targetTrack->setName("Loudness Track"); }
@@ -264,8 +264,7 @@ void MainComponent::prepareToPlay(int samples, double s) {
         // Si ya tenia tamano por carga previa de plugins, lo respetamos y limpiamos.
         bool hasPlugins = !t->plugins.isEmpty();
         if (hasPlugins) {
-            t->allocatePdcBuffer();
-            t->pdcBuffer.clear();
+            t->dsp.pdcBuffer.clear();
         }
         // DOUBLE BUFFER: publicar snapshot inicial con los clips/notas cargados del proyecto
         t->prepare(s, samples);

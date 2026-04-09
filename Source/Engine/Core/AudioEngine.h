@@ -65,8 +65,8 @@ public:
         if (topo) {
             for (auto* track : topo->activeTracks) {
                 track->audioBuffer.clear();
-                track->pdcBuffer.clear();
-                track->pdcWritePtr = 0;
+                track->dsp.pdcBuffer.clear();
+                track->dsp.pdcWritePtr = 0;
                 for (auto* p : track->plugins) {
                     if (p != nullptr && p->isLoaded())
                         p->reset();
@@ -76,8 +76,8 @@ public:
 
         if (masterTrack) {
             masterTrack->audioBuffer.clear();
-            masterTrack->pdcBuffer.clear();
-            masterTrack->pdcWritePtr = 0;
+            masterTrack->dsp.pdcBuffer.clear();
+            masterTrack->dsp.pdcWritePtr = 0;
             for (auto* p : masterTrack->plugins) {
                 if (p != nullptr && p->isLoaded())
                     p->reset();
@@ -127,16 +127,16 @@ public:
         // NUNCA llamar a prepareToPlay aquí porque destruye el loop real-time y cuelga VSTs pesados.
         if (isPlayingNow && !clock.wasPlayingLastBlock) {
             for (auto* track : topo->activeTracks) {
-                track->pdcBuffer.clear();
-                track->pdcWritePtr = 0;
+                track->dsp.pdcBuffer.clear();
+                track->dsp.pdcWritePtr = 0;
                 for (auto* p : track->plugins) {
                     if (p != nullptr && p->isLoaded())
                         p->reset();
                 }
             }
             if (masterTrack != nullptr) {
-                masterTrack->pdcBuffer.clear();
-                masterTrack->pdcWritePtr = 0;
+                masterTrack->dsp.pdcBuffer.clear();
+                masterTrack->dsp.pdcWritePtr = 0;
                 for (auto* p : masterTrack->plugins) {
                     if (p != nullptr && p->isLoaded())
                         p->reset();
@@ -240,9 +240,9 @@ public:
                                                   bufferToFill.numSamples);
 
             for (auto* t : topo->activeTracks) {
-                if (t->getType() == TrackType::Loudness) t->postLoudness.process(analysisProxy);
-                else if (t->getType() == TrackType::Balance) t->postBalance.process(analysisProxy);
-                else if (t->getType() == TrackType::MidSide) t->postMidSide.process(analysisProxy);
+                if (t->getType() == TrackType::Loudness) t->dsp.postLoudness.process(analysisProxy);
+                else if (t->getType() == TrackType::Balance) t->dsp.postBalance.process(analysisProxy);
+                else if (t->getType() == TrackType::MidSide) t->dsp.postMidSide.process(analysisProxy);
             }
         }
 

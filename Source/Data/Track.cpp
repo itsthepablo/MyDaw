@@ -1,5 +1,5 @@
 #include "Track.h"
-#include "../Engine/Core/AudioEngine.h" // For Clock access if needed
+#include "../Engine/Core/AudioEngine.h" 
 #include "../PluginHost/VSTHost.h"
 
 // ============================================================
@@ -26,15 +26,7 @@ Track::~Track()
 void Track::prepare(double sampleRate, int samplesPerBlock)
 {
     mixerData.prepare(sampleRate, samplesPerBlock);
-    inlineEQ.prepare(sampleRate, samplesPerBlock, 2);
-}
-
-void Track::allocatePdcBuffer()
-{
-    if (pdcBuffer.getNumSamples() >= 524288) return; 
-    pdcBuffer.setSize(2, 524288, false, true, false);
-    pdcBuffer.clear();
-    pdcWritePtr = 0;
+    dsp.prepare(sampleRate, samplesPerBlock);
 }
 
 // ============================================================
@@ -64,7 +56,6 @@ AudioClipData* Track::loadAndAddAudioClip(const juce::File& file, float startX)
 
         clip->generateCache();
 
-        // Generar AudioThumbnail para renderizado estable (sin temblor al hacer zoom)
         clip->thumbnail = std::make_unique<juce::AudioThumbnail>(64, thumbnailFormatManager, thumbnailCache);
         clip->thumbnail->reset(clip->fileBuffer.getNumChannels(),
                                clip->sourceSampleRate,
@@ -84,8 +75,6 @@ void Track::migrateMidiToRelative()
     for (auto* clip : midiClips) {
         if (!clip) continue;
         for (auto& note : clip->notes) {
-            // Heurística: si la nota está en el rango absoluto [startX, startX + width], 
-            // la convertimos a relativa restando startX.
             if (note.x >= (int)clip->startX && note.x < (int)(clip->startX + clip->width + 1.0f)) {
                 note.x -= (int)clip->startX;
                 changed = true;
@@ -101,10 +90,9 @@ void Track::migrateMidiToRelative()
 
 void Track::commitSnapshot()
 {
-    // PDC: alocar buffer bajo demanda — solo si el track tiene contenido.
-    // Tracks vacios no consumen los 4MB del ring buffer de retardo.
+    // PDC: delegate allocation to dsp
     if (!audioClips.isEmpty() || !midiClips.isEmpty() || !plugins.isEmpty() || !notes.empty())
-        allocatePdcBuffer();
+        dsp.allocatePdcBuffer();
 
     auto* snap = new TrackSnapshot();
 
@@ -149,7 +137,7 @@ void Track::commitSnapshot()
         if (!a) continue;
         AutomationClipSnapshot as;
         as.parameterId = a->parameterId;
-        as.lane = a->lane;      // Copia por valor segura en real-time
+        as.lane = a->lane;      
         snap->automations.push_back(std::move(as));
     }
 

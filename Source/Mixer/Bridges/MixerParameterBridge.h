@@ -1,5 +1,5 @@
 #pragma once
-#include "../../Tracks/Track.h"
+#include "../../Data/Track.h"
 
 /**
  * MixerParameterBridge: Interfaz centralizada para la comunicación entre 

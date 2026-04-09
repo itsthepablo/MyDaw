@@ -1,6 +1,6 @@
 #pragma once
 #include <JuceHeader.h>
-#include "../../../Tracks/Track.h"
+#include "../../../Data/Track.h"
 
 /**
  * LoudnessMeter — Rediseño Premium v2
@@ -36,7 +36,7 @@ public:
         g.drawText("LUFS SHORT-TERM", content.removeFromTop(12.0f), juce::Justification::centred);
 
         // 4. VALOR PRINCIPAL (El corazón del diseño)
-        float st = track.postLoudness.getShortTerm();
+        float st = track.dsp.postLoudness.getShortTerm();
         juce::String stStr = (st <= -70.0f) ? "-inf" : juce::String(st, 1);
         
         g.setColour(juce::Colours::white);
@@ -59,18 +59,18 @@ public:
         };
 
         // Range (LRA)
-        float lra = track.postLoudness.getRange();
+        float lra = track.dsp.postLoudness.getRange();
         drawMetric(bottomRow.removeFromLeft(colWidth), "RANGE", juce::String(lra, 1), juce::Colours::orange.withAlpha(0.9f));
 
         // True Peak (dBTP)
-        float tp = track.postLoudness.getTruePeak();
+        float tp = track.dsp.postLoudness.getTruePeak();
         float tpDb = juce::Decibels::gainToDecibels(tp, -100.0f);
         juce::String tpStr = (tpDb <= -100.0f) ? "-inf" : juce::String(tpDb, 1);
         juce::Colour tpCol = (tpDb > -0.1f) ? juce::Colours::red : juce::Colours::cyan.withAlpha(0.8f);
         drawMetric(bottomRow.removeFromLeft(colWidth), "dBTP", tpStr, tpCol);
 
         // Integrated (Long)
-        float lng = track.postLoudness.getIntegrated();
+        float lng = track.dsp.postLoudness.getIntegrated();
         juce::String lngStr = (lng <= -70.0f) ? "-inf" : juce::String(lng, 1);
         drawMetric(bottomRow, "LONG", lngStr, juce::Colours::magenta.withAlpha(0.8f));
     }
@@ -80,7 +80,7 @@ private:
     {
         static int slowCount = 0;
         if (++slowCount >= 10) {
-            track.postLoudness.calculateIntegratedAndLRA();
+            track.dsp.postLoudness.calculateIntegratedAndLRA();
             slowCount = 0;
         }
         repaint();

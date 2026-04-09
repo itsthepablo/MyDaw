@@ -87,8 +87,8 @@ void EffectsPanel::setTrack(Track* t) {
     if (activeTrack) {
         gsBridge = std::make_unique<GainStationBridge>(
             activeTrack->gainStationData, 
-            activeTrack->preLoudness, 
-            activeTrack->postLoudness
+            activeTrack->dsp.preLoudness, 
+            activeTrack->dsp.postLoudness
         );
         gainStation.setBridge(gsBridge.get());
     } else {

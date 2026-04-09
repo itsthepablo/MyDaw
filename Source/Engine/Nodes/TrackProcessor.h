@@ -1,7 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include "../Core/AudioClock.h"
-#include "../../Tracks/Track.h"
+#include "../../Data/Track.h"
 #include "../../Modules/GainStation/DSP/GainStationDSP.h"
 #include "../../Modules/LoudnessTrack/DSP/LoudnessTrackDSP.h"
 #include "../../Modules/BalanceTrack/DSP/BalanceTrackDSP.h"
@@ -37,12 +37,12 @@ public:
             return;
         }
 
-        if (!track->isAnalyzersPrepared) {
-            track->preLoudness.prepare(44100.0, 512);
-            track->postLoudness.prepare(44100.0, 512);
-            track->postBalance.prepare(44100.0, 512);
-            track->postMidSide.prepare(44100.0);
-            track->isAnalyzersPrepared = true;
+        if (!track->dsp.isAnalyzersPrepared) {
+            track->dsp.preLoudness.prepare(44100.0, 512);
+            track->dsp.postLoudness.prepare(44100.0, 512);
+            track->dsp.postBalance.prepare(44100.0, 512);
+            track->dsp.postMidSide.prepare(44100.0);
+            track->dsp.isAnalyzersPrepared = true;
         }
 
         juce::MidiBuffer trackMidi;
@@ -248,7 +248,7 @@ public:
         // Se aplica inmediatamente como moldeado base del track (Audio + Sintetizador)
         {
             juce::dsp::AudioBlock<float> eqBlock(mainProxyBuffer);
-            track->inlineEQ.process(eqBlock);
+            track->dsp.inlineEQ.process(eqBlock);
         }
 
         // --- PRE-FX & GAIN STATION ---
@@ -319,9 +319,9 @@ public:
 
         // --- RECORD ANALYSIS HISTORY ---
         if (isPlayingNow && track->isLoudnessRecording) {
-            LoudnessTrackDSP::recordAnalysis(track->loudnessTrackData, track->postLoudness, clock.currentSamplePos);
-            BalanceTrackDSP::recordAnalysis(track->balanceTrackData, track->postBalance, clock.currentSamplePos);
-            MidSideTrackDSP::recordAnalysis(track->midSideTrackData, track->postMidSide, clock.currentSamplePos);
+            LoudnessTrackDSP::recordAnalysis(track->loudnessTrackData, track->dsp.postLoudness, clock.currentSamplePos);
+            BalanceTrackDSP::recordAnalysis(track->balanceTrackData, track->dsp.postBalance, clock.currentSamplePos);
+            MidSideTrackDSP::recordAnalysis(track->midSideTrackData, track->dsp.postMidSide, clock.currentSamplePos);
         }
 
         if (numChannels > 2) {

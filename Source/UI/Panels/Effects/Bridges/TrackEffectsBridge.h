@@ -50,7 +50,7 @@ public:
                         int currentBlockSize = blockSize > 0 ? blockSize : 512;
                         host->prepareToPlay(sampleRate, currentBlockSize);
                         t.plugins.add(host);
-                        t.allocatePdcBuffer(); 
+                        t.dsp.allocatePdcBuffer(); 
                         host->setIsInstrument(t.getType() == TrackType::MIDI && t.plugins.size() == 1);
                         host->onSidechainChanged = [&engine, &container]() { engine.routingMatrix.commitNewTopology(container.getTracks()); };
                         engine.routingMatrix.commitNewTopology(container.getTracks());
@@ -78,7 +78,7 @@ public:
                 int currentBlockSize = blockSize > 0 ? blockSize : 512;
                 utility->prepareToPlay(sampleRate, currentBlockSize);
                 t.plugins.add(utility);
-                t.allocatePdcBuffer(); 
+                t.dsp.allocatePdcBuffer(); 
                 utility->setIsInstrument(false); 
                 utility->onSidechainChanged = [&engine, &container]() { engine.routingMatrix.commitNewTopology(container.getTracks()); };
                 engine.routingMatrix.commitNewTopology(container.getTracks());
@@ -104,7 +104,7 @@ public:
                 int currentBlockSize = blockSize > 0 ? blockSize : 512;
                 orion->prepareToPlay(sampleRate, currentBlockSize);
                 t.plugins.add(orion);
-                t.allocatePdcBuffer();
+                t.dsp.allocatePdcBuffer();
                 orion->setIsInstrument(true);
                 orion->onSidechainChanged = [&engine, &container]() { engine.routingMatrix.commitNewTopology(container.getTracks()); };
                 engine.routingMatrix.commitNewTopology(container.getTracks());
