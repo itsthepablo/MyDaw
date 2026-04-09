@@ -48,11 +48,11 @@ public:
 
     // --- FASE (POLARIDAD) ---
     static bool isPhaseInverted(const Track* t) {
-        return t ? t->mixerData.isPhaseInverted.load(std::memory_order_relaxed) : false;
+        return t ? t->isPhaseInverted() : false;
     }
     
     static void setPhaseInverted(Track* t, bool i) {
-        if (t) t->mixerData.isPhaseInverted.store(i, std::memory_order_relaxed);
+        if (t) t->setPhaseInverted(i);
     }
 
     // --- METERING ---
@@ -99,10 +99,10 @@ public:
 
     // --- MONO (Si aplica) ---
     static bool isMonoActive(const Track* t) {
-        return t ? t->isMonoActive : false;
+        return t ? t->isMonoActive() : false;
     }
     
     static void setMonoActive(Track* t, bool m) {
-        if (t) t->isMonoActive = m;
+        if (t) t->setMonoActive(m);
     }
 };

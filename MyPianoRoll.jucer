@@ -5,6 +5,34 @@
               companyCopyright="Two Levels Audio" version="1.0.0">
   <MAINGROUP id="OgOeCb" name="FatPuppy Studio">
     <GROUP id="{832B9725-4498-E7CC-3428-6D1D4B31D6DB}" name="Source">
+      <GROUP id="{F2F6C20B-2317-2419-AF24-5D67676D1368}" name="Modules">
+        <GROUP id="{6BDDFC46-D6E3-FC63-9DE7-B37910E6B6D6}" name="GainStation">
+          <GROUP id="{CD141FD0-FC7A-5319-CEFA-D0935F758745}" name="Bridges">
+            <FILE id="i3NuuX" name="GainStationBridge.h" compile="0" resource="0"
+                  file="Source/Modules/GainStation/Bridges/GainStationBridge.h"/>
+          </GROUP>
+          <GROUP id="{FB40E499-9983-2D68-2670-AE5FE76AF05B}" name="Data">
+            <FILE id="Cpfg3a" name="GainStationData.h" compile="0" resource="0"
+                  file="Source/Modules/GainStation/Data/GainStationData.h"/>
+          </GROUP>
+          <GROUP id="{3853F9BB-C9EA-E450-2AAE-429E340A8EB6}" name="DSP">
+            <FILE id="F1hiXn" name="GainStationDSP.cpp" compile="1" resource="0"
+                  file="Source/Modules/GainStation/DSP/GainStationDSP.cpp"/>
+            <FILE id="RByOS6" name="GainStationDSP.h" compile="0" resource="0"
+                  file="Source/Modules/GainStation/DSP/GainStationDSP.h"/>
+          </GROUP>
+          <GROUP id="{75E8CF77-B95E-A3A2-4D09-2558A5E771AA}" name="UI">
+            <FILE id="M7XrAk" name="GainStationMeter.cpp" compile="1" resource="0"
+                  file="Source/Modules/GainStation/UI/GainStationMeter.cpp"/>
+            <FILE id="oft4Vo" name="GainStationMeter.h" compile="0" resource="0"
+                  file="Source/Modules/GainStation/UI/GainStationMeter.h"/>
+            <FILE id="ZFnkYb" name="GainStationPanel.cpp" compile="1" resource="0"
+                  file="Source/Modules/GainStation/UI/GainStationPanel.cpp"/>
+            <FILE id="b6FMwC" name="GainStationPanel.h" compile="0" resource="0"
+                  file="Source/Modules/GainStation/UI/GainStationPanel.h"/>
+          </GROUP>
+        </GROUP>
+      </GROUP>
       <GROUP id="{C4B4A205-E119-6FE9-C7E0-09229B5E0910}" name="Assets">
         <FILE id="R0gvs4" name="IconAssets.h" compile="0" resource="0" file="Source/Assets/IconAssets.h"/>
       </GROUP>

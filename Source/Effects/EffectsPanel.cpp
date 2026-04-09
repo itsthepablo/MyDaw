@@ -78,12 +78,22 @@ EffectsPanel::EffectsPanel() {
         repaint();
         };
 
-    addAndMakeVisible(loudnessMeter);
+    addAndMakeVisible(gainStation);
 }
 
 void EffectsPanel::setTrack(Track* t) {
     activeTrack = t;
-    loudnessMeter.setTrack(t);
+    if (activeTrack) {
+        gsBridge = std::make_unique<GainStationBridge>(
+            activeTrack->gainStationData, 
+            activeTrack->preLoudness, 
+            activeTrack->postLoudness
+        );
+        gainStation.setBridge(gsBridge.get());
+    } else {
+        gsBridge.reset();
+        gainStation.setBridge(nullptr);
+    }
     updateSlots();
 }
 
@@ -143,7 +153,7 @@ void EffectsPanel::updateStyles() {
         addSendBtn.setColour(juce::TextButton::buttonColourId, bg.brighter(0.1f));
         
         // También actualizar la GainStation si es necesario
-        loudnessMeter.repaint();
+        gainStation.repaint();
     }
 }
 
@@ -155,7 +165,7 @@ void EffectsPanel::paint(juce::Graphics& g) {
     }
 
     int trackInfoWidth = 110;
-    int gainStationWidth = isGainStationExpanded ? 180 : 0;
+    int gainStationWidth = isGainStationExpanded ? gainStation.getPreferredWidth() : 0;
     int totalLeftWidth = trackInfoWidth + gainStationWidth; 
 
     if (auto* theme = dynamic_cast<CustomTheme*>(&getLookAndFeel())) {
@@ -189,7 +199,7 @@ void EffectsPanel::paint(juce::Graphics& g) {
 
 void EffectsPanel::resized() {
     int trackInfoWidth = 110;
-    int gainStationWidth = 180;
+    int gainStationWidth = gainStation.getPreferredWidth();
     int toggleBarWidth = 20;
     int padding = 15;
 
@@ -198,7 +208,7 @@ void EffectsPanel::resized() {
     if (!activeTrack) {
         toggleGainStationBtn.setVisible(false);
         hideGainStationBtn.setVisible(false);
-        loudnessMeter.setVisible(false);
+        gainStation.setVisible(false);
         return;
     }
 
@@ -207,22 +217,21 @@ void EffectsPanel::resized() {
     if (isGainStationExpanded) {
         toggleGainStationBtn.setVisible(false);
         hideGainStationBtn.setVisible(true);
-        loudnessMeter.setVisible(true);
-        loudnessMeter.setBounds(trackInfoWidth, 20, gainStationWidth, getHeight() - 30);
+        gainStation.setVisible(true);
+        gainStation.setBounds(trackInfoWidth, 20, gainStationWidth, getHeight() - 30);
         hideGainStationBtn.setBounds(trackInfoWidth + gainStationWidth - 45, 5, 40, 15);
         startX += gainStationWidth + padding;
     }
     else {
         toggleGainStationBtn.setVisible(true);
         hideGainStationBtn.setVisible(false);
-        loudnessMeter.setVisible(false);
+        gainStation.setVisible(false);
         toggleGainStationBtn.setBounds(trackInfoWidth, 0, toggleBarWidth, getHeight());
         startX += toggleBarWidth + padding;
     }
 
     int x = startX;
     int y = 20;
-    int slotWidth = 140;
     int slotHeight = getHeight() - 40;
     if (slotHeight < 50) slotHeight = 50;
 

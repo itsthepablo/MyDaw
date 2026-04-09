@@ -5,7 +5,7 @@
 #include <map> 
 #include "EffectDevice.h"
 #include "SendDevice.h"
-#include "../UI/GainStation/GainStationPanel.h" 
+#include "../Modules/GainStation/UI/GainStationPanel.h"
 
 // ==============================================================================
 // EFFECTS PANEL (Contenedor Principal de Plugins y Envíos)
@@ -54,7 +54,8 @@ private:
     juce::TextButton toggleGainStationBtn; 
     juce::TextButton hideGainStationBtn;   
 
-    GainStationPanel loudnessMeter;
+    GainStationPanel gainStation;
+    std::unique_ptr<GainStationBridge> gsBridge;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EffectsPanel)
 };

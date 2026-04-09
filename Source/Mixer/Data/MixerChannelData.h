@@ -26,7 +26,6 @@ struct MixerChannelData {
     // --- ESTADOS ATÓMICOS (Thread-Safe) ---
     std::atomic<bool> isMuted { false };
     std::atomic<bool> isSoloed { false };
-    std::atomic<bool> isPhaseInverted { false };
     
     // --- GESTIÓN DE PANEO ---
     std::atomic<bool> panningModeDual { false };

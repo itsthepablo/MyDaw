@@ -11,6 +11,7 @@
 #include <juce_dsp/juce_dsp.h>
 #include "../Native_Plugins/ChannelEQ/ChannelEQ_DSP.h"
 #include "../Mixer/Data/MixerChannelData.h"
+#include "../Modules/GainStation/Data/GainStationData.h"
 #include <map>
 #include <map>
 #include <vector>
@@ -163,6 +164,9 @@ struct TrackSnapshot {
 
 class Track {
 public:
+    GainStationData gainStationData;
+    MixerChannelData mixerData;
+
     friend class MixerParameterBridge;
     friend class MixerDSP;
     Track(int id, juce::String n, TrackType t) : trackId(id), name(n), type(t) {
@@ -187,6 +191,11 @@ public:
     void setVolume(float v) { mixerData.setVolume(v); }
     float getBalance() const { return mixerData.balance; }
     void setBalance(float b) { mixerData.setBalance(b); }
+    
+    float getPreGain() const { return gainStationData.preGain.load(std::memory_order_relaxed); }
+    void setPreGain(float v) { gainStationData.preGain.store(v, std::memory_order_relaxed); }
+    float getPostGain() const { return gainStationData.postGain.load(std::memory_order_relaxed); }
+    void setPostGain(float v) { gainStationData.postGain.store(v, std::memory_order_relaxed); }
 
     void prepare(double sampleRate, int samplesPerBlock)
     {
@@ -200,14 +209,11 @@ public:
     juce::StringArray getPluginNames() const { return pluginNames; }
     void addPluginName(juce::String n) { pluginNames.add(n); }
 
-    float getPreGain() const { return preGain; }
-    void setPreGain(float v) { preGain = v; }
+    bool isPhaseInverted() const { return gainStationData.isPhaseInverted.load(std::memory_order_relaxed); }
+    void setPhaseInverted(bool i) { gainStationData.isPhaseInverted.store(i, std::memory_order_relaxed); }
+    bool isMonoActive() const { return gainStationData.isMonoActive.load(std::memory_order_relaxed); }
+    void setMonoActive(bool m) { gainStationData.isMonoActive.store(m, std::memory_order_relaxed); }
 
-    float getPostGain() const { return postGain; }
-    void setPostGain(float v) { postGain = v; }
-
-    // bool isPhaseInverted -> MOVIDO A mixerData
-    bool isMonoActive = false;
 
     std::vector<Note> notes;
     juce::OwnedArray<BaseEffect> plugins;
@@ -398,15 +404,10 @@ public:
     }
 
 private:
-    MixerChannelData mixerData;
-
     int trackId;
     juce::String name;
     TrackType type;
     juce::Colour color;
-
-    float preGain = 1.0f;
-    float postGain = 1.0f;
 
     juce::StringArray pluginNames;
 

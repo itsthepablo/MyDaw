@@ -2,7 +2,7 @@
 #include <JuceHeader.h>
 #include "../Core/AudioClock.h"
 #include "../../Tracks/Track.h"
-#include "../../UI/GainStation/GainStationDSP.h" 
+#include "../../Modules/GainStation/DSP/GainStationDSP.h"
 #include "../../Effects/EffectsPanel.h" 
 #include "../Routing/RoutingMatrix.h" // NUEVO: Para TopoState
 
@@ -249,8 +249,7 @@ public:
         }
 
         // --- PRE-FX & GAIN STATION ---
-        // Medimos el sonido 'crudo' ecualizado antes de enviarlo a los plugins de inserción.
-        GainStationDSP::processPreFX(track, mainProxyBuffer);
+        GainStationDSP::processPreFX(track->gainStationData, track, mainProxyBuffer);
 
         for (auto* p : track->plugins) {
             if (p != nullptr && p->isLoaded() && !p->getIsInstrument()) {
@@ -313,8 +312,7 @@ public:
         }
 
         // --- POST-FX & GAIN STATION ---
-        // Usamos mainProxyBuffer para medir unicamente los samples validos de este bloque.
-        GainStationDSP::processPostFX(track, mainProxyBuffer);
+        GainStationDSP::processPostFX(track->gainStationData, track, mainProxyBuffer);
 
         if (numChannels > 2) {
             for (int ch = 2; ch < numChannels; ++ch) {
