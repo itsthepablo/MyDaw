@@ -119,12 +119,6 @@
         <FILE id="XkBcIL" name="AutomationData.h" compile="0" resource="0"
               file="Source/Data/AutomationData.h"/>
       </GROUP>
-      <GROUP id="{9BE8723D-5C5A-42B2-938A-BE8BB236FD35}" name="Instruments">
-        <FILE id="DH4AH2" name="InstrumentPanel.cpp" compile="1" resource="0"
-              file="Source/Instruments/InstrumentPanel.cpp"/>
-        <FILE id="XB6lrf" name="InstrumentPanel.h" compile="0" resource="0"
-              file="Source/Instruments/InstrumentPanel.h"/>
-      </GROUP>
       <GROUP id="{C1405057-646F-29F2-ADE5-EE3D759DC311}" name="Project">
         <FILE id="VvWl44" name="ProjectManager.cpp" compile="1" resource="0"
               file="Source/Project/ProjectManager.cpp"/>
@@ -161,6 +155,26 @@
             <FILE id="SGj0nP" name="EffectsPanel.cpp" compile="1" resource="0"
                   file="Source/UI/Panels/Effects/EffectsPanel.cpp"/>
             <FILE id="ZyjqYN" name="EffectsPanel.h" compile="0" resource="0" file="Source/UI/Panels/Effects/EffectsPanel.h"/>
+          </GROUP>
+          <GROUP id="{AB71F7C6-9C78-4D68-9F78-3F1D7B4C9E23}" name="Instruments">
+            <GROUP id="{B71F7D42-9D23-4E67-ADCE-A3412B890F12}" name="Bridges">
+              <FILE id="NDVttX" name="TrackInstrumentBridge.h" compile="0" resource="0"
+                    file="Source/UI/Panels/Instruments/Bridges/TrackInstrumentBridge.h"/>
+            </GROUP>
+            <FILE id="DH4AH2" name="InstrumentPanel.cpp" compile="1" resource="0"
+                  file="Source/UI/Panels/Instruments/InstrumentPanel.cpp"/>
+            <FILE id="XB6lrf" name="InstrumentPanel.h" compile="0" resource="0"
+                  file="Source/UI/Panels/Instruments/InstrumentPanel.h"/>
+          </GROUP>
+          <GROUP id="{C44D871A-9876-1234-ADCE-B3412B789012}" name="Browsers">
+            <FILE id="h6clO8" name="FileBrowserPanel.h" compile="0" resource="0"
+                  file="Source/UI/Panels/Browsers/FileBrowserPanel.h"/>
+            <FILE id="BK4wwE" name="PickerPanel.h" compile="0" resource="0"
+                  file="Source/UI/Panels/Browsers/PickerPanel.h"/>
+          </GROUP>
+          <GROUP id="{AB71F7C6-ABCD-4D68-9F78-3F1D7B4C9E24}" name="ChannelRack">
+            <FILE id="mmFN15" name="ChannelRackPanel.h" compile="0" resource="0"
+                  file="Source/UI/Panels/ChannelRack/ChannelRackPanel.h"/>
           </GROUP>
         </GROUP>
         <FILE id="arQwvG" name="MidiPatternStyles.h" compile="0" resource="0"
@@ -238,14 +252,9 @@
         <FILE id="kfwxKj" name="BottomDockResizer.h" compile="0" resource="0"
               file="Source/UI/BottomDockResizer.h"/>
         <FILE id="G1m4fc" name="BottomDock.h" compile="0" resource="0" file="Source/UI/BottomDock.h"/>
-        <FILE id="mmFN15" name="ChannelRackPanel.h" compile="0" resource="0"
-              file="Source/UI/ChannelRackPanel.h"/>
-        <FILE id="h6clO8" name="FileBrowserPanel.h" compile="0" resource="0"
-              file="Source/UI/FileBrowserPanel.h"/>
         <FILE id="M86NJQ" name="LeftSidebar.h" compile="0" resource="0" file="Source/UI/LeftSidebar.h"/>
         <FILE id="Bc6gRt" name="MidiClipRenderer.h" compile="0" resource="0"
               file="Source/UI/MidiClipRenderer.h"/>
-        <FILE id="BK4mww" name="PickerPanel.h" compile="0" resource="0" file="Source/UI/PickerPanel.h"/>
         <FILE id="yioUXf" name="ResourceMeter.h" compile="0" resource="0" file="Source/UI/ResourceMeter.h"/>
         <FILE id="lP5IIW" name="SidebarResizer.h" compile="0" resource="0"
               file="Source/UI/SidebarResizer.h"/>
@@ -292,8 +301,6 @@
         <FILE id="q6I1fP" name="BridgeManager.h" compile="0" resource="0" file="Source/Bridge/BridgeManager.h"/>
         <FILE id="C1c2Iw" name="InterfaceBridge.h" compile="0" resource="0"
               file="Source/Bridge/InterfaceBridge.h"/>
-        <FILE id="NDVttX" name="TrackInstrumentBridge.h" compile="0" resource="0"
-              file="Source/Bridge/TrackInstrumentBridge.h"/>
         <FILE id="MoyJcG" name="TrackMixerPlaylistBridge.h" compile="0" resource="0"
               file="Source/Bridge/TrackMixerPlaylistBridge.h"/>
         <FILE id="Xu9v5w" name="TrackPianoRollBridge.h" compile="1" resource="0"

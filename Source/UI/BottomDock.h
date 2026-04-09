@@ -1,9 +1,9 @@
 #pragma once
 #include <JuceHeader.h>
 #include "../Theme/CustomTheme.h"
-#include "ChannelRackPanel.h"
+#include "Panels/ChannelRack/ChannelRackPanel.h"
 #include "../UI/Panels/Effects/EffectsPanel.h"
-#include "../Instruments/InstrumentPanel.h"
+#include "../UI/Panels/Instruments/InstrumentPanel.h"
 #include "../Mixer/MixerComponent.h"
 
 class BottomDock : public juce::Component {

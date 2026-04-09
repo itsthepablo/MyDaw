@@ -1,5 +1,6 @@
 #include "InstrumentPanel.h"
-#include "../Theme/CustomTheme.h"
+#include "../../../Theme/CustomTheme.h"
+#include "../Effects/UI/EffectDevice.h"
 
 InstrumentPanel::InstrumentPanel() 
 {

@@ -1,13 +1,13 @@
 #pragma once
 #include <JuceHeader.h>
-#include "../Tracks/TrackContainer.h"
-#include "../Instruments/InstrumentPanel.h"
-#include "../UI/Panels/Effects/EffectsPanel.h"
-#include "../Native_Plugins/BaseEffect.h"
-#include "../UI/BottomDock.h"
-#include "../PluginHost/VSTHost.h"
-#include "../Native_Plugins/Orion/OrionPlugin.h"
-#include "../Engine/Core/AudioEngine.h" 
+#include "../../../../Tracks/TrackContainer.h"
+#include "../InstrumentPanel.h"
+#include "../../Effects/EffectsPanel.h"
+#include "../../../../Native_Plugins/BaseEffect.h"
+#include "../../../BottomDock.h"
+#include "../../../../PluginHost/VSTHost.h"
+#include "../../../../Native_Plugins/Orion/OrionPlugin.h"
+#include "../../../../Engine/Core/AudioEngine.h" 
 
 class TrackInstrumentBridge {
 public:

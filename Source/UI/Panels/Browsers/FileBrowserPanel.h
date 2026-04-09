@@ -1,6 +1,6 @@
 #pragma once
 #include <JuceHeader.h>
-#include "../Theme/CustomTheme.h"
+#include "../../../Theme/CustomTheme.h"
 
 class FileBrowserPanel : public juce::Component, public juce::ComboBox::Listener {
 public:

@@ -1,8 +1,8 @@
 #pragma once
 #include <JuceHeader.h>
 #include <vector>
-#include "../Theme/CustomTheme.h"
-#include "Knobs/FLKnobLookAndFeel.h"
+#include "../../../Theme/CustomTheme.h"
+#include "../../Knobs/FLKnobLookAndFeel.h"
 
 // ==============================================================================
 // 1. ESTRUCTURA DE DATOS GLOBAL (Desconectada de las Pistas)

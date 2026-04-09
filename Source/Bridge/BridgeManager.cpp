@@ -4,7 +4,8 @@
 #include "TrackMixerPlaylistBridge.h"
 #include "TransportBridge.h" 
 #include "InterfaceBridge.h"
-#include "TrackInstrumentBridge.h"
+#include "../UI/Panels/Instruments/InstrumentPanel.h"
+#include "../UI/Panels/Instruments/Bridges/TrackInstrumentBridge.h"
 
 void BridgeManager::initializeAllBridges(BridgeDependencies d) {
     TrackPianoRollBridge::connect(d.trackContainer, d.playlistUI, d.pianoRollUI, d.openPianoRoll);

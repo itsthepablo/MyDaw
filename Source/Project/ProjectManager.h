@@ -2,7 +2,7 @@
 #include <JuceHeader.h>
 #include "../Tracks/TrackContainer.h"
 #include "../Playlist/PlaylistComponent.h"
-#include "../UI/PickerPanel.h"
+#include "../UI/Panels/Browsers/PickerPanel.h"
 #include "../Engine/Core/AudioEngine.h"
 
 class ProjectManager {
