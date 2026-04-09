@@ -66,12 +66,10 @@
                   file="Source/Modules/LoudnessTrack/DSP/LoudnessTrackDSP.h"/>
           </GROUP>
           <GROUP id="{70EC0780-2AEF-0ECB-DCBB-1908926AE37F}" name="UI">
-            <FILE id="CZtiPv" name="BalanceRenderer.h" compile="0" resource="0"
-                  file="Source/Modules/LoudnessTrack/UI/BalanceRenderer.h"/>
+            <FILE id="nhC3ZN" name="LoudnessMeter.h" compile="0" resource="0"
+                  file="Source/Modules/LoudnessTrack/UI/LoudnessMeter.h"/>
             <FILE id="bqEEJg" name="LoudnessTrackRenderer.h" compile="0" resource="0"
                   file="Source/Modules/LoudnessTrack/UI/LoudnessTrackRenderer.h"/>
-            <FILE id="YiFQ2y" name="MidSideRenderer.h" compile="0" resource="0"
-                  file="Source/Modules/LoudnessTrack/UI/MidSideRenderer.h"/>
           </GROUP>
         </GROUP>
         <GROUP id="{BEED88EB-5413-C0FD-D795-797F0787EB27}" name="MidSideTrack">
@@ -179,17 +177,6 @@
         </GROUP>
         <FILE id="arQwvG" name="MidiPatternStyles.h" compile="0" resource="0"
               file="Source/UI/MidiPatternStyles.h"/>
-        <GROUP id="{B6357D25-D9E2-3C4A-AA66-543D29690500}" name="Loudness">
-          <FILE id="nhC3ZN" name="LoudnessMeter.h" compile="0" resource="0" file="Source/UI/Loudness/LoudnessMeter.h"/>
-        </GROUP>
-        <GROUP id="{6D660262-129A-F82F-7410-493E0F46A50D}" name="Playlist">
-          <FILE id="VfrgOT" name="BalanceRenderer.h" compile="0" resource="0"
-                file="Source/UI/Playlist/BalanceRenderer.h"/>
-          <FILE id="TfaWko" name="LoudnessRenderer.h" compile="0" resource="0"
-                file="Source/UI/Playlist/LoudnessRenderer.h"/>
-          <FILE id="WMWpRT" name="MidSideRenderer.h" compile="0" resource="0"
-                file="Source/UI/Playlist/MidSideRenderer.h"/>
-        </GROUP>
         <GROUP id="{370703D0-1732-1E2E-EE22-515A559A3353}" name="OfflineRenderer">
           <FILE id="HQ3qTp" name="OfflineRenderer.cpp" compile="1" resource="0"
                 file="Source/UI/OfflineRenderer/OfflineRenderer.cpp"/>
@@ -242,8 +229,6 @@
         </GROUP>
         <FILE id="vxUryM" name="AutomationRenderer.h" compile="0" resource="0"
               file="Source/UI/AutomationRenderer.h"/>
-        <FILE id="U89Tfp" name="SidechainPicker.h" compile="0" resource="0"
-              file="Source/UI/SidechainPicker.h"/>
         <FILE id="BvdwDj" name="UIManager.cpp" compile="1" resource="0" file="Source/UI/UIManager.cpp"/>
         <FILE id="bmzdqo" name="UIManager.h" compile="0" resource="0" file="Source/UI/UIManager.h"/>
         <FILE id="eosDxo" name="SplashWindow.h" compile="0" resource="0" file="Source/UI/SplashWindow.h"/>

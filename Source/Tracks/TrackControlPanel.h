@@ -5,7 +5,7 @@
 #include "../PluginHost/VSTHost.h" 
 #include "../UI/Knobs/FloatingValueSlider.h" 
 #include "../UI/LevelMeter.h"
-#include "../UI/Loudness/LoudnessMeter.h"
+#include "../Modules/LoudnessTrack/UI/LoudnessMeter.h"
 
 class TrackControlPanel : public juce::Component, private juce::Timer, public juce::ChangeListener {
 public:
