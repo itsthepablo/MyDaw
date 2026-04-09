@@ -6,7 +6,7 @@
 #include "../../Modules/LoudnessTrack/DSP/LoudnessTrackDSP.h"
 #include "../../Modules/BalanceTrack/DSP/BalanceTrackDSP.h"
 #include "../../Modules/MidSideTrack/DSP/MidSideTrackDSP.h"
-#include "../../Effects/EffectsPanel.h" 
+#include "../../UI/Panels/Effects/EffectsPanel.h"
 #include "../Routing/RoutingMatrix.h" // NUEVO: Para TopoState
 
 class TrackProcessor {

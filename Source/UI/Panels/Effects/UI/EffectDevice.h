@@ -1,7 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include <functional>
-#include "../Native_Plugins/BaseEffect.h"
+#include "../../../../Native_Plugins/BaseEffect.h"
 
 class EffectsPanel;
 

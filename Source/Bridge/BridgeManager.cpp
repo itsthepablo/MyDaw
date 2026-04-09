@@ -1,6 +1,6 @@
 #include "BridgeManager.h"
 #include "TrackPianoRollBridge.h"
-#include "TrackEffectsBridge.h"
+#include "../UI/Panels/Effects/Bridges/TrackEffectsBridge.h"
 #include "TrackMixerPlaylistBridge.h"
 #include "TransportBridge.h" 
 #include "InterfaceBridge.h"

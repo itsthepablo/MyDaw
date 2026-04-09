@@ -2,7 +2,7 @@
 #include <JuceHeader.h>
 #include "../Theme/CustomTheme.h"
 #include "ChannelRackPanel.h"
-#include "../Effects/EffectsPanel.h"
+#include "../UI/Panels/Effects/EffectsPanel.h"
 #include "../Instruments/InstrumentPanel.h"
 #include "../Mixer/MixerComponent.h"
 

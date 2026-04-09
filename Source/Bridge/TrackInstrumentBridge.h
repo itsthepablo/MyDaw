@@ -2,7 +2,7 @@
 #include <JuceHeader.h>
 #include "../Tracks/TrackContainer.h"
 #include "../Instruments/InstrumentPanel.h"
-#include "../Effects/EffectsPanel.h"
+#include "../UI/Panels/Effects/EffectsPanel.h"
 #include "../Native_Plugins/BaseEffect.h"
 #include "../UI/BottomDock.h"
 #include "../PluginHost/VSTHost.h"

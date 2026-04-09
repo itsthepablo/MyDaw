@@ -3,7 +3,7 @@
 #include "../UI/Buttons/ToolbarButtons.h"
 #include "../UI/TopMenuBar/TopMenuBar.h"
 #include "../UI/BottomDock.h"
-#include "../Effects/EffectsPanel.h"
+#include "../UI/Panels/Effects/EffectsPanel.h"
 #include "../UI/LeftSidebar.h"
 #include "../Tracks/TrackContainer.h"
 

@@ -4,7 +4,7 @@
 #include "../Playlist/PlaylistComponent.h"
 #include "../PianoRoll/PianoRollComponent.h"
 #include "../Mixer/MixerComponent.h"
-#include "../Effects/EffectsPanel.h"
+#include "../UI/Panels/Effects/EffectsPanel.h"
 #include "../Instruments/InstrumentPanel.h" // <-- NUEVO
 #include "../UI/TransportBar.h"
 #include "../UI/TopMenuBar/TopMenuBar.h"

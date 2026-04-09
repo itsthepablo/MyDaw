@@ -1,5 +1,5 @@
 #include "EffectDevice.h"
-#include "EffectsPanel.h"
+#include "../EffectsPanel.h"
 #include <memory>
 
 EffectDevice::EffectDevice(int index, juce::String name, bool isInst, bool bypassed, BaseEffect* effectRef, EffectsPanel& p)

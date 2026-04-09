@@ -5,7 +5,7 @@
 #include "../PianoRoll/PianoRollComponent.h"
 #include "../Mixer/MixerComponent.h"
 // MasterChannelUI eliminado - se usará MixerChannelUI para el Master
-#include "../Effects/EffectsPanel.h"
+#include "Panels/Effects/EffectsPanel.h"
 #include "../Instruments/InstrumentPanel.h"
 #include "../UI/TransportBar.h"
 #include "../UI/Buttons/ToolbarButtons.h"

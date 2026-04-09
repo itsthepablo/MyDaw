@@ -1,11 +1,11 @@
 #pragma once
 #include <JuceHeader.h>
-#include "../Tracks/Track.h"
+#include "../../../Tracks/Track.h"
 #include <functional>
 #include <map> 
-#include "EffectDevice.h"
-#include "../Modules/Routing/UI/SendDevice.h"
-#include "../Modules/GainStation/UI/GainStationPanel.h"
+#include "UI/EffectDevice.h"
+#include "../../../Modules/Routing/UI/SendDevice.h"
+#include "../../../Modules/GainStation/UI/GainStationPanel.h"
 
 // ==============================================================================
 // EFFECTS PANEL (Contenedor Principal de Plugins y Envíos)

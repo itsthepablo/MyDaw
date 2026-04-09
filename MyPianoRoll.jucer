@@ -147,6 +147,22 @@
         <FILE id="ghMFvY" name="UtilityPlugin.h" compile="0" resource="0" file="Source/Native_Plugins/UtilityPlugin.h"/>
       </GROUP>
       <GROUP id="{721FC522-4CF1-05D4-BC36-D97CDC4B59FC}" name="UI">
+        <GROUP id="{F278595C-9DD2-AB70-2017-5867DB256D4C}" name="Panels">
+          <GROUP id="{0C36019D-F522-6343-38A2-83441157C025}" name="Effects">
+            <GROUP id="{1A66A052-11AC-C72C-034A-510725269499}" name="Bridges">
+              <FILE id="IbgHeY" name="TrackEffectsBridge.h" compile="0" resource="0"
+                    file="Source/UI/Panels/Effects/Bridges/TrackEffectsBridge.h"/>
+            </GROUP>
+            <GROUP id="{6D187676-6A04-4F0C-CD2C-871D7B887923}" name="UI">
+              <FILE id="JUHLvk" name="EffectDevice.cpp" compile="1" resource="0"
+                    file="Source/UI/Panels/Effects/UI/EffectDevice.cpp"/>
+              <FILE id="iCBIKf" name="EffectDevice.h" compile="0" resource="0" file="Source/UI/Panels/Effects/UI/EffectDevice.h"/>
+            </GROUP>
+            <FILE id="SGj0nP" name="EffectsPanel.cpp" compile="1" resource="0"
+                  file="Source/UI/Panels/Effects/EffectsPanel.cpp"/>
+            <FILE id="ZyjqYN" name="EffectsPanel.h" compile="0" resource="0" file="Source/UI/Panels/Effects/EffectsPanel.h"/>
+          </GROUP>
+        </GROUP>
         <FILE id="arQwvG" name="MidiPatternStyles.h" compile="0" resource="0"
               file="Source/UI/MidiPatternStyles.h"/>
         <GROUP id="{B6357D25-D9E2-3C4A-AA66-543D29690500}" name="Loudness">
@@ -276,8 +292,6 @@
         <FILE id="q6I1fP" name="BridgeManager.h" compile="0" resource="0" file="Source/Bridge/BridgeManager.h"/>
         <FILE id="C1c2Iw" name="InterfaceBridge.h" compile="0" resource="0"
               file="Source/Bridge/InterfaceBridge.h"/>
-        <FILE id="E9uxC2" name="TrackEffectsBridge.h" compile="1" resource="0"
-              file="Source/Bridge/TrackEffectsBridge.h"/>
         <FILE id="NDVttX" name="TrackInstrumentBridge.h" compile="0" resource="0"
               file="Source/Bridge/TrackInstrumentBridge.h"/>
         <FILE id="MoyJcG" name="TrackMixerPlaylistBridge.h" compile="0" resource="0"
@@ -286,15 +300,6 @@
               file="Source/Bridge/TrackPianoRollBridge.h"/>
         <FILE id="s7f94C" name="TransportBridge.h" compile="0" resource="0"
               file="Source/Bridge/TransportBridge.h"/>
-      </GROUP>
-      <GROUP id="{73F36168-2865-EFB5-E542-4C7CFFA91F73}" name="Effects">
-        <FILE id="KgutWf" name="EffectDevice.cpp" compile="1" resource="0"
-              file="Source/Effects/EffectDevice.cpp"/>
-        <FILE id="YxiXoJ" name="EffectDevice.h" compile="0" resource="0" file="Source/Effects/EffectDevice.h"/>
-        <FILE id="LzcHep" name="EffectsPanel.cpp" compile="1" resource="0"
-              file="Source/Effects/EffectsPanel.cpp"/>
-        <FILE id="RbHrXU" name="EffectsPanel.h" compile="0" resource="0" file="Source/Effects/EffectsPanel.h"/>
-        <FILE id="hpmdn9" name="SendDevice.h" compile="0" resource="0" file="Source/Effects/SendDevice.h"/>
       </GROUP>
       <GROUP id="{57A16124-0184-7C27-B886-F155C0B20BDF}" name="Mixer">
         <GROUP id="{E5A2B3C7-9234-ED5A-B707-4A9ED9B22552}" name="Bridges">

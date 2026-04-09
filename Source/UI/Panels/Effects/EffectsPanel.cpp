@@ -1,7 +1,7 @@
 #include "EffectsPanel.h"
-#include "EffectDevice.h"
-#include "../Theme/CustomTheme.h"
-#include "../Modules/Routing/UI/SendDevice.h"
+#include "UI/EffectDevice.h"
+#include "../../../Theme/CustomTheme.h"
+#include "../../../Modules/Routing/UI/SendDevice.h"
 
 EffectsPanel::EffectsPanel() {
 

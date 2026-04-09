@@ -1,12 +1,12 @@
 #pragma once
 #include <JuceHeader.h>
-#include "../Tracks/TrackContainer.h"
-#include "../Effects/EffectsPanel.h"
-#include "../Playlist/PlaylistComponent.h"
-#include "../Native_Plugins/UtilityPlugin.h" 
-#include "../Native_Plugins/Orion/OrionPlugin.h"
+#include "../../../../Tracks/TrackContainer.h"
+#include "../EffectsPanel.h"
+#include "../../../../Playlist/PlaylistComponent.h"
+#include "../../../../Native_Plugins/UtilityPlugin.h" 
+#include "../../../../Native_Plugins/Orion/OrionPlugin.h"
 
-#include "../Engine/Core/AudioEngine.h"
+#include "../../../../Engine/Core/AudioEngine.h"
 
 class TrackEffectsBridge {
 public:

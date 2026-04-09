@@ -1,8 +1,8 @@
 #pragma once
 #include <JuceHeader.h>
 #include "../Tracks/Track.h"
-#include "../Effects/EffectsPanel.h" 
-#include "../Effects/EffectDevice.h"
+#include "../UI/Panels/Effects/EffectsPanel.h"
+#include "../UI/Panels/Effects/UI/EffectDevice.h"
 
 class InstrumentPanel : public juce::Component {
 public:
