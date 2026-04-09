@@ -6,6 +6,7 @@
 #include "../../UI/Knobs/FloatingValueSlider.h" 
 #include "../../UI/LevelMeter.h"
 #include "../../Modules/LoudnessTrack/UI/LoudnessMeter.h"
+#include "../LookAndFeel/TrackLookAndFeel.h"
 
 class TrackControlPanel : public juce::Component, private juce::Timer, public juce::ChangeListener {
 public:
@@ -26,6 +27,10 @@ public:
                                track.getType() == TrackType::MidSide);
         nameLabel.setEditable(!isAnalysisTrack);
         nameLabel.onTextChange = [this] { track.setName(nameLabel.getText()); };
+
+        // Aplicar LookAndFeel de color del track al medidor de peak
+        trackMeterLF.setTrackColour(track.getColor());
+        levelMeter.setLookAndFeel(&trackMeterLF);
 
         muteBtn.setButtonText("M");
         muteBtn.setClickingTogglesState(true);
@@ -203,10 +208,15 @@ public:
         startTimerHz(30);
     }
 
-    ~TrackControlPanel() { stopTimer(); }
+    ~TrackControlPanel() { 
+        levelMeter.setLookAndFeel(nullptr);
+        stopTimer(); 
+    }
 
     void timerCallback() override {
         if (track.getType() == TrackType::Loudness || track.getType() == TrackType::Balance || track.getType() == TrackType::MidSide) return; 
+        // Sincronizar color del track con el medidor en cada tick (el usuario puede cambiar el color en runtime)
+        trackMeterLF.setTrackColour(track.getColor());
         if (MixerParameterBridge::isMuted(&track)) { levelMeter.setLevel(0.0f, 0.0f); return; }
         float vol = MixerParameterBridge::getVolume(&track);
         float pan = MixerParameterBridge::getBalance(&track);
@@ -242,13 +252,13 @@ public:
         auto area = getLocalBounds();
         int indent = track.folderDepth * 15;
         
-        // --- NUEVO DISEÑO: Indicador Desacoplado ---
+        // --- NUEVO DISEÑO: Indicador de Color a la izquierda ---
         auto colorBarArea = area.withTrimmedLeft(indent + 4).removeFromLeft(6).reduced(0, 4);
         g.setColour(track.getColor());
         g.fillRoundedRectangle(colorBarArea.toFloat(), 3.0f);
 
-        // --- Fondo de la pista (con Gap tras el indicador) ---
-        auto contentArea = area.withTrimmedLeft(indent + 4 + 6 + 4); // Indent + Margen + AnchoBarra + Gap
+        // --- Fondo de la pista (con Gap tras el indicador de color) ---
+        auto contentArea = area.withTrimmedLeft(indent + 4 + 6 + 4).withTrimmedRight(18); // 2px gap + 12px meter + 4px gap derecho
         g.setColour(track.getColor().withAlpha(0.15f));
         g.fillRoundedRectangle(contentArea.toFloat().reduced(0, 2), 4.0f);
 
@@ -287,8 +297,8 @@ public:
         int indent = track.folderDepth * 15;
         // GRID FIX: Altura estricta de 100px
         auto area = getLocalBounds();
-        // El contenido real empieza después del indicador (Indent + Margen + Barra + Gap)
-        auto contentArea = area.withTrimmedLeft(indent + 4 + 6 + 4).reduced(4, 2);
+        // El contenido real empieza después del indicador de color (Indent + Margen + Barra + Gap)
+        auto contentArea = area.withTrimmedLeft(indent + 4 + 6 + 4).withTrimmedRight(18).reduced(4, 2);
 
         auto leftCol = contentArea.removeFromLeft(125);
         auto topRow = leftCol.removeFromTop(20);
@@ -327,9 +337,10 @@ public:
         }
 
         if (track.getType() != TrackType::Loudness && track.getType() != TrackType::Balance && track.getType() != TrackType::MidSide) {
-            auto meterArea = contentArea.removeFromRight(12);
-            levelMeter.setBounds(meterArea.reduced(0, 2));
-            contentArea.removeFromRight(8);
+            // Medidor de peak: 2px gap izq + 12px ancho + 4px gap der = 18px total
+            trackMeterLF.setTrackColour(track.getColor());
+            auto meterArea = area.removeFromRight(18).withTrimmedLeft(2).withTrimmedRight(4).reduced(0, 2);
+            levelMeter.setBounds(meterArea);
         }
 
         auto fxArea = contentArea.removeFromRight(110);
@@ -428,5 +439,6 @@ private:
     juce::ComboBox targetLufsCombo, balanceScaleCombo, midSideScaleCombo, midSideModeCombo;
     std::unique_ptr<LoudnessMeter> loudnessMeter;
     juce::OwnedArray<juce::TextButton> pluginButtons; LevelMeter levelMeter;
+    TrackLevelMeterLF trackMeterLF;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TrackControlPanel)
-};
+};
