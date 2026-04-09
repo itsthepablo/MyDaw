@@ -5,7 +5,7 @@
 #include "../UI/BottomDock.h"
 #include "../UI/Panels/Effects/EffectsPanel.h"
 #include "../UI/LeftSidebar.h"
-#include "../Tracks/TrackContainer.h"
+#include "../Tracks/UI/TrackContainer.h"
 
 class InterfaceBridge {
 public:

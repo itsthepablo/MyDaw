@@ -5,7 +5,7 @@
 #include <memory>
 #include <functional> 
 #include <cmath>       
-#include "../Tracks/TrackContainer.h" 
+#include "../Tracks/UI/TrackContainer.h" 
 #include "Tools/PlaylistTool.h" 
 #include "PlaylistMenuBar/PlaylistMenuBar.h" 
 #include "ScrollBar/PlaylistNavigator.h" 

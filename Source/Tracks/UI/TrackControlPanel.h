@@ -1,11 +1,11 @@
 #pragma once
 #include <JuceHeader.h>
-#include "Track.h"
-#include "../Mixer/Bridges/MixerParameterBridge.h"
-#include "../PluginHost/VSTHost.h" 
-#include "../UI/Knobs/FloatingValueSlider.h" 
-#include "../UI/LevelMeter.h"
-#include "../Modules/LoudnessTrack/UI/LoudnessMeter.h"
+#include "../Track.h"
+#include "../../Mixer/Bridges/MixerParameterBridge.h"
+#include "../../PluginHost/VSTHost.h" 
+#include "../../UI/Knobs/FloatingValueSlider.h" 
+#include "../../UI/LevelMeter.h"
+#include "../../Modules/LoudnessTrack/UI/LoudnessMeter.h"
 
 class TrackControlPanel : public juce::Component, private juce::Timer, public juce::ChangeListener {
 public:

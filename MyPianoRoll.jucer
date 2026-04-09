@@ -386,16 +386,28 @@
               file="Source/Playlist/PlaylistDropHandler.h"/>
       </GROUP>
       <GROUP id="{F98E9492-EAA4-A856-6CC6-2352DAB93A59}" name="Tracks">
-        <FILE id="i43p2y" name="AudioClipData.h" compile="0" resource="0" file="Source/Tracks/AudioClipData.h"/>
-        <FILE id="LJbzpQ" name="MasterTrackStrip.cpp" compile="1" resource="0"
-              file="Source/Tracks/MasterTrackStrip.cpp"/>
-        <FILE id="JPlinE" name="MasterTrackStrip.h" compile="0" resource="0"
-              file="Source/Tracks/MasterTrackStrip.h"/>
+        <GROUP id="{A1B2C3D4-E5F6-4A5B-8C7D-9E0F1A2B3C4D}" name="Data">
+          <FILE id="i43p2y" name="AudioClipData.h" compile="0" resource="0" file="Source/Tracks/Data/AudioClipData.h"/>
+        </GROUP>
+        <GROUP id="{B2C3D4E5-F6A7-4B8C-9D0E-1F2A3B4C5D6E}" name="UI">
+          <FILE id="LJbzpQ" name="MasterTrackStrip.cpp" compile="1" resource="0"
+                file="Source/Tracks/UI/MasterTrackStrip.cpp"/>
+          <FILE id="JPlinE" name="MasterTrackStrip.h" compile="0" resource="0"
+                file="Source/Tracks/UI/MasterTrackStrip.h"/>
+          <FILE id="UklVn6" name="TrackContainer.h" compile="0" resource="0"
+                file="Source/Tracks/UI/TrackContainer.h"/>
+          <FILE id="DW4KPG" name="TrackControlPanel.h" compile="0" resource="0"
+                file="Source/Tracks/UI/TrackControlPanel.h"/>
+        </GROUP>
+        <GROUP id="{C3D4E5F6-A7B8-4C9D-0E1F-2A3B4C5D6E7F}" name="DSP">
+          <FILE id="vX8mN2" name="TrackDSP.h" compile="0" resource="0" file="Source/Tracks/DSP/TrackDSP.h"/>
+        </GROUP>
+        <GROUP id="{D4E5F6A7-B8C9-4D0E-1F2A-3B4C5D6E7F8A}" name="LookAndFeel">
+          <FILE id="kRy9G1" name="TrackLookAndFeel.h" compile="0" resource="0"
+                file="Source/Tracks/LookAndFeel/TrackLookAndFeel.h"/>
+        </GROUP>
+        <FILE id="H2n5m1" name="Track.cpp" compile="1" resource="0" file="Source/Tracks/Track.cpp"/>
         <FILE id="QSBRZT" name="Track.h" compile="0" resource="0" file="Source/Tracks/Track.h"/>
-        <FILE id="UklVn6" name="TrackContainer.h" compile="0" resource="0"
-              file="Source/Tracks/TrackContainer.h"/>
-        <FILE id="DW4KPG" name="TrackControlPanel.h" compile="0" resource="0"
-              file="Source/Tracks/TrackControlPanel.h"/>
       </GROUP>
       <GROUP id="{9F2E0E2B-DA67-CB81-440A-F014789C271E}" name="Theme">
         <FILE id="vwtk4p" name="CustomTheme.cpp" compile="1" resource="0" file="Source/Theme/CustomTheme.cpp"/>

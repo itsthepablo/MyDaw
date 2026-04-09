@@ -1,7 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
-#include "../Theme/CustomTheme.h"
-#include "Track.h"
+#include "../../Theme/CustomTheme.h"
+#include "../Track.h"
 #include "TrackControlPanel.h"
 #include "MasterTrackStrip.h"
 #include <vector>

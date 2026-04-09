@@ -1,6 +1,6 @@
 #pragma once
 #include <JuceHeader.h>
-#include "../Tracks/TrackContainer.h"
+#include "../Tracks/UI/TrackContainer.h"
 #include "../Mixer/MixerComponent.h"
 #include "../Playlist/PlaylistComponent.h"
 

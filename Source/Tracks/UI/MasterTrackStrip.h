@@ -1,8 +1,8 @@
 #pragma once
 #include <JuceHeader.h>
-#include "../Tracks/Track.h"
-#include "../UI/LevelMeter.h"
-#include "../UI/Knobs/FloatingValueSlider.h"
+#include "../Track.h"
+#include "../../UI/LevelMeter.h"
+#include "../../UI/Knobs/FloatingValueSlider.h"
 
 // ==============================================================================
 // MasterTrackStrip — Panel de Control del Master (Anclado al fondo)

@@ -1,7 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include "../../../Theme/CustomTheme.h"
-#include "../../../Tracks/TrackContainer.h"
+#include "../../../Tracks/UI/TrackContainer.h"
 #include "../../MidiClipRenderer.h"   
 #include "../../WaveformRenderer.h"   
 #include <vector>

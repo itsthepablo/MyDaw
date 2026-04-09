@@ -1,5 +1,5 @@
 #include "MasterTrackStrip.h"
-#include "../Mixer/Bridges/MixerParameterBridge.h"
+#include "../../Mixer/Bridges/MixerParameterBridge.h"
 
 MasterTrackStrip::MasterTrackStrip()
 {

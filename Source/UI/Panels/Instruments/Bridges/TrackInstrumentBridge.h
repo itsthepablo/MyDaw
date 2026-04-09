@@ -1,6 +1,6 @@
 #pragma once
 #include <JuceHeader.h>
-#include "../../../../Tracks/TrackContainer.h"
+#include "../../../../Tracks/UI/TrackContainer.h"
 #include "../InstrumentPanel.h"
 #include "../../Effects/EffectsPanel.h"
 #include "../../../../Native_Plugins/BaseEffect.h"

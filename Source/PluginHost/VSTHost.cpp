@@ -1,5 +1,5 @@
 #include "../PluginHost/VSTHost.h"
-#include "../Tracks/TrackContainer.h"
+#include "../Tracks/UI/TrackContainer.h"
 #include "../Engine/Core/AudioEngine.h"
 #include "../Engine/Routing/RoutingMatrix.h"
 
