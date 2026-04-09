@@ -218,7 +218,7 @@ public:
                 
                 // --- SIDECHAIN SUPPORT ---
                 const juce::AudioBuffer<float>* sidechainBuf = nullptr;
-                int scId = p->sidechainSourceTrackId.load(std::memory_order_relaxed);
+                int scId = p->sidechain.sourceTrackId.load(std::memory_order_relaxed);
                 if (scId != -1 && topo != nullptr) {
                     for (int i = 0; i < topo->activeTracks.size(); ++i) {
                         auto* t = topo->activeTracks[i];
@@ -262,7 +262,7 @@ public:
 
                 // --- SIDECHAIN SUPPORT ---
                 const juce::AudioBuffer<float>* sidechainBuf = nullptr;
-                int scId = p->sidechainSourceTrackId.load(std::memory_order_relaxed);
+                int scId = p->sidechain.sourceTrackId.load(std::memory_order_relaxed);
                 if (scId != -1 && topo != nullptr) {
                     for (int i = 0; i < topo->activeTracks.size(); ++i) {
                         auto* t = topo->activeTracks[i];

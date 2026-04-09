@@ -161,7 +161,7 @@ public:
 
         // --- ENVÍOS ---
         auto addSendAction = [&engine, &container, refreshUIs](Track& t) {
-            t.sends.push_back({ -1, 1.0f, false, false }); 
+            t.routingData.sends.push_back({ -1, 1.0f, false, false }); 
             engine.routingMatrix.commitNewTopology(container.getTracks());
             refreshUIs();
         };
@@ -171,8 +171,8 @@ public:
         if (masterChannelUI) masterChannelUI->onAddSend = addSendAction;
 
         auto deleteSendAction = [&engine, &container, refreshUIs](Track& t, int idx) {
-            if (idx >= 0 && idx < (int)t.sends.size()) {
-                t.sends.erase(t.sends.begin() + idx);
+            if (idx >= 0 && idx < (int)t.routingData.sends.size()) {
+                t.routingData.sends.erase(t.routingData.sends.begin() + idx);
                 engine.routingMatrix.commitNewTopology(container.getTracks());
                 refreshUIs();
             }

@@ -156,104 +156,13 @@ private:
         PDCManager::applyDelay(track, ctx.numSamples);
 
         // 4. ENVÍOS PRE-FADER (Antes de Volumen/Pan)
-        bool midCalculated = false;
-        bool sideCalculated = false;
-
-        for (const auto& send : track->sends) {
-            if (!send.isMuted && send.isPreFader && ctx.idToIndex.count(send.targetTrackId)) {
-                int targetIdx = ctx.idToIndex.at(send.targetTrackId);
-                auto* target = topo->activeTracks[targetIdx];
-                const juce::SpinLock::ScopedLockType sl(target->bufferLock);
-                
-                if (send.routing == SendRouting::Stereo) {
-                    int chans = juce::jmin(target->audioBuffer.getNumChannels(), track->audioBuffer.getNumChannels());
-                    for (int c = 0; c < chans; ++c)
-                        target->audioBuffer.addFrom(c, 0, track->audioBuffer, c, 0, ctx.numSamples, send.gain);
-                }
-                else {
-                    // Cálculo bajo demanda fuera del bucle de samples
-                    if (send.routing == SendRouting::Mid && !midCalculated) {
-                        auto* l = track->audioBuffer.getReadPointer(0);
-                        auto* r = track->audioBuffer.getNumChannels() > 1 ? track->audioBuffer.getReadPointer(1) : l;
-                        auto* w = ctx.msWorkBuffer.getWritePointer(0);
-                        for (int s = 0; s < ctx.numSamples; ++s) w[s] = (l[s] + r[s]) * 0.5f;
-                        midCalculated = true;
-                        sideCalculated = false; // El buffer de trabajo es compartido
-                    }
-                    else if (send.routing == SendRouting::Side && !sideCalculated) {
-                        auto* l = track->audioBuffer.getReadPointer(0);
-                        auto* r = track->audioBuffer.getNumChannels() > 1 ? track->audioBuffer.getReadPointer(1) : l;
-                        auto* w = ctx.msWorkBuffer.getWritePointer(0);
-                        for (int s = 0; s < ctx.numSamples; ++s) w[s] = (l[s] - r[s]) * 0.5f;
-                        sideCalculated = true;
-                        midCalculated = false;
-                    }
-
-                    // Sumar el componente Mid (L+R) a ambos canales del destino
-                    if (send.routing == SendRouting::Mid) {
-                        for (int c = 0; c < target->audioBuffer.getNumChannels(); ++c)
-                            target->audioBuffer.addFrom(c, 0, ctx.msWorkBuffer, 0, 0, ctx.numSamples, send.gain);
-                    }
-                    // Sumar el componente Side (L-R) en contrafase: L += Side, R -= Side
-                    else if (send.routing == SendRouting::Side) {
-                        if (target->audioBuffer.getNumChannels() > 0)
-                            target->audioBuffer.addFrom(0, 0, ctx.msWorkBuffer, 0, 0, ctx.numSamples, send.gain);
-                        if (target->audioBuffer.getNumChannels() > 1)
-                            target->audioBuffer.addFrom(1, 0, ctx.msWorkBuffer, 0, 0, ctx.numSamples, -send.gain);
-                    }
-                }
-            }
-        }
+        RoutingDSP::processSends(track->audioBuffer, track->routingData.sends, ctx.idToIndex, topo->activeTracks, true, ctx.msWorkBuffer, ctx.numSamples);
 
         // 5. Volumen y pan (resultado queda en track->audioBuffer para Fase 2)
         MixerDSP::applyGainAndPan(track, ctx.numSamples, ctx.hwOutChannels);
 
         // 6. ENVÍOS POST-FADER (Después de Volumen/Pan)
-        midCalculated = false;
-        sideCalculated = false;
-
-        for (const auto& send : track->sends) {
-            if (!send.isMuted && !send.isPreFader && ctx.idToIndex.count(send.targetTrackId)) {
-                int targetIdx = ctx.idToIndex.at(send.targetTrackId);
-                auto* target = topo->activeTracks[targetIdx];
-                const juce::SpinLock::ScopedLockType sl(target->bufferLock);
-
-                if (send.routing == SendRouting::Stereo) {
-                    int chans = juce::jmin(target->audioBuffer.getNumChannels(), track->audioBuffer.getNumChannels());
-                    for (int c = 0; c < chans; ++c)
-                        target->audioBuffer.addFrom(c, 0, track->audioBuffer, c, 0, ctx.numSamples, send.gain);
-                }
-                else {
-                    if (send.routing == SendRouting::Mid && !midCalculated) {
-                        auto* l = track->audioBuffer.getReadPointer(0);
-                        auto* r = track->audioBuffer.getNumChannels() > 1 ? track->audioBuffer.getReadPointer(1) : l;
-                        auto* w = ctx.msWorkBuffer.getWritePointer(0);
-                        for (int s = 0; s < ctx.numSamples; ++s) w[s] = (l[s] + r[s]) * 0.5f;
-                        midCalculated = true;
-                        sideCalculated = false;
-                    }
-                    else if (send.routing == SendRouting::Side && !sideCalculated) {
-                        auto* l = track->audioBuffer.getReadPointer(0);
-                        auto* r = track->audioBuffer.getNumChannels() > 1 ? track->audioBuffer.getReadPointer(1) : l;
-                        auto* w = ctx.msWorkBuffer.getWritePointer(0);
-                        for (int s = 0; s < ctx.numSamples; ++s) w[s] = (l[s] - r[s]) * 0.5f;
-                        sideCalculated = true;
-                        midCalculated = false;
-                    }
-
-                    if (send.routing == SendRouting::Mid) {
-                        for (int c = 0; c < target->audioBuffer.getNumChannels(); ++c)
-                            target->audioBuffer.addFrom(c, 0, ctx.msWorkBuffer, 0, 0, ctx.numSamples, send.gain);
-                    }
-                    else if (send.routing == SendRouting::Side) {
-                        if (target->audioBuffer.getNumChannels() > 0)
-                            target->audioBuffer.addFrom(0, 0, ctx.msWorkBuffer, 0, 0, ctx.numSamples, send.gain);
-                        if (target->audioBuffer.getNumChannels() > 1)
-                            target->audioBuffer.addFrom(1, 0, ctx.msWorkBuffer, 0, 0, ctx.numSamples, -send.gain);
-                    }
-                }
-            }
-        }
+        RoutingDSP::processSends(track->audioBuffer, track->routingData.sends, ctx.idToIndex, topo->activeTracks, false, ctx.msWorkBuffer, ctx.numSamples);
 
         // 7. Notificar a los dependientes
         if (idx < (int)topo->notifyList.size()) {

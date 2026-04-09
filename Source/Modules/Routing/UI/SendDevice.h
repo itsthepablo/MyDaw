@@ -1,7 +1,8 @@
 #pragma once
 #include <JuceHeader.h>
-#include "../Tracks/Track.h"
-#include <functional>
+#include "../../../Tracks/Track.h"
+#include "../Data/SendData.h"
+#include "../LookAndFeel/RoutingLookAndFeel.h"
 
 // ==============================================================================
 // Componente que representa un ENVÍO (Send) en el panel de efectos
@@ -11,6 +12,8 @@ public:
     SendDevice(int sendIndex, Track* source, const juce::Array<Track*>& availableTracks, std::function<void()> onChange, std::function<void(int)> onDelete)
         : idx(sendIndex), sourceTrack(source), allTracks(availableTracks), onNotifyChange(onChange), onNotifyDelete(onDelete)
     {
+        setLookAndFeel(&routingLF);
+
         addAndMakeVisible(targetSelector);
         targetSelector.addItem("None", 1000);
         for (auto* t : allTracks) {
@@ -18,8 +21,8 @@ public:
                 targetSelector.addItem(t->getName(), t->getId());
         }
 
-        if (idx < (int)sourceTrack->sends.size()) {
-            auto& s = sourceTrack->sends[idx];
+        if (idx < (int)sourceTrack->routingData.sends.size()) {
+            auto& s = sourceTrack->routingData.sends[idx];
             targetSelector.setSelectedId(s.targetTrackId == -1 ? 1000 : s.targetTrackId, juce::dontSendNotification);
             gainSlider.setValue(s.gain, juce::dontSendNotification);
             prePostBtn.setButtonText(s.isPreFader ? "PRE" : "POST");
@@ -27,9 +30,9 @@ public:
         }
 
         targetSelector.onChange = [this] {
-            if (idx < (int)sourceTrack->sends.size()) {
+            if (idx < (int)sourceTrack->routingData.sends.size()) {
                 int id = targetSelector.getSelectedId();
-                sourceTrack->sends[idx].targetTrackId = (id == 1000 ? -1 : id);
+                sourceTrack->routingData.sends[idx].targetTrackId = (id == 1000 ? -1 : id);
                 if (onNotifyChange) onNotifyChange();
             }
         };
@@ -39,17 +42,17 @@ public:
         gainSlider.setRange(0.0, 1.5, 0.01);
         gainSlider.setTextValueSuffix("x");
         gainSlider.onValueChange = [this] {
-            if (idx < (int)sourceTrack->sends.size()) {
-                sourceTrack->sends[idx].gain = (float)gainSlider.getValue();
+            if (idx < (int)sourceTrack->routingData.sends.size()) {
+                sourceTrack->routingData.sends[idx].gain = (float)gainSlider.getValue();
             }
         };
 
         addAndMakeVisible(prePostBtn);
         prePostBtn.setClickingTogglesState(true);
         prePostBtn.onClick = [this] {
-            if (idx < (int)sourceTrack->sends.size()) {
-                sourceTrack->sends[idx].isPreFader = prePostBtn.getToggleState();
-                prePostBtn.setButtonText(sourceTrack->sends[idx].isPreFader ? "PRE" : "POST");
+            if (idx < (int)sourceTrack->routingData.sends.size()) {
+                sourceTrack->routingData.sends[idx].isPreFader = prePostBtn.getToggleState();
+                prePostBtn.setButtonText(sourceTrack->routingData.sends[idx].isPreFader ? "PRE" : "POST");
                 if (onNotifyChange) onNotifyChange();
             }
         };
@@ -58,12 +61,11 @@ public:
         addAndMakeVisible(routingBtn);
         updateRoutingVisuals();
         routingBtn.onClick = [this] {
-            if (idx < (int)sourceTrack->sends.size()) {
-                auto& s = sourceTrack->sends[idx];
-                int r = (int)s.routing;
-                s.routing = (SendRouting)((r + 1) % 3);
+            if (idx < (int)sourceTrack->routingData.sends.size()) {
+                auto& s = sourceTrack->routingData.sends[idx];
+                int r = (int)s.mode;
+                s.mode = (RoutingMode)((r + 1) % 3);
                 updateRoutingVisuals();
-                // No necesitamos relanzar topología porque el ruteo interno no cambia dependencias
             }
         };
 
@@ -73,20 +75,24 @@ public:
         deleteBtn.onClick = [this] { if (onNotifyDelete) onNotifyDelete(idx); };
     }
 
+    ~SendDevice() override {
+        setLookAndFeel(nullptr);
+    }
+
     void updateRoutingVisuals() {
-        if (idx >= (int)sourceTrack->sends.size()) return;
-        auto& s = sourceTrack->sends[idx];
+        if (idx >= (int)sourceTrack->routingData.sends.size()) return;
+        auto& s = sourceTrack->routingData.sends[idx];
         
-        switch (s.routing) {
-            case SendRouting::Stereo:
+        switch (s.mode) {
+            case RoutingMode::Stereo:
                 routingBtn.setButtonText("ST");
                 routingBtn.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
                 break;
-            case SendRouting::Mid:
+            case RoutingMode::Mid:
                 routingBtn.setButtonText("MID");
                 routingBtn.setColour(juce::TextButton::textColourOffId, juce::Colours::orange);
                 break;
-            case SendRouting::Side:
+            case RoutingMode::Side:
                 routingBtn.setButtonText("SIDE");
                 routingBtn.setColour(juce::TextButton::textColourOffId, juce::Colours::yellow);
                 break;
@@ -95,10 +101,10 @@ public:
 
     void paint(juce::Graphics& g) override {
         auto area = getLocalBounds().reduced(2);
-        g.setColour(juce::Colour(55, 60, 65));
+        g.setColour(RoutingLookAndFeel::getSlotBackground());
         g.fillRoundedRectangle(area.toFloat(), 6.0f);
         
-        g.setColour(juce::Colours::orange.withAlpha(0.7f));
+        g.setColour(RoutingLookAndFeel::getSendOrange().withAlpha(0.7f));
         g.setFont(juce::Font(12.0f, juce::Font::bold));
         g.drawText("SEND", area.getX() + 5, area.getY() + 5, 40, 15, juce::Justification::centredLeft);
     }
@@ -130,6 +136,8 @@ private:
     juce::TextButton prePostBtn;
     juce::TextButton routingBtn;
     juce::TextButton deleteBtn;
+
+    RoutingLookAndFeel routingLF;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SendDevice)
 };

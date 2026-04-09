@@ -122,7 +122,11 @@ public:
         std::unique_ptr<juce::ScopedLock> lock;
         if (audioMutex != nullptr) lock = std::make_unique<juce::ScopedLock>(*audioMutex);
 
-        int id = idToUse > 0 ? idToUse : (int)tracks.size() + 1;
+        int id = idToUse > 0 ? idToUse : nextTrackId++;
+        
+        // Sincronizar el contador si estamos forzando un ID (ej. al cargar proyecto)
+        if (idToUse >= nextTrackId) nextTrackId = idToUse + 1;
+
         juce::String nameToUse;
         if (type == TrackType::MIDI) nameToUse = "Inst " + juce::String(id);
         else if (type == TrackType::Audio) nameToUse = "Audio " + juce::String(id);
@@ -460,6 +464,7 @@ private:
     TrackControlPanel* draggedPanelForGhost = nullptr;
     int ghostY = 0; juce::Image ghostSnapshot;
     int lastSelectedTrackIndex = -1;
+    int nextTrackId = 1;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TrackContainer)
 };

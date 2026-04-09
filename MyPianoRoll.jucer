@@ -92,6 +92,25 @@
                   file="Source/Modules/MidSideTrack/UI/MidSideTrackRenderer.h"/>
           </GROUP>
         </GROUP>
+        <GROUP id="{28138EFD-0889-5556-C514-F473D22FACBC}" name="Routing">
+          <GROUP id="{A02A659A-A883-D61B-40AA-BCFEE858A1B4}" name="Data">
+            <FILE id="lJuLXk" name="RoutingData.h" compile="0" resource="0" file="Source/Modules/Routing/Data/RoutingData.h"/>
+            <FILE id="GnLQMF" name="SendData.h" compile="0" resource="0" file="Source/Modules/Routing/Data/SendData.h"/>
+            <FILE id="gJeXLN" name="SidechainData.h" compile="0" resource="0" file="Source/Modules/Routing/Data/SidechainData.h"/>
+          </GROUP>
+          <GROUP id="{B9FFCB69-5087-A572-8C85-64A770366E32}" name="DSP">
+            <FILE id="rChcxi" name="RoutingDSP.h" compile="0" resource="0" file="Source/Modules/Routing/DSP/RoutingDSP.h"/>
+          </GROUP>
+          <GROUP id="{3D6394CA-D821-2404-2F47-7698CC73F608}" name="LookAndFeel">
+            <FILE id="QvMsmN" name="RoutingLookAndFeel.h" compile="0" resource="0"
+                  file="Source/Modules/Routing/LookAndFeel/RoutingLookAndFeel.h"/>
+          </GROUP>
+          <GROUP id="{9D43A335-C8BE-64D1-A6C7-21BC0403A179}" name="UI">
+            <FILE id="gRHObW" name="SendDevice.h" compile="0" resource="0" file="Source/Modules/Routing/UI/SendDevice.h"/>
+            <FILE id="HOGhuW" name="SidechainSelector.h" compile="0" resource="0"
+                  file="Source/Modules/Routing/UI/SidechainSelector.h"/>
+          </GROUP>
+        </GROUP>
       </GROUP>
       <GROUP id="{C4B4A205-E119-6FE9-C7E0-09229B5E0910}" name="Assets">
         <FILE id="R0gvs4" name="IconAssets.h" compile="0" resource="0" file="Source/Assets/IconAssets.h"/>

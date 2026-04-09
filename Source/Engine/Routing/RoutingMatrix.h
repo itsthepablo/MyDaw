@@ -4,6 +4,7 @@
 #include <vector>
 #include <map>
 #include "../../Tracks/Track.h"
+#include "../../Modules/Routing/DSP/RoutingDSP.h"
 
 class RoutingMatrix {
 public:
@@ -75,7 +76,7 @@ public:
 
         // --- SIDECHAIN DEPENDENCIES ---
         for (int i = 0; i < n; ++i) {
-            auto sidechainDeps = tracks[i]->getSidechainDependencies();
+            auto sidechainDeps = RoutingDSP::getSidechainDependencies(tracks[i]->plugins);
             for (int sourceId : sidechainDeps) {
                 if (idToIndex.count(sourceId)) {
                     int sourceIdx = idToIndex[sourceId];
@@ -89,7 +90,7 @@ public:
 
         // --- SEND DEPENDENCIES (ENVÍOS) ---
         for (int i = 0; i < n; ++i) {
-            for (const auto& send : tracks[i]->sends) {
+            for (const auto& send : tracks[i]->routingData.sends) {
                 if (!send.isMuted && idToIndex.count(send.targetTrackId)) {
                     int targetIdx = idToIndex[send.targetTrackId];
                     // El destino (target) debe esperar al origen (i)

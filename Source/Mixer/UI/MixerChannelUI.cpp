@@ -31,7 +31,7 @@ void MixerChannelUI::FXRack::resized() {
 MixerChannelUI::SendRack::SendRack(Track* t, MixerChannelUI* p) : track(t), parent(p) {}
 
 void MixerChannelUI::SendRack::syncSlots() {
-    int needed = std::max(4, (int)track->sends.size() + 1);
+    int needed = std::max(4, (int)track->routingData.sends.size() + 1);
     while (slots.size() < needed) {
         auto* s = new SendSlot(track, slots.size());
         s->onAddSend = [this] { if (parent->onAddSend) parent->onAddSend(*track); };

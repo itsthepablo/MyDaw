@@ -75,7 +75,7 @@ SendSlot::SendSlot(Track* t, int idx) : track(t), index(idx) {}
 
 void SendSlot::paint(juce::Graphics& g) {
     auto b = getLocalBounds().reduced(2);
-    bool hasSend = track && index < track->sends.size();
+    bool hasSend = track && index < track->routingData.sends.size();
     
     auto activeCol = findColour(MixerColours::sendActive);
     auto emptyCol = findColour(MixerColours::slotEmpty);
@@ -89,7 +89,7 @@ void SendSlot::paint(juce::Graphics& g) {
 }
 
 void SendSlot::mouseDown(const juce::MouseEvent& e) {
-    bool hasSend = track && index < track->sends.size();
+    bool hasSend = track && index < track->routingData.sends.size();
     if (hasSend) {
         if (e.mods.isPopupMenu()) {
             juce::PopupMenu m; m.addItem(1, "Eliminar Envío");

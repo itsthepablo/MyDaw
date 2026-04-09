@@ -1,6 +1,7 @@
 #include "EffectsPanel.h"
 #include "EffectDevice.h"
 #include "../Theme/CustomTheme.h"
+#include "../Modules/Routing/UI/SendDevice.h"
 
 EffectsPanel::EffectsPanel() {
 
@@ -128,7 +129,7 @@ void EffectsPanel::updateSlots() {
         }
 
         // --- 2. ENVÍOS ---
-        for (int i = 0; i < (int)activeTrack->sends.size(); ++i) {
+        for (int i = 0; i < (int)activeTrack->routingData.sends.size(); ++i) {
             auto tracks = getAvailableTracks ? getAvailableTracks() : juce::Array<Track*>();
             auto* sendDev = new SendDevice(i, activeTrack, tracks, 
                 [this] { if (onChangeSend) onChangeSend(*activeTrack); },

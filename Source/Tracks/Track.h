@@ -16,6 +16,7 @@
 #include "../Modules/LoudnessTrack/Data/LoudnessTrackData.h"
 #include "../Modules/BalanceTrack/Data/BalanceTrackData.h"
 #include "../Modules/MidSideTrack/Data/MidSideTrackData.h"
+#include "../Modules/Routing/Data/RoutingData.h"
 #include <map>
 #include <vector>
 #include <algorithm>
@@ -24,18 +25,6 @@
 
 enum class TrackType { MIDI, Audio, Folder, Loudness, Balance, MidSide };
 enum class WaveformViewMode { Combined, SeparateLR, MidSide, Spectrogram }; 
-enum class SendRouting { Stereo, Mid, Side }; 
-
-// ============================================================
-// ESTRUCTURA DE ENVÍO (SEND) — Ruteo entre pistas
-// ============================================================
-struct TrackSend {
-    int targetTrackId = -1;
-    float gain = 1.0f; // Multiplicador de volumen
-    bool isPreFader = false;
-    bool isMuted = false;
-    SendRouting routing = SendRouting::Stereo; 
-};
 
 struct MidiClipData {
     juce::String name;
@@ -108,6 +97,7 @@ public:
     LoudnessTrackData loudnessTrackData;
     BalanceTrackData  balanceTrackData;
     MidSideTrackData  midSideTrackData;
+    TrackRoutingData  routingData;
 
     friend class MixerParameterBridge;
     friend class MixerDSP;
@@ -160,20 +150,7 @@ public:
     std::vector<Note> notes;
     juce::OwnedArray<BaseEffect> plugins;
 
-    // --- SENDS (ENVÍOS) ---
-    std::vector<TrackSend> sends;
-    
-    // --- SIDECHAIN DEPENDENCIES ---
-    std::vector<int> getSidechainDependencies() const {
-        std::vector<int> deps;
-        for (auto* p : plugins) {
-            if (p != nullptr) {
-                int sourceId = p->sidechainSourceTrackId.load(std::memory_order_relaxed);
-                if (sourceId != -1) deps.push_back(sourceId);
-            }
-        }
-        return deps;
-    }
+    // --- SENDS Y SIDECHAIN MOVIDO A RoutingDSP ---
 
     juce::OwnedArray<AudioClipData> audioClips;
     juce::OwnedArray<MidiClipData> midiClips;

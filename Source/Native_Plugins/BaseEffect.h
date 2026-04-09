@@ -1,6 +1,8 @@
 #pragma once
 #include <JuceHeader.h>
 
+#include "../Modules/Routing/Data/SidechainData.h"
+
 class TrackContainer; // Forward declaration
 
 enum class PluginRouting { Stereo, Mid, Side };
@@ -28,7 +30,7 @@ public:
         processBlock(buffer, midiMessages); 
     }
     
-    std::atomic<int> sidechainSourceTrackId { -1 };
+    SidechainSettings sidechain;
     virtual bool supportsSidechain() const { return false; }
     
     std::function<void()> onSidechainChanged;

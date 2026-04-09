@@ -1,6 +1,8 @@
 #include "ProjectManager.h"
 #include "../PluginHost/VSTHost.h"
 #include "../Native_Plugins/UtilityPlugin.h"
+#include "../Modules/Routing/Data/RoutingData.h"
+#include "../Modules/Routing/Data/SendData.h"
 
 void ProjectManager::saveProject(TrackContainer& trackContainer, AudioEngine& engine, std::unique_ptr<juce::FileChooser>& fileChooser) {
     fileChooser = std::make_unique<juce::FileChooser>(
@@ -42,7 +44,7 @@ void ProjectManager::saveProject(TrackContainer& trackContainer, AudioEngine& en
                     p.setProperty("name", plugin->getLoadedPluginName(), nullptr);
                     p.setProperty("isNative", plugin->isNative(), nullptr);
                     p.setProperty("bypassed", plugin->isBypassed(), nullptr);
-                    p.setProperty("sidechainSource", (int)plugin->sidechainSourceTrackId.load(), nullptr);
+                    p.setProperty("sidechainSource", (int)plugin->sidechain.sourceTrackId.load(), nullptr);
 
                     if (auto* v = dynamic_cast<VSTHost*>(plugin)) {
                         p.setProperty("vstPath", v->getPluginPath(), nullptr);
@@ -59,13 +61,13 @@ void ProjectManager::saveProject(TrackContainer& trackContainer, AudioEngine& en
 
                 // --- SENDS (ENVÍOS) ---
                 juce::ValueTree sendsTree("SENDS");
-                for (const auto& send : track->sends) {
+                for (const auto& send : track->routingData.sends) {
                     juce::ValueTree s("SEND");
                     s.setProperty("target", send.targetTrackId, nullptr);
                     s.setProperty("gain", send.gain, nullptr);
                     s.setProperty("isPre", send.isPreFader, nullptr);
                     s.setProperty("isMuted", send.isMuted, nullptr);
-                    s.setProperty("routing", (int)send.routing, nullptr);
+                    s.setProperty("routing", (int)send.mode, nullptr);
                     sendsTree.addChild(s, -1, nullptr);
                 }
                 t.addChild(sendsTree, -1, nullptr);
@@ -136,7 +138,7 @@ void ProjectManager::loadProject(const juce::File& file, TrackContainer& trackCo
     // 1. Settings
     juce::ValueTree settings = projectTree.getChildWithName("SETTINGS");
     if (settings.isValid()) {
-        double bpm = settings.getProperty("bpm", 120.0);
+        double bpm = (double)settings.getProperty("bpm", 120.0);
         engine.transportState.bpm.store(bpm);
         playlistUI.setBpm(bpm);
     }
@@ -147,9 +149,9 @@ void ProjectManager::loadProject(const juce::File& file, TrackContainer& trackCo
         juce::ValueTree tTree = tracksTree.getChild(i);
         
         int id = tTree.getProperty("id");
-        TrackType type = (TrackType)(int)tTree.getProperty("type");
+        TrackType tType = (TrackType)(int)tTree.getProperty("type");
         
-        auto* t = trackContainer.addTrack(type, id);
+        auto* t = trackContainer.addTrack(tType, id);
         if (t == nullptr) continue;
 
         t->setName(tTree.getProperty("name").toString());
@@ -161,13 +163,13 @@ void ProjectManager::loadProject(const juce::File& file, TrackContainer& trackCo
         juce::ValueTree sList = tTree.getChildWithName("SENDS");
         for (int j = 0; j < sList.getNumChildren(); ++j) {
             juce::ValueTree sTree = sList.getChild(j);
-            TrackSend s;
+            SendEntry s;
             s.targetTrackId = sTree.getProperty("target", -1);
             s.gain = sTree.getProperty("gain", 1.0f);
             s.isPreFader = sTree.getProperty("isPre", false);
             s.isMuted = sTree.getProperty("isMuted", false);
-            s.routing = (SendRouting)(int)sTree.getProperty("routing", 0);
-            t->sends.push_back(s);
+            s.mode = (RoutingMode)(int)sTree.getProperty("routing", 0);
+            t->routingData.sends.push_back(s);
         }
 
         // --- AUDIO CLIPS ---

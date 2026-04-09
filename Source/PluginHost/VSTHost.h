@@ -2,6 +2,7 @@
 #include <JuceHeader.h>
 #include <functional>
 #include "../Native_Plugins/BaseEffect.h"
+#include "../Modules/Routing/UI/SidechainSelector.h"
 
 // Forward declarations
 class TrackContainer;
@@ -26,7 +27,7 @@ public:
 
 class VSTCustomHeader : public juce::Component {
 public:
-    VSTCustomHeader(juce::DocumentWindow* w, BaseEffect* fx, TrackContainer* container);
+    VSTCustomHeader(juce::DocumentWindow* w, BaseEffect* fx, TrackContainer* container, std::function<void()> onUpdate);
     
     void paint(juce::Graphics& g) override;
     void resized() override;
@@ -39,15 +40,16 @@ private:
     TrackContainer* trackContainer;
     
     juce::TextButton closeBtn;
-    juce::ComboBox sidechainSelector;
-    juce::Label sidechainLabel;
+    SidechainSelector scSelector;
     juce::ComponentDragger dragger;
+
+    std::function<void()> onTopologyUpdate;
 };
 
 class VSTContainer : public juce::Component, private juce::ComponentListener {
 public:
-    VSTContainer(juce::DocumentWindow* w, juce::AudioProcessorEditor* ed, BaseEffect* fx, TrackContainer* container) 
-        : header(w, fx, container), editor(ed) 
+    VSTContainer(juce::DocumentWindow* w, juce::AudioProcessorEditor* ed, BaseEffect* fx, TrackContainer* container, std::function<void()> onUpdate) 
+        : header(w, fx, container, onUpdate), editor(ed) 
     {
         addAndMakeVisible(editor.get());
         addAndMakeVisible(header);
@@ -81,7 +83,7 @@ private:
 
 class VSTWindow : public juce::DocumentWindow {
 public:
-    VSTWindow(juce::AudioProcessor* plugin, BaseEffect* fx, TrackContainer* container)
+    VSTWindow(juce::AudioProcessor* plugin, BaseEffect* fx, TrackContainer* container, std::function<void()> onUpdate)
         : DocumentWindow(plugin->getName(), juce::Colours::darkgrey, DocumentWindow::closeButton)
     {
         setUsingNativeTitleBar(false);
@@ -89,7 +91,7 @@ public:
         setAlwaysOnTop(true);
         
         if (auto* editor = plugin->createEditorIfNeeded()) {
-            setContentOwned(new VSTContainer(this, editor, fx, container), true);
+            setContentOwned(new VSTContainer(this, editor, fx, container, onUpdate), true);
             setResizable(editor->isResizable(), false);
         }
     }
@@ -125,6 +127,8 @@ public:
 
     bool isBypassed() const override { return bypassed; }
     void setBypassed(bool shouldBypass) override { bypassed = shouldBypass; }
+
+    std::function<void()> onTopologyUpdate;
 
 private:
     juce::AudioPluginFormatManager formatManager;

@@ -1,11 +1,13 @@
-#include "VSTHost.h"
+#include "../PluginHost/VSTHost.h"
 #include "../Tracks/TrackContainer.h"
+#include "../Engine/Core/AudioEngine.h"
+#include "../Engine/Routing/RoutingMatrix.h"
 
 // ==============================================================================
 // VST CUSTOM HEADER IMPLEMENTATION
 // ==============================================================================
-VSTCustomHeader::VSTCustomHeader(juce::DocumentWindow* w, BaseEffect* fx, TrackContainer* container)
-    : window(w), effect(fx), trackContainer(container)
+VSTCustomHeader::VSTCustomHeader(juce::DocumentWindow* w, BaseEffect* fx, TrackContainer* container, std::function<void()> onUpdate)
+    : window(w), effect(fx), trackContainer(container), onTopologyUpdate(onUpdate)
 {
     addAndMakeVisible(closeBtn);
     closeBtn.setButtonText("x");
@@ -14,34 +16,29 @@ VSTCustomHeader::VSTCustomHeader(juce::DocumentWindow* w, BaseEffect* fx, TrackC
 
     if (effect && effect->supportsSidechain() && trackContainer)
     {
-        addAndMakeVisible(sidechainLabel);
-        sidechainLabel.setText("Sidechain:", juce::dontSendNotification);
-        sidechainLabel.setFont(juce::Font(11.0f));
-        sidechainLabel.setColour(juce::Label::textColourId, juce::Colours::white.withAlpha(0.6f));
-
-        addAndMakeVisible(sidechainSelector);
-        sidechainSelector.addItem("None", 1000); // ID especial para desactivar
+        addAndMakeVisible(scSelector);
         
-        const auto& tracks = trackContainer->getTracks();
-        for (int i = 0; i < tracks.size(); ++i)
-        {
-            // Evitar que una pista se use a sí misma como sidechain (Feedback loop)
-            // Nota: Aquí necesitaríamos saber en qué pista está el plugin. 
-            // Por simplicidad, listamos todas y el motor gestionará la seguridad.
-            sidechainSelector.addItem(tracks[i]->getName(), tracks[i]->getId());
-        }
-
-        int currentSc = effect->sidechainSourceTrackId.load();
-        if (currentSc == -1) sidechainSelector.setSelectedId(1000, juce::dontSendNotification);
-        else sidechainSelector.setSelectedId(currentSc, juce::dontSendNotification);
-
-        sidechainSelector.onChange = [this] {
-            int selectedId = sidechainSelector.getSelectedId();
-            if (selectedId == 1000) effect->sidechainSourceTrackId.store(-1);
-            else effect->sidechainSourceTrackId.store(selectedId);
+        // --- DATA BRIDGE ---
+        auto refreshTracks = [this] {
+            juce::Array<std::pair<int, juce::String>> trackData;
+            for (auto* t : trackContainer->getTracks())
+                trackData.add({ t->getId(), t->getName() });
             
-            if (effect->onSidechainChanged) effect->onSidechainChanged();
+            scSelector.updateAvailableTracks(trackData, effect->sidechain.sourceTrackId.load());
         };
+
+        refreshTracks();
+
+        scSelector.onSourceChanged = [this, refreshTracks](int selectedId) {
+            effect->sidechain.sourceTrackId.store(selectedId);
+            if (effect->onSidechainChanged) effect->onSidechainChanged();
+            
+            // --- ACTUALIZAR TOPOLOGÍA DE AUDIO ---
+            if (onTopologyUpdate) onTopologyUpdate();
+        };
+
+        trackContainer->onTracksReordered = [refreshTracks] { refreshTracks(); };
+        trackContainer->onTrackAdded = [refreshTracks] { refreshTracks(); };
     }
 }
 
@@ -52,7 +49,7 @@ void VSTCustomHeader::paint(juce::Graphics& g)
     g.setFont(juce::Font(15.0f, juce::Font::bold));
     
     // Si hay selector de sidechain, movemos el título a la izquierda
-    if (sidechainSelector.isVisible())
+    if (scSelector.isVisible())
         g.drawText(window->getName(), 10, 0, getWidth() / 2, getHeight(), juce::Justification::centredLeft);
     else
         g.drawText(window->getName(), getLocalBounds(), juce::Justification::centred);
@@ -60,15 +57,11 @@ void VSTCustomHeader::paint(juce::Graphics& g)
 
 void VSTCustomHeader::resized()
 {
-    int bs = getHeight() - 8;
-    closeBtn.setBounds(getWidth() - bs - 8, 4, bs, bs);
-
-    if (sidechainSelector.isVisible())
-    {
-        int comboW = 120;
-        sidechainSelector.setBounds(getWidth() - bs - 20 - comboW, 5, comboW, getHeight() - 10);
-        sidechainLabel.setBounds(sidechainSelector.getX() - 65, 0, 60, getHeight());
-    }
+    auto area = getLocalBounds();
+    closeBtn.setBounds(area.removeFromRight(30).reduced(5));
+    
+    if (scSelector.isVisible())
+        scSelector.setBounds(area.removeFromRight(180));
 }
 
 // ==============================================================================
@@ -175,7 +168,7 @@ void VSTHost::showWindow(TrackContainer* container)
         // Si no hay ventana o el container cambió (necesario para refrescar el selector), la recreamos
         if (vstWindow == nullptr)
         {
-            vstWindow = std::make_unique<VSTWindow>(vstPlugin.get(), this, container);
+            vstWindow = std::make_unique<VSTWindow>(vstPlugin.get(), this, container, onTopologyUpdate);
         }
         
         vstWindow->setVisible(true);
