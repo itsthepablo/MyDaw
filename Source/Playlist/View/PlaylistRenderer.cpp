@@ -1,8 +1,8 @@
 #include "PlaylistRenderer.h"
 #include "../../UI/AutomationRenderer.h"
-#include "../../UI/MidiClipRenderer.h"
+#include "../../Clips/Midi/UI/MidiPatternRenderer.h"
 #include "../../UI/MidiPatternStyles.h"
-#include "../../UI/WaveformRenderer.h"
+#include "../../Clips/Audio/UI/AudioClipRenderer.h"
 #include "../../Modules/LoudnessTrack/Bridges/LoudnessTrackBridge.h"
 #include "../../Modules/LoudnessTrack/UI/LoudnessTrackRenderer.h"
 #include "../../Modules/BalanceTrack/Bridges/BalanceTrackBridge.h"
@@ -55,7 +55,7 @@ void PlaylistRenderer::drawFolderSummaries(juce::Graphics& g,
                 if (std::find(descendantIds.begin(), descendantIds.end(),
                               clip.trackPtr->getId()) != descendantIds.end()) {
                     folderHasMidi = true;
-                    for (const auto &n : clip.linkedMidi->notes) {
+                    for (const auto &n : clip.linkedMidi->getNotes()) {
                         folderMinP = std::min(folderMinP, n.pitch);
                         folderMaxP = std::max(folderMaxP, n.pitch);
                     }
@@ -90,11 +90,11 @@ void PlaylistRenderer::drawFolderSummaries(juce::Graphics& g,
                         if (clip.linkedAudio != nullptr) {
                             double clipUnits = (double)clip.startX;
                             double viewUnits = (double)ctx.hS / ctx.hZoom;
-                            WaveformRenderer::drawWaveformSummary(
+                            AudioClipRenderer::drawWaveformSummary(
                                 g, *clip.linkedAudio, clipSummaryRect.toFloat(), ctx.hZoom,
                                 clipUnits, viewUnits);
                         } else if (clip.linkedMidi != nullptr) {
-                            MidiClipRenderer::drawMidiSummary(
+                            MidiPatternRenderer::drawMidiSummary(
                                 g, *clip.linkedMidi, clipSummaryRect, (float)ctx.hZoom,
                                 (float)ctx.hS, folderMinP, folderMaxP);
                         }
@@ -155,38 +155,24 @@ void PlaylistRenderer::drawTracksAndClips(juce::Graphics& g,
 
         juce::Colour trackColor = clip.trackPtr->getColor();
 
-        bool isMutedLocally = (clip.linkedAudio && clip.linkedAudio->isMuted) ||
-                              (clip.linkedMidi && clip.linkedMidi->isMuted);
+        bool isMutedLocally = (clip.linkedAudio && clip.linkedAudio->getIsMuted()) ||
+                              (clip.linkedMidi && clip.linkedMidi->getIsMuted());
         float alphaMult = isMutedLocally ? 0.3f : 1.0f;
         g.setOpacity(alphaMult);
 
         // 1. Dibujar el Clip
+        // 1. Dibujar el Clip
         if (clip.linkedAudio != nullptr) {
-            // --- LÓGICA DE AUDIO (Shell estándar) ---
-            g.setColour(trackColor.darker(0.8f).withAlpha(1.0f));
-            g.fillRoundedRectangle(clipRectF, 5.0f);
-
-            juce::Rectangle<float> headerRectF = clipRectF.withHeight(14.0f);
-            g.setColour(trackColor.darker(0.8f).withAlpha(0.4f)); 
-            g.fillRoundedRectangle(headerRectF, 5.0f);
-            
-            g.setColour(juce::Colours::white);
-            g.setFont(juce::Font(11.0f, juce::Font::bold));
-            g.drawText(" " + clip.name, headerRectF.reduced(3.0f, 0.0f).toNearestInt(),
-                       juce::Justification::centredLeft, true);
-
-            juce::Rectangle<float> innerAreaF = clipRectF.withTrimmedTop(18.0f);
             double clipUnits = (double)clip.startX;
             double viewUnits = (double)ctx.hS / ctx.hZoom;
-            WaveformRenderer::drawWaveform(
-                g, *clip.linkedAudio, innerAreaF, trackColor,
+            AudioClipRenderer::drawAudioClip(
+                g, *clip.linkedAudio, clipRectF, trackColor,
                 clip.trackPtr->getWaveformViewMode(), ctx.hZoom, clipUnits, viewUnits);
         }
         else if (clip.linkedMidi != nullptr) {
-            // --- LÓGICA DE MIDI (Delegación total al Renderer basado en Estilos) ---
-            MidiClipRenderer::drawMidiClip(
+            MidiPatternRenderer::drawMidiPattern(
                 g, *clip.linkedMidi, clipRectF.toNearestInt(), trackColor, clip.name,
-                clip.trackPtr->isInlineEditingActive, ctx.hZoom, ctx.hS, (double)ctx.playheadAbsPos);
+                clip.trackPtr->isInlineEditingActive, ctx.hZoom, (int)ctx.hS, (double)ctx.playheadAbsPos);
         }
 
         // 4. Indicador de selección (Universal)

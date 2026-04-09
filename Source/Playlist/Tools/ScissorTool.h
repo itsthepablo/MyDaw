@@ -2,6 +2,8 @@
 #include <JuceHeader.h>
 #include "PlaylistTool.h"
 #include "../PlaylistComponent.h"
+#include "../../Clips/Audio/AudioClip.h"
+#include "../../Clips/Midi/MidiPattern.h"
 
 class ScissorTool : public PlaylistTool {
 public:
@@ -24,49 +26,45 @@ public:
 
         if (clip.linkedMidi) {
             auto* oldMidi = clip.linkedMidi;
-            auto* newMidi = new MidiClipData();
-            newMidi->name = oldMidi->name + " (Corte)";
-            newMidi->startX = splitX;
-            newMidi->width = newWidthRight;
-            newMidi->color = oldMidi->color;
+            MidiPattern* newMidi = new MidiPattern(*oldMidi);
+            
+            newMidi->setName(oldMidi->getName() + " (Corte)");
+            newMidi->setStartX(splitX);
+            newMidi->setWidth(newWidthRight);
 
-            for (auto it = oldMidi->notes.begin(); it != oldMidi->notes.end(); ) {
+            // Filtrar notas para el nuevo clip
+            auto& oldNotes = oldMidi->getNotes();
+            auto& newNotes = newMidi->getNotes();
+            newNotes.clear();
+
+            for (auto it = oldNotes.begin(); it != oldNotes.end(); ) {
                 if (it->x >= splitX) {
-                    newMidi->notes.push_back(*it);
-                    it = oldMidi->notes.erase(it);
+                    newNotes.push_back(*it);
+                    it = oldNotes.erase(it);
                 }
                 else ++it;
             }
 
-            oldMidi->width = newWidthLeft;
+            oldMidi->setWidth(newWidthLeft);
             clip.width = newWidthLeft;
 
-            clip.trackPtr->midiClips.add(newMidi);
-            p.clips.push_back({ clip.trackPtr, newMidi->startX, newMidi->width, newMidi->name, nullptr, newMidi });
+            clip.trackPtr->getMidiClips().add(newMidi);
+            p.clips.push_back({ clip.trackPtr, newMidi->getStartX(), newMidi->getWidth(), newMidi->getName(), nullptr, newMidi });
         }
         else if (clip.linkedAudio) {
             auto* oldAudio = clip.linkedAudio;
+            AudioClip* newAudio = new AudioClip(*oldAudio);
             
-            auto* newAudio = new AudioClipData();
-            newAudio->name = oldAudio->name + " (Cortado)";
-            newAudio->startX = splitX;
-            newAudio->width = newWidthRight;
-            newAudio->offsetX = oldAudio->offsetX + newWidthLeft;
-            newAudio->originalWidth = oldAudio->originalWidth;
-            newAudio->isMuted = oldAudio->isMuted;
-            newAudio->sourceFilePath = oldAudio->sourceFilePath;
-            newAudio->fileBuffer.makeCopyOf(oldAudio->fileBuffer);
-            newAudio->sourceSampleRate = oldAudio->sourceSampleRate;
-            newAudio->cachedPeaksL = oldAudio->cachedPeaksL;
-            newAudio->cachedPeaksR = oldAudio->cachedPeaksR;
-            newAudio->cachedPeaksMid = oldAudio->cachedPeaksMid;
-            newAudio->cachedPeaksSide = oldAudio->cachedPeaksSide;
+            newAudio->setName(oldAudio->getName() + " (Cortado)");
+            newAudio->setStartX(splitX);
+            newAudio->setWidth(newWidthRight);
+            newAudio->setOffsetX(oldAudio->getOffsetX() + newWidthLeft);
 
-            oldAudio->width = newWidthLeft;
+            oldAudio->setWidth(newWidthLeft);
             clip.width = newWidthLeft;
 
-            clip.trackPtr->audioClips.add(newAudio);
-            p.clips.push_back({ clip.trackPtr, newAudio->startX, newAudio->width, newAudio->name, newAudio, nullptr });
+            clip.trackPtr->getAudioClips().add(newAudio);
+            p.clips.push_back({ clip.trackPtr, newAudio->getStartX(), newAudio->getWidth(), newAudio->getName(), newAudio, nullptr });
         }
         p.repaint();
     }
@@ -76,4 +74,4 @@ public:
     void mouseMove(const juce::MouseEvent& e, PlaylistComponent& p) override {
         p.setMouseCursor(juce::MouseCursor::CrosshairCursor);
     }
-};
+};

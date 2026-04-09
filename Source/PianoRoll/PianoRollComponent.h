@@ -29,22 +29,22 @@ public:
 
     std::function<float()> getPlaybackPosition;
 
-    std::function<void(MidiClipData*)> onPatternEdited;
+    std::function<void(MidiPattern*)> onPatternEdited;
     void notifyPatternEdited() {
         if (onPatternEdited && activeClip) onPatternEdited(activeClip);
     }
 
-    void setActiveClip(MidiClipData* clip) {
+    void setActiveClip(MidiPattern* clip) {
         activeClip = clip;
         automationEditor.setClipReference(clip);
         if (clip != nullptr) {
-            double newScroll = clip->startX * hZoom;
+            double newScroll = clip->getStartX() * hZoom;
             hBar.setCurrentRangeStart(newScroll);
             automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, (float)getSnapPixels(), playheadAbsPos);
         }
         repaint();
     }
-    MidiClipData* getActiveClip() const { return activeClip; }
+    MidiPattern* getActiveClip() const { return activeClip; }
 
     void setPlaying(bool p) { isPlaying = p; }
     bool getIsPlaying() const { return isPlaying; }
@@ -78,13 +78,13 @@ public:
 
     const std::vector<Note>& getNotes() const {
         static std::vector<Note> empty;
-        return (activeClip != nullptr) ? activeClip->notes : empty;
+        return (activeClip != nullptr) ? activeClip->getNotes() : empty;
     }
 
     AutomationEditor& getAutoEditor() { return automationEditor; }
 
 private:
-    MidiClipData* activeClip = nullptr;
+    MidiPattern* activeClip = nullptr;
 
     float playheadAbsPos = 0.0f;
     bool isPlaying = false;

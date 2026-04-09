@@ -26,13 +26,13 @@ public:
             for (auto* mc : track->midiClips)
             {
                 juce::ValueTree mcTree("MIDI_CLIP");
-                mcTree.setProperty("name", mc->name, nullptr);
-                mcTree.setProperty("startX", mc->startX, nullptr);
-                mcTree.setProperty("width", mc->width, nullptr);
-                mcTree.setProperty("style", (int)mc->style, nullptr);
+                mcTree.setProperty("name", mc->getName(), nullptr);
+                mcTree.setProperty("startX", mc->getStartX(), nullptr);
+                mcTree.setProperty("width", mc->getWidth(), nullptr);
+                mcTree.setProperty("style", (int)mc->getStyle(), nullptr);
 
                 juce::ValueTree notesNode("NOTES");
-                for (auto& note : mc->notes)
+                for (auto& note : mc->getNotes())
                 {
                     juce::ValueTree n("NOTE");
                     n.setProperty("x", note.x, nullptr);
@@ -48,10 +48,10 @@ public:
             for (auto* ac : track->audioClips)
             {
                 juce::ValueTree acTree("AUDIO_CLIP");
-                acTree.setProperty("name", ac->name, nullptr);
-                acTree.setProperty("startX", ac->startX, nullptr);
-                acTree.setProperty("width", ac->width, nullptr);
-                acTree.setProperty("filePath", ac->sourceFilePath, nullptr); // <-- RUTA REAL DEL SAMPLE
+                acTree.setProperty("name", ac->getName(), nullptr);
+                acTree.setProperty("startX", ac->getStartX(), nullptr);
+                acTree.setProperty("width", ac->getWidth(), nullptr);
+                acTree.setProperty("filePath", ac->getSourceFilePath(), nullptr); // <-- RUTA REAL DEL SAMPLE
                 clipsNode.addChild(acTree, -1, nullptr);
             }
 
@@ -99,11 +99,11 @@ public:
                 {
                     if (cTree.hasType("MIDI_CLIP"))
                     {
-                        auto* midi = new MidiClipData();
-                        midi->name = cTree.getProperty("name");
-                        midi->startX = cTree.getProperty("startX");
-                        midi->width = cTree.getProperty("width");
-                        midi->style = (MidiStyleType)(int)cTree.getProperty("style", 0);
+                        auto* midi = new MidiPattern();
+                        midi->setName(cTree.getProperty("name"));
+                        midi->setStartX(cTree.getProperty("startX"));
+                        midi->setWidth(cTree.getProperty("width"));
+                        midi->setStyle((MidiStyleType)(int)cTree.getProperty("style", 0));
 
                         juce::ValueTree notesTree = cTree.getChildWithName("NOTES");
                         for (auto nTree : notesTree)
@@ -113,7 +113,7 @@ public:
                             n.pitch = nTree.getProperty("pitch");
                             n.width = nTree.getProperty("width");
                             n.frequency = 0; // Default frequency
-                            midi->notes.push_back(n);
+                            midi->getNotes().push_back(n);
                         }
                         newTrack->midiClips.add(midi);
                         playlist.addMidiClipToView(newTrack, midi);
@@ -123,23 +123,18 @@ public:
                         juce::File sampleFile(cTree.getProperty("filePath").toString());
                         if (sampleFile.existsAsFile())
                         {
-                            juce::AudioFormatManager fmt;
-                            fmt.registerBasicFormats();
-                            fmt.registerFormat(new juce::MP3AudioFormat(), false);
-
-                            if (auto reader = std::unique_ptr<juce::AudioFormatReader>(fmt.createReaderFor(sampleFile)))
+                            auto* audio = new AudioClip();
+                            audio->setStartX(cTree.getProperty("startX"));
+                            if (audio->loadFromFile(sampleFile, 44100.0))
                             {
-                                auto* audio = new AudioClipData();
-                                audio->name = cTree.getProperty("name");
-                                audio->startX = cTree.getProperty("startX");
-                                audio->sourceFilePath = sampleFile.getFullPathName();
-                                audio->fileBuffer.setSize((int)reader->numChannels, (int)reader->lengthInSamples);
-                                reader->read(&audio->fileBuffer, 0, (int)reader->lengthInSamples, 0, true, true);
-                                audio->width = cTree.getProperty("width");
-                                audio->generateCache();
-
+                                audio->setName(cTree.getProperty("name"));
+                                audio->setWidth(cTree.getProperty("width"));
                                 newTrack->audioClips.add(audio);
-                                playlist.clips.push_back({ newTrack, audio->startX, audio->width, audio->name, audio, nullptr });
+                                playlist.clips.push_back({ newTrack, audio->getStartX(), audio->getWidth(), audio->getName(), audio, nullptr });
+                            }
+                            else
+                            {
+                                delete audio;
                             }
                         }
                     }

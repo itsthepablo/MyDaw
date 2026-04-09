@@ -44,8 +44,8 @@ public:
         repaint();
     }
 
-    juce::OwnedArray<AudioClipData> unusedAudioPool;
-    juce::OwnedArray<MidiClipData> unusedMidiPool;
+    juce::OwnedArray<AudioClip> unusedAudioPool;
+    juce::OwnedArray<MidiPattern> unusedMidiPool;
     juce::OwnedArray<AutomationClipData> automationPool;
 
     // --- NUEVO: Contenedor para CLIPPING automático ---
@@ -195,14 +195,14 @@ public:
 
         if (index >= 0 && index < tracks.size()) {
             auto* t = tracks[index];
-            for (int i = t->audioClips.size() - 1; i >= 0; --i) {
-                auto* a = t->audioClips[i];
-                t->audioClips.removeObject(a, false);
+            for (int i = t->getAudioClips().size() - 1; i >= 0; --i) {
+                auto* a = t->getAudioClips()[i];
+                t->getAudioClips().removeObject(a, false);
                 unusedAudioPool.add(a);
             }
-            for (int i = t->midiClips.size() - 1; i >= 0; --i) {
-                auto* m = t->midiClips[i];
-                t->midiClips.removeObject(m, false);
+            for (int i = t->getMidiClips().size() - 1; i >= 0; --i) {
+                auto* m = t->getMidiClips()[i];
+                t->getMidiClips().removeObject(m, false);
                 unusedMidiPool.add(m);
             }
             trackPanels.remove(index);
@@ -217,9 +217,9 @@ public:
         std::unique_ptr<juce::ScopedLock> lock;
         if (audioMutex != nullptr) lock = std::make_unique<juce::ScopedLock>(*audioMutex);
         if (isMidi) {
-            for (int i = unusedMidiPool.size() - 1; i >= 0; --i) if (unusedMidiPool[i]->name == name) unusedMidiPool.remove(i, true);
+            for (int i = unusedMidiPool.size() - 1; i >= 0; --i) if (unusedMidiPool[i]->getName() == name) unusedMidiPool.remove(i, true);
         } else {
-            for (int i = unusedAudioPool.size() - 1; i >= 0; --i) if (unusedAudioPool[i]->name == name) unusedAudioPool.remove(i, true);
+            for (int i = unusedAudioPool.size() - 1; i >= 0; --i) if (unusedAudioPool[i]->getName() == name) unusedAudioPool.remove(i, true);
         }
     }
 

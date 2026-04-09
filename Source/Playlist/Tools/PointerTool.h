@@ -2,7 +2,9 @@
 #include <JuceHeader.h>
 #include "PlaylistTool.h"
 #include "../PlaylistComponent.h"
-#include "../../UI/MidiClipRenderer.h"
+#include "../../Clips/Midi/UI/MidiPatternRenderer.h"
+#include "../../Clips/Audio/AudioClip.h"
+#include "../../Clips/Midi/MidiPattern.h"
 
 class PointerTool : public PlaylistTool {
 public:
@@ -94,10 +96,10 @@ public:
                     m.addItem(2, "Rename");
                     
                     juce::PopupMenu styleMenu;
-                    styleMenu.addItem(10, "Classic (Colored BG)", true, linkedMidi->style == MidiStyleType::Classic);
-                    styleMenu.addItem(11, "Modern (Dark BG)", true, linkedMidi->style == MidiStyleType::Modern);
-                    styleMenu.addItem(12, "Minimal (Transparent)", true, linkedMidi->style == MidiStyleType::Minimal);
-                    styleMenu.addItem(13, "Gradient (Neon Round)", true, linkedMidi->style == MidiStyleType::Gradient);
+                    styleMenu.addItem(10, "Classic (Colored BG)", true, linkedMidi->getStyle() == MidiStyleType::Classic);
+                    styleMenu.addItem(11, "Modern (Dark BG)", true, linkedMidi->getStyle() == MidiStyleType::Modern);
+                    styleMenu.addItem(12, "Minimal (Transparent)", true, linkedMidi->getStyle() == MidiStyleType::Minimal);
+                    styleMenu.addItem(13, "Gradient (Neon Round)", true, linkedMidi->getStyle() == MidiStyleType::Gradient);
                     m.addSubMenu("Midi Style", styleMenu);
 
                     m.addSeparator();
@@ -116,26 +118,26 @@ public:
                     }
                     if (cIdx >= p.clips.size()) return;
 
-                    MidiClipData* sourceMidi = p.clips[cIdx].linkedMidi;
+                    MidiPattern* sourceMidi = p.clips[cIdx].linkedMidi;
                     Track* targetTrack = p.clips[cIdx].trackPtr;
 
                     if (result == 1 && sourceMidi && targetTrack) {
-                        MidiClipData* newMidiClip = new MidiClipData(*sourceMidi);
+                        MidiPattern* newMidiClip = new MidiPattern(*sourceMidi);
                         int maxPatternNum = 0;
                         if (p.tracksRef) {
                             for (auto* tr : *p.tracksRef) {
-                                for (auto* mc : tr->midiClips) {
-                                    if (mc->name.startsWith("Pattern ")) {
-                                        int num = mc->name.substring(8).getIntValue();
+                                for (MidiPattern* mc : tr->getMidiClips()) {
+                                    if (mc->getName().startsWith("Pattern ")) {
+                                        int num = mc->getName().substring(8).getIntValue();
                                         if (num > maxPatternNum) maxPatternNum = num;
                                     }
                                 }
                             }
                         }
-                        newMidiClip->name = "Pattern " + juce::String(maxPatternNum + 1);
-                        targetTrack->midiClips.add(newMidiClip);
+                        newMidiClip->setName("Pattern " + juce::String(maxPatternNum + 1));
+                        targetTrack->getMidiClips().add(newMidiClip);
                         p.clips[cIdx].linkedMidi = newMidiClip;
-                        p.clips[cIdx].name = newMidiClip->name;
+                        p.clips[cIdx].name = newMidiClip->getName();
                         targetTrack->commitSnapshot(); // DOUBLE BUFFER: nuevo clip independiente
                         p.repaint();
                         p.hNavigator.repaint();
@@ -143,7 +145,7 @@ public:
                     else if (result == 2 && sourceMidi) {
                         juce::MessageManager::callAsync([&p, sourceMidi]() {
                             auto* alert = new juce::AlertWindow("Rename Pattern", "Enter new name:", juce::AlertWindow::QuestionIcon);
-                            alert->addTextEditor("newName", sourceMidi->name);
+                            alert->addTextEditor("newName", sourceMidi->getName());
                             alert->addButton("OK", 1, juce::KeyPress(juce::KeyPress::returnKey, 0, 0));
                             alert->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey, 0, 0));
 
@@ -151,12 +153,12 @@ public:
                                 alert->setVisible(false);
                                 if (btn == 1) {
                                     juce::String newName = alert->getTextEditorContents("newName");
-                                    juce::String oldName = sourceMidi->name;
+                                    juce::String oldName = sourceMidi->getName();
 
                                     if (newName.isNotEmpty() && newName != oldName) {
                                         if (p.tracksRef) {
                                             for (auto* tr : *p.tracksRef) {
-                                                for (auto* mc : tr->midiClips) { if (mc->name == oldName) mc->name = newName; }
+                                                for (MidiPattern* mc : tr->getMidiClips()) { if (mc->getName() == oldName) mc->setName(newName); }
                                             }
                                         }
                                         for (auto& cv : p.clips) { if (cv.name == oldName) cv.name = newName; }
@@ -169,7 +171,7 @@ public:
                             });
                     }
                     else if (result >= 10 && result <= 13 && sourceMidi) {
-                        sourceMidi->style = (MidiStyleType)(result - 10);
+                        sourceMidi->setStyle((MidiStyleType)(result - 10));
                         if (targetTrack) targetTrack->commitSnapshot();
                         p.repaint();
                     }
@@ -186,18 +188,18 @@ public:
                 int wPos = (int)(clip.width * p.hZoom);
                 juce::Rectangle<int> clipRect(xPos, yPos + 2, wPos - 1, (int)p.trackHeight - 4);
 
-                int noteIdx = MidiClipRenderer::hitTestInlineNote(*clip.linkedMidi, clipRect, e.x, e.y, p.hZoom, hS);
+                int noteIdx = MidiPatternRenderer::hitTestInlineNote(*clip.linkedMidi, clipRect, e.x, e.y, p.hZoom, hS);
 
                 if (noteIdx != -1) {
-                    auto& note = clip.linkedMidi->notes[noteIdx];
+                    auto& note = clip.linkedMidi->getNotes()[noteIdx];
                     int noteScreenX = (int)(note.x * p.hZoom) - (int)hS;
                     int noteScreenW = std::max(3, (int)(note.width * p.hZoom));
 
                     p.draggingClipIndex = cIdx;
                     p.draggingNoteIndex = noteIdx;
                     p.dragStartAbsX = p.getAbsoluteXFromMouse(e.x);
-                    p.dragStartNoteX = note.x;
-                    p.dragStartNoteWidth = note.width;
+                    p.dragStartNoteX = (float)note.x;
+                    p.dragStartNoteWidth = (float)note.width;
                     p.isResizingNote = e.x > (noteScreenX + noteScreenW - 6);
                     p.repaint();
                     return;
@@ -304,12 +306,12 @@ public:
 
         if (p.draggingNoteIndex != -1) {
             auto* midiClip = p.clips[p.draggingClipIndex].linkedMidi;
-            auto& note = midiClip->notes[p.draggingNoteIndex];
+            auto& note = midiClip->getNotes()[p.draggingNoteIndex];
             
             // RELATIVO: snappedX es relativo al inicio del clip (congelado en 0 por ahora para notas)
             float snappedX = std::round((p.dragStartNoteX + diff) / p.snapPixels) * p.snapPixels;
 
-            if (p.isResizingNote) note.width = juce::jmax(10.0f, p.dragStartNoteWidth + diff);
+            if (p.isResizingNote) note.width = (int)juce::jmax(10.0f, p.dragStartNoteWidth + diff);
             else note.x = (int)juce::jmax(0.0f, snappedX); // Las notas siempre son >= 0
 
             p.notifyPatternEdited(midiClip);
@@ -323,15 +325,15 @@ public:
             auto& source = p.clips[p.draggingClipIndex];
             
             if (source.linkedMidi) {
-                MidiClipData* clone = new MidiClipData(*source.linkedMidi);
-                source.trackPtr->midiClips.add(clone);
+                MidiPattern* clone = new MidiPattern(*source.linkedMidi);
+                source.trackPtr->getMidiClips().add(clone);
                 p.clips.push_back({ source.trackPtr, source.startX, source.width, source.name, nullptr, clone });
                 p.draggingClipIndex = (int)p.clips.size() - 1;
                 p.selectedClipIndices.clear();
                 p.selectedClipIndices.push_back(p.draggingClipIndex);
             } else if (source.linkedAudio) {
-                AudioClipData* clone = new AudioClipData(*source.linkedAudio);
-                source.trackPtr->audioClips.add(clone);
+                AudioClip* clone = new AudioClip(*source.linkedAudio);
+                source.trackPtr->getAudioClips().add(clone);
                 p.clips.push_back({ source.trackPtr, source.startX, source.width, source.name, clone, nullptr });
                 p.draggingClipIndex = (int)p.clips.size() - 1;
                 p.selectedClipIndices.clear();
@@ -353,13 +355,13 @@ public:
 
                 if (isMidi) {
                     auto* m = p.clips[p.draggingClipIndex].linkedMidi;
-                    oldTrack->midiClips.removeObject(m, false);
-                    newTrack->midiClips.add(m);
+                    oldTrack->getMidiClips().removeObject(m, false);
+                    newTrack->getMidiClips().add(m);
                 }
                 else if (isAudio) {
                     auto* a = p.clips[p.draggingClipIndex].linkedAudio;
-                    oldTrack->audioClips.removeObject(a, false);
-                    newTrack->audioClips.add(a);
+                    oldTrack->getAudioClips().removeObject(a, false);
+                    newTrack->getAudioClips().add(a);
                 }
                 p.clips[p.draggingClipIndex].trackPtr = newTrack;
             }
@@ -372,12 +374,12 @@ public:
             float newW = juce::jmax(10.0f, p.dragStartWidth + diff);
             p.clips[p.draggingClipIndex].width = newW;
             // No actualizar linkedAudio en tiempo real para evitar glitcheo de lectura
-            if (p.clips[p.draggingClipIndex].linkedMidi != nullptr) p.clips[p.draggingClipIndex].linkedMidi->width = newW;
+            if (p.clips[p.draggingClipIndex].linkedMidi != nullptr) p.clips[p.draggingClipIndex].linkedMidi->setWidth(newW);
         }
         else {
             // Las notas MIDI se mantienen relativas al bloque (0-based)
             p.clips[p.draggingClipIndex].startX = snappedX;
-            if (p.clips[p.draggingClipIndex].linkedMidi != nullptr) p.clips[p.draggingClipIndex].linkedMidi->startX = snappedX;
+            if (p.clips[p.draggingClipIndex].linkedMidi != nullptr) p.clips[p.draggingClipIndex].linkedMidi->setStartX(snappedX);
         }
         p.repaint();
         p.hNavigator.repaint(); // SINCRONIZA EL MINIMAPA AL ARRASTRAR
@@ -404,10 +406,10 @@ public:
             if (p.draggingNoteIndex == -1) {
                 // Fin de movimiento/resize de clip
                 if (p.isResizingClip) {
-                    if (clip.linkedAudio != nullptr) clip.linkedAudio->width = clip.width;
+                    if (clip.linkedAudio != nullptr) clip.linkedAudio->setWidth(clip.width);
                 }
                 else {
-                    if (clip.linkedAudio != nullptr) clip.linkedAudio->startX = clip.startX;
+                    if (clip.linkedAudio != nullptr) clip.linkedAudio->setStartX(clip.startX);
                 }
                 // DOUBLE BUFFER: publicar la posición/tamaño final al audio thread
                 if (clip.trackPtr != nullptr)
@@ -438,10 +440,10 @@ public:
                 int wPos = (int)(clip.width * p.hZoom);
                 juce::Rectangle<int> clipRect(xPos, yPos + 2, wPos - 1, (int)p.trackHeight - 4);
 
-                int noteIdx = MidiClipRenderer::hitTestInlineNote(*clip.linkedMidi, clipRect, e.x, e.y, p.hZoom, hS);
+                int noteIdx = MidiPatternRenderer::hitTestInlineNote(*clip.linkedMidi, clipRect, e.x, e.y, p.hZoom, hS);
 
                 if (noteIdx != -1) {
-                    auto& note = clip.linkedMidi->notes[noteIdx];
+                    auto& note = clip.linkedMidi->getNotes()[noteIdx];
                     int noteScreenX = (int)(note.x * p.hZoom) - (int)hS;
                     int noteScreenW = std::max(3, (int)(note.width * p.hZoom));
 

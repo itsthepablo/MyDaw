@@ -187,7 +187,7 @@ void MainComponent::setupCallbacks() {
 
     // bottomDockResizer.onResizeDelta eliminado (altura fija)
 
-    ui.playlistUI.onMidiClipDeleted = [this](MidiClipData* c) {
+    ui.playlistUI.onMidiClipDeleted = [this](MidiPattern* c) {
         if (ui.pianoRollUI.getActiveClip() == c) closePianoRoll();
         };
 

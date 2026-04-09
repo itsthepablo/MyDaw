@@ -2,9 +2,9 @@
 #include <JuceHeader.h>
 #include "../GlobalData.h" 
 #include "../Native_Plugins/BaseEffect.h"
+#include "../Clips/Audio/AudioClip.h"
+#include "../Clips/Midi/MidiPattern.h"
 #include "../Tracks/Data/TrackData.h"
-#include "../Tracks/Data/AudioClipData.h"
-#include "../Tracks/Data/MidiClipData.h"
 #include "../Tracks/Data/TrackSnapshots.h"
 #include "../Tracks/DSP/TrackDSP.h"
 
@@ -80,8 +80,11 @@ public:
     // --- LISTAS DE CONTENIDO ---
     std::vector<Note> notes;
     juce::OwnedArray<BaseEffect> plugins;
-    juce::OwnedArray<AudioClipData> audioClips;
-    juce::OwnedArray<MidiClipData> midiClips;
+    juce::OwnedArray<AudioClip>& getAudioClips() { return audioClips; }
+    const juce::OwnedArray<AudioClip>& getAudioClips() const { return audioClips; }
+    juce::OwnedArray<MidiPattern>& getMidiClips() { return midiClips; }
+    const juce::OwnedArray<MidiPattern>& getMidiClips() const { return midiClips; }
+
     std::vector<AutomationClipData*> automationClips;
 
     // --- ESTADO DE JERARQUÍA ---
@@ -102,7 +105,7 @@ public:
     juce::SpinLock bufferLock;
 
     // --- MÉTODOS DE OPERACIÓN ---
-    AudioClipData* loadAndAddAudioClip(const juce::File& file, float startX);
+    AudioClip* loadAndAddAudioClip(const juce::File& file, float startX);
     void migrateMidiToRelative();
     void commitSnapshot();
 
@@ -121,6 +124,8 @@ private:
     juce::AudioThumbnailCache thumbnailCache { 10 };
 
     WaveformViewMode waveformViewMode = WaveformViewMode::Combined;
+    juce::OwnedArray<AudioClip> audioClips;
+    juce::OwnedArray<MidiPattern> midiClips;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Track)
 };

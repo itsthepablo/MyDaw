@@ -30,12 +30,12 @@ public:
 
     std::function<void(TrackType)> onNewTrackRequested;
     std::function<void(int)> onVerticalScroll;
-    std::function<void(Track*, MidiClipData*)> onMidiClipDoubleClicked;
-    std::function<void(MidiClipData*)> onMidiClipDeleted;
-    std::function<void(MidiClipData*)> onPatternEdited;
+    std::function<void(Track*, MidiPattern*)> onMidiClipDoubleClicked;
+    std::function<void(MidiPattern*)> onMidiClipDeleted;
+    std::function<void(MidiPattern*)> onPatternEdited;
     std::function<void(Track*)> onClipSelected;
 
-    void notifyPatternEdited(MidiClipData* clip) {
+    void notifyPatternEdited(MidiPattern* clip) {
         if (onPatternEdited && clip != nullptr) onPatternEdited(clip);
     }
 
@@ -97,8 +97,8 @@ public:
 
     void setExternalMutex(juce::CriticalSection* mutex);
     void setMasterTrack(Track* mt);
-    void addMidiClipToView(Track* targetTrack, MidiClipData* newClip);
-    void addAudioClipToView(Track* targetTrack, AudioClipData* newClip);
+    void addMidiClipToView(Track* targetTrack, MidiPattern* newClip);
+    void addAudioClipToView(Track* targetTrack, AudioClip* newClip);
     void updateScrollBars();
 
     void setTool(int toolId);

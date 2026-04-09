@@ -14,10 +14,10 @@ public:
 
         auto& clip = p.clips[cIdx];
         if (clip.linkedAudio) {
-            clip.linkedAudio->isMuted = !clip.linkedAudio->isMuted;
+            clip.linkedAudio->setIsMuted(!clip.linkedAudio->getIsMuted());
         }
         if (clip.linkedMidi) {
-            clip.linkedMidi->isMuted = !clip.linkedMidi->isMuted;
+            clip.linkedMidi->setIsMuted(!clip.linkedMidi->getIsMuted());
         }
         
         p.repaint();

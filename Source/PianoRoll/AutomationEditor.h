@@ -3,7 +3,7 @@
 #include <set>
 #include <map>
 #include "../GlobalData.h" 
-#include "../Data/Track.h" // <-- REQUERIDO PARA CONOCER MidiClipData
+#include "../Clips/Midi/MidiPattern.h"
 
 // NO TOCAR NI SIMPLIFICAR HASTA QUE YO LO ORDENE
 struct LinkedNode {
@@ -40,7 +40,7 @@ public:
     void updateView(float hS, float hZ, float vS, float vZ, double snap, float ph);
 
     // <-- AQUÍ ESTÁ LA FUNCIÓN QUE EL COMPILADOR NO ENCUENTRA. ASEGÚRATE DE PEGAR ESTO:
-    void setClipReference(MidiClipData* clip);
+    void setClipReference(MidiPattern* clip);
 
     void grabNodesUnderNotes(const std::set<int>& selectedIndices);
     void moveLinkedNodes(float deltaX);
@@ -72,7 +72,7 @@ private:
     float tooltipValue = 0.0f;
 
     juce::CriticalSection dataLock;
-    MidiClipData* clipRef = nullptr;
+    MidiPattern* clipRef = nullptr;
     std::vector<LinkedNode> linkedNodes;
 
     const int keyW = 80;

@@ -7,6 +7,6 @@ struct TrackClip {
     float startX;
     float width;
     juce::String name;
-    AudioClipData* linkedAudio = nullptr;
-    MidiClipData* linkedMidi = nullptr;
+    AudioClip* linkedAudio = nullptr;
+    MidiPattern* linkedMidi = nullptr;
 };

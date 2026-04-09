@@ -33,39 +33,27 @@ void Track::prepare(double sampleRate, int samplesPerBlock)
 // LÓGICA DE CLIPS Y DATOS
 // ============================================================
 
-AudioClipData* Track::loadAndAddAudioClip(const juce::File& file, float startX)
+AudioClip* Track::loadAndAddAudioClip(const juce::File& file, float startX)
 {
-    juce::AudioFormatManager manager;
-    manager.registerBasicFormats();
-    std::unique_ptr<juce::AudioFormatReader> reader(manager.createReaderFor(file));
-
-    if (reader != nullptr)
+    auto* clip = new AudioClip();
+    clip->setStartX(startX);
+    
+    if (clip->loadFromFile(file, 44100.0)) // Valor base de sample rate
     {
-        auto* clip = new AudioClipData();
-        clip->name = file.getFileNameWithoutExtension();
-        clip->sourceFilePath = file.getFullPathName();
-        clip->startX = startX;
+        auto* thumb = new juce::AudioThumbnail(64, thumbnailFormatManager, thumbnailCache);
+        thumb->reset(clip->getBuffer().getNumChannels(),
+                    44100.0, // base rate
+                    (juce::int64)clip->getBuffer().getNumSamples());
+        thumb->addBlock(0, clip->getBuffer(), 0, clip->getBuffer().getNumSamples());
         
-        double duration = (double)reader->lengthInSamples / reader->sampleRate;
-        clip->width = (float)(duration * 160.0); 
-        clip->originalWidth = clip->width;
-        clip->sourceSampleRate = reader->sampleRate;
-
-        clip->fileBuffer.setSize((int)reader->numChannels, (int)reader->lengthInSamples);
-        reader->read(&clip->fileBuffer, 0, (int)reader->lengthInSamples, 0, true, true);
-
-        clip->generateCache();
-
-        clip->thumbnail = std::make_unique<juce::AudioThumbnail>(64, thumbnailFormatManager, thumbnailCache);
-        clip->thumbnail->reset(clip->fileBuffer.getNumChannels(),
-                               clip->sourceSampleRate,
-                               (juce::int64)clip->fileBuffer.getNumSamples());
-        clip->thumbnail->addBlock(0, clip->fileBuffer, 0, clip->fileBuffer.getNumSamples());
-
+        clip->setThumbnail(std::unique_ptr<juce::AudioThumbnail>(thumb));
+        
         audioClips.add(clip);
         commitSnapshot();
         return clip;
     }
+    
+    delete clip;
     return nullptr;
 }
 
@@ -73,12 +61,9 @@ void Track::migrateMidiToRelative()
 {
     bool changed = false;
     for (auto* clip : midiClips) {
-        if (!clip) continue;
-        for (auto& note : clip->notes) {
-            if (note.x >= (int)clip->startX && note.x < (int)(clip->startX + clip->width + 1.0f)) {
-                note.x -= (int)clip->startX;
-                changed = true;
-            }
+        if (clip != nullptr) {
+            clip->migrateToRelative();
+            changed = true;
         }
     }
     if (changed) commitSnapshot();
@@ -98,33 +83,35 @@ void Track::commitSnapshot()
 
     snap->audioClips.reserve((size_t)audioClips.size());
     for (auto* ac : audioClips) {
-        if (!ac) continue;
+        if (ac != nullptr) {
         AudioClipSnapshot acs;
-        acs.startX        = ac->startX;
-        acs.width         = ac->width;
-        acs.offsetX       = ac->offsetX;
-        acs.isMuted       = ac->isMuted;
-        acs.isLoaded      = ac->isLoaded.load(std::memory_order_relaxed);
-        acs.fileBufferPtr = &ac->fileBuffer;   
-        acs.numChannels   = ac->fileBuffer.getNumChannels();
-        acs.numSamples    = ac->fileBuffer.getNumSamples();
+        acs.startX        = ac->getStartX();
+        acs.width         = ac->getWidth();
+        acs.offsetX       = ac->getOffsetX();
+        acs.isMuted       = ac->getIsMuted();
+        acs.isLoaded      = ac->isLoaded();
+        acs.fileBufferPtr = &ac->getBuffer();   
+        acs.numChannels   = ac->getBuffer().getNumChannels();
+        acs.numSamples    = ac->getBuffer().getNumSamples();
         snap->audioClips.push_back(acs);
+        }
     }
 
     snap->midiClips.reserve((size_t)midiClips.size());
     for (auto* mc : midiClips) {
-        if (!mc) continue;
+        if (mc != nullptr) {
         MidiClipSnapshot mcs;
-        mcs.startX  = mc->startX;
-        mcs.width   = mc->width;
-        mcs.offsetX = mc->offsetX;
-        mcs.isMuted = mc->isMuted;
-        mcs.style   = mc->style;
-        mcs.notes.reserve(mc->notes.size());
-        for (const auto& n : mc->notes) {
+        mcs.startX  = mc->getStartX();
+        mcs.width   = mc->getWidth();
+        mcs.offsetX = mc->getOffsetX();
+        mcs.isMuted = mc->getIsMuted();
+        mcs.style   = mc->getStyle();
+        mcs.notes.reserve(mc->getNotes().size());
+        for (const auto& n : mc->getNotes()) {
             mcs.notes.push_back({ n.pitch, n.x, n.width, n.frequency });
         }
         snap->midiClips.push_back(std::move(mcs));
+        }
     }
 
     snap->notes.reserve(notes.size());

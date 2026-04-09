@@ -19,17 +19,17 @@ void PlaylistActionHandler::deleteSelectedClips(PlaylistComponent& p) {
 
         if (p.trackContainer) {
             if (tc.linkedAudio) {
-                tc.trackPtr->audioClips.removeObject(tc.linkedAudio, false);
+                tc.trackPtr->getAudioClips().removeObject(tc.linkedAudio, false);
                 p.trackContainer->unusedAudioPool.add(tc.linkedAudio);
             }
             if (tc.linkedMidi) {
-                tc.trackPtr->midiClips.removeObject(tc.linkedMidi, false);
+                tc.trackPtr->getMidiClips().removeObject(tc.linkedMidi, false);
                 p.trackContainer->unusedMidiPool.add(tc.linkedMidi);
             }
         }
         else {
-            if (tc.linkedAudio) tc.trackPtr->audioClips.removeObject(tc.linkedAudio, true);
-            if (tc.linkedMidi) tc.trackPtr->midiClips.removeObject(tc.linkedMidi, true);
+            if (tc.linkedAudio) tc.trackPtr->getAudioClips().removeObject(tc.linkedAudio, true);
+            if (tc.linkedMidi) tc.trackPtr->getMidiClips().removeObject(tc.linkedMidi, true);
         }
 
         p.clips.erase(p.clips.begin() + index);
@@ -57,13 +57,13 @@ void PlaylistActionHandler::deleteClipsByName(PlaylistComponent& p, const juce::
 
     for (int i = (int)p.clips.size() - 1; i >= 0; --i) {
         auto& c = p.clips[i];
-        if (isMidi && c.linkedMidi && c.linkedMidi->name == name) {
+        if (isMidi && c.linkedMidi && c.linkedMidi->getName() == name) {
             if (p.onMidiClipDeleted) p.onMidiClipDeleted(c.linkedMidi);
-            c.trackPtr->midiClips.removeObject(c.linkedMidi, true);
+            c.trackPtr->getMidiClips().removeObject(c.linkedMidi, true);
             p.clips.erase(p.clips.begin() + i);
         }
-        else if (!isMidi && c.linkedAudio && c.linkedAudio->name == name) {
-            c.trackPtr->audioClips.removeObject(c.linkedAudio, true);
+        else if (!isMidi && c.linkedAudio && c.linkedAudio->getName() == name) {
+            c.trackPtr->getAudioClips().removeObject(c.linkedAudio, true);
             p.clips.erase(p.clips.begin() + i);
         }
     }
@@ -100,12 +100,12 @@ void PlaylistActionHandler::handleDoubleClick(PlaylistComponent& p, const juce::
         float snappedX = std::round(absX / p.snapPixels) * p.snapPixels;
 
         Track* targetTrack = (*p.tracksRef)[tIdx];
-        MidiClipData* newMidiClip = nullptr;
+        MidiPattern* newMidiClip = nullptr;
 
-        if (!targetTrack->midiClips.isEmpty()) {
-            MidiClipData* sourceClip = targetTrack->midiClips.getLast();
-            newMidiClip = new MidiClipData(*sourceClip);
-            newMidiClip->startX = snappedX;
+        if (!targetTrack->getMidiClips().isEmpty()) {
+            MidiPattern* sourceClip = targetTrack->getMidiClips().getLast();
+            newMidiClip = new MidiPattern(*sourceClip);
+            newMidiClip->setStartX(snappedX);
             // IMPORTANTE: Ya no sumamos timeShift a las notas. 
             // Las notas son relativas (0-based) para que los clones funcionen.
             newMidiClip->autoVol = sourceClip->autoVol;
@@ -116,22 +116,22 @@ void PlaylistActionHandler::handleDoubleClick(PlaylistComponent& p, const juce::
         else {
             int maxPatternNum = 0;
             for (auto* tr : *p.tracksRef) {
-                for (auto* mc : tr->midiClips) {
-                    if (mc->name.startsWith("Pattern ")) {
-                        int num = mc->name.substring(8).getIntValue();
+                for (auto* mc : tr->getMidiClips()) {
+                    if (mc->getName().startsWith("Pattern ")) {
+                        int num = mc->getName().substring(8).getIntValue();
                         if (num > maxPatternNum) maxPatternNum = num;
                     }
                 }
             }
-            newMidiClip = new MidiClipData();
-            newMidiClip->name = "Pattern " + juce::String(maxPatternNum + 1);
-            newMidiClip->startX = snappedX;
-            newMidiClip->width = 320.0f;
-            newMidiClip->color = targetTrack->getColor();
+            newMidiClip = new MidiPattern();
+            newMidiClip->setName("Pattern " + juce::String(maxPatternNum + 1));
+            newMidiClip->setStartX(snappedX);
+            newMidiClip->setWidth(320.0f);
+            newMidiClip->setColor(targetTrack->getColor());
         }
 
-        targetTrack->midiClips.add(newMidiClip);
-        p.clips.push_back({ targetTrack, snappedX, newMidiClip->width, newMidiClip->name, nullptr, newMidiClip });
+        targetTrack->getMidiClips().add(newMidiClip);
+        p.clips.push_back({ targetTrack, snappedX, newMidiClip->getWidth(), newMidiClip->getName(), nullptr, newMidiClip });
         targetTrack->commitSnapshot(); // DOUBLE BUFFER: nuevo clip MIDI creado
         p.repaint();
         p.hNavigator.repaint(); // SINCRONIZA EL MINIMAPA

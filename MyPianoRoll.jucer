@@ -5,6 +5,34 @@
               companyCopyright="Two Levels Audio" version="1.0.0">
   <MAINGROUP id="OgOeCb" name="FatPuppy Studio">
     <GROUP id="{832B9725-4498-E7CC-3428-6D1D4B31D6DB}" name="Source">
+      <GROUP id="{C1IpS0}" name="Clips">
+        <GROUP id="{AuD1O0}" name="Audio">
+          <GROUP id="{AuU1I0}" name="UI">
+            <FILE id="aCrCp1" name="AudioClipRenderer.cpp" compile="1" resource="0"
+                  file="Source/Clips/Audio/UI/AudioClipRenderer.cpp"/>
+            <FILE id="aCrRh1" name="AudioClipRenderer.h" compile="0" resource="0"
+                  file="Source/Clips/Audio/UI/AudioClipRenderer.h"/>
+          </GROUP>
+          <GROUP id="{AuLF00}" name="LookAndFeel">
+            <FILE id="aCLFh1" name="AudioClipLF.h" compile="0" resource="0" file="Source/Clips/Audio/LookAndFeel/AudioClipLF.h"/>
+          </GROUP>
+          <FILE id="aC1pp1" name="AudioClip.cpp" compile="1" resource="0" file="Source/Clips/Audio/AudioClip.cpp"/>
+          <FILE id="aChh11" name="AudioClip.h" compile="0" resource="0" file="Source/Clips/Audio/AudioClip.h"/>
+        </GROUP>
+        <GROUP id="{M1D1I0}" name="Midi">
+          <GROUP id="{MiU1I0}" name="UI">
+            <FILE id="mPrCp1" name="MidiPatternRenderer.cpp" compile="1" resource="0"
+                  file="Source/Clips/Midi/UI/MidiPatternRenderer.cpp"/>
+            <FILE id="mPrRh1" name="MidiPatternRenderer.h" compile="0" resource="0"
+                  file="Source/Clips/Midi/UI/MidiPatternRenderer.h"/>
+          </GROUP>
+          <GROUP id="{MiLF00}" name="LookAndFeel">
+            <FILE id="mPLFh1" name="MidiPatternLF.h" compile="0" resource="0" file="Source/Clips/Midi/LookAndFeel/MidiPatternLF.h"/>
+          </GROUP>
+          <FILE id="mPp1C1" name="MidiPattern.cpp" compile="1" resource="0" file="Source/Clips/Midi/MidiPattern.cpp"/>
+          <FILE id="mPhh11" name="MidiPattern.h" compile="0" resource="0" file="Source/Clips/Midi/MidiPattern.h"/>
+        </GROUP>
+      </GROUP>
       <GROUP id="{F2F6C20B-2317-2419-AF24-5D67676D1368}" name="Modules">
         <GROUP id="{7481A44C-CCB0-1AB7-B999-3AC310948541}" name="BalanceTrack">
           <GROUP id="{62F73CB3-B99B-07D6-494A-9A22DD534DD2}" name="Bridges">
@@ -240,14 +268,10 @@
               file="Source/UI/BottomDockResizer.h"/>
         <FILE id="G1m4fc" name="BottomDock.h" compile="0" resource="0" file="Source/UI/BottomDock.h"/>
         <FILE id="M86NJQ" name="LeftSidebar.h" compile="0" resource="0" file="Source/UI/LeftSidebar.h"/>
-        <FILE id="Bc6gRt" name="MidiClipRenderer.h" compile="0" resource="0"
-              file="Source/UI/MidiClipRenderer.h"/>
         <FILE id="yioUXf" name="ResourceMeter.h" compile="0" resource="0" file="Source/UI/ResourceMeter.h"/>
         <FILE id="lP5IIW" name="SidebarResizer.h" compile="0" resource="0"
               file="Source/UI/SidebarResizer.h"/>
         <FILE id="NkM4y4" name="TransportBar.h" compile="0" resource="0" file="Source/UI/TransportBar.h"/>
-        <FILE id="ZgzqNL" name="WaveformRenderer.h" compile="0" resource="0"
-              file="Source/UI/WaveformRenderer.h"/>
       </GROUP>
       <GROUP id="{DE716C5C-395E-36B2-27F4-94E8BA4A1B7D}" name="Engine">
         <GROUP id="{C5ABA81C-AA5B-F434-FDEC-1F29839225C6}" name="Core">
@@ -389,8 +413,6 @@
       </GROUP>
       <GROUP id="{F98E9492-EAA4-A856-6CC6-2352DAB93A59}" name="Tracks">
         <GROUP id="{A1B2C3D4-E5F6-4A5B-8C7D-9E0F1A2B3C4D}" name="Data">
-          <FILE id="i43p2y" name="AudioClipData.h" compile="0" resource="0" file="Source/Tracks/Data/AudioClipData.h"/>
-          <FILE id="jX8mN1" name="MidiClipData.h" compile="0" resource="0" file="Source/Tracks/Data/MidiClipData.h"/>
           <FILE id="tD9p2X" name="TrackData.h" compile="0" resource="0" file="Source/Tracks/Data/TrackData.h"/>
           <FILE id="sN3p1Q" name="TrackSnapshots.h" compile="0" resource="0" file="Source/Tracks/Data/TrackSnapshots.h"/>
         </GROUP>

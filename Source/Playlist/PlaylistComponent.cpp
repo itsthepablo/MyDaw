@@ -1,9 +1,9 @@
 #include "PlaylistComponent.h"
 #include "../Theme/CustomTheme.h"
 #include "../UI/AutomationRenderer.h"
-#include "../UI/MidiClipRenderer.h"
+#include "../Clips/Midi/UI/MidiPatternRenderer.h"
 #include "../UI/MidiPatternStyles.h"
-#include "../UI/WaveformRenderer.h"
+#include "../Clips/Audio/UI/AudioClipRenderer.h"
 #include "PlaylistActionHandler.h"
 #include "PlaylistDropHandler.h"
 #include "Tools/EraserTool.h"
@@ -183,8 +183,8 @@ void PlaylistComponent::updateScrollBars() {
 }
 
 void PlaylistComponent::addMidiClipToView(Track *targetTrack,
-                                          MidiClipData *newClip) {
-  clips.push_back({targetTrack, newClip->startX, newClip->width, newClip->name,
+                                          MidiPattern *newClip) {
+  clips.push_back({targetTrack, newClip->getStartX(), newClip->getWidth(), newClip->getName(),
                    nullptr, newClip});
   if (targetTrack != nullptr)
     targetTrack
@@ -195,8 +195,8 @@ void PlaylistComponent::addMidiClipToView(Track *targetTrack,
 }
 
 void PlaylistComponent::addAudioClipToView(Track *targetTrack,
-                                           AudioClipData *newClip) {
-  clips.push_back({targetTrack, newClip->startX, newClip->width, newClip->name,
+                                           AudioClip *newClip) {
+  clips.push_back({targetTrack, newClip->getStartX(), newClip->getWidth(), newClip->getName(),
                    newClip, nullptr});
   if (targetTrack != nullptr)
     targetTrack->commitSnapshot();

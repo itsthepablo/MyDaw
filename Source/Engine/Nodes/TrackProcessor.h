@@ -19,9 +19,9 @@ public:
         const juce::MidiBuffer& previewMidi,
         const RoutingMatrix::TopoState* topo) noexcept // lock-free guarantee
     {
-        bool hasClipsOrNotes = !(track->audioClips.isEmpty() && track->midiClips.isEmpty() && track->notes.empty());
+        bool hasClipsOrNotes = !(track->getAudioClips().isEmpty() && track->getMidiClips().isEmpty() && track->notes.empty());
 
-        PDCManager::dbgClips.store(track->audioClips.size(), std::memory_order_relaxed);
+        PDCManager::dbgClips.store(track->getAudioClips().size(), std::memory_order_relaxed);
 
         float magL = track->audioBuffer.getMagnitude(0, 0, numSamples);
         float magR = track->audioBuffer.getNumChannels() > 1 ? track->audioBuffer.getMagnitude(1, 0, numSamples) : 0.0f;

@@ -74,28 +74,28 @@ void ProjectManager::saveProject(TrackContainer& trackContainer, AudioEngine& en
 
                 // --- AUDIO CLIPS ---
                 juce::ValueTree aClips("AUDIO_CLIPS");
-                for (auto* clip : track->audioClips) {
+                for (AudioClip* clip : track->getAudioClips()) {
                     juce::ValueTree c("CLIP");
-                    c.setProperty("name", clip->name, nullptr);
-                    c.setProperty("startX", (double)clip->startX, nullptr);
-                    c.setProperty("width", (double)clip->width, nullptr);
-                    c.setProperty("offsetX", (double)clip->offsetX, nullptr);
-                    c.setProperty("path", clip->sourceFilePath, nullptr);
+                    c.setProperty("name", clip->getName(), nullptr);
+                    c.setProperty("startX", (double)clip->getStartX(), nullptr);
+                    c.setProperty("width", (double)clip->getWidth(), nullptr);
+                    c.setProperty("offsetX", (double)clip->getOffsetX(), nullptr);
+                    c.setProperty("path", clip->getSourceFilePath(), nullptr);
                     aClips.addChild(c, -1, nullptr);
                 }
                 t.addChild(aClips, -1, nullptr);
 
                 // --- MIDI CLIPS ---
                 juce::ValueTree mClips("MIDI_CLIPS");
-                for (auto* clip : track->midiClips) {
+                for (MidiPattern* clip : track->getMidiClips()) {
                     juce::ValueTree c("CLIP");
-                    c.setProperty("name", clip->name, nullptr);
-                    c.setProperty("startX", (double)clip->startX, nullptr);
-                    c.setProperty("width", (double)clip->width, nullptr);
-                    c.setProperty("offsetX", (double)clip->offsetX, nullptr);
+                    c.setProperty("name", clip->getName(), nullptr);
+                    c.setProperty("startX", (double)clip->getStartX(), nullptr);
+                    c.setProperty("width", (double)clip->getWidth(), nullptr);
+                    c.setProperty("offsetX", (double)clip->getOffsetX(), nullptr);
 
                     juce::ValueTree notesTree("NOTES");
-                    for (const auto& note : clip->notes) {
+                    for (const Note& note : clip->getNotes()) {
                         juce::ValueTree n("N");
                         n.setProperty("p", note.pitch, nullptr);
                         n.setProperty("x", note.x, nullptr);
@@ -189,17 +189,18 @@ void ProjectManager::loadProject(const juce::File& file, TrackContainer& trackCo
         juce::ValueTree mClips = tTree.getChildWithName("MIDI_CLIPS");
         for (int j = 0; j < mClips.getNumChildren(); ++j) {
             juce::ValueTree cTree = mClips.getChild(j);
-            auto* clip = new MidiClipData();
-            clip->name = cTree.getProperty("name").toString();
-            clip->startX = (float)cTree.getProperty("startX");
-            clip->width = (float)cTree.getProperty("width");
+            auto* clip = new MidiPattern();
+            clip->setName(cTree.getProperty("name").toString());
+            clip->setStartX((float)cTree.getProperty("startX"));
+            clip->setWidth((float)cTree.getProperty("width"));
+            clip->setOffsetX((float)cTree.getProperty("offsetX", 0.0f));
             
             juce::ValueTree notesTree = cTree.getChildWithName("NOTES");
             for (int k = 0; k < notesTree.getNumChildren(); ++k) {
                 juce::ValueTree nTree = notesTree.getChild(k);
-                clip->notes.push_back({ (int)nTree.getProperty("p"), (int)nTree.getProperty("x"), (int)nTree.getProperty("w") });
+                clip->getNotes().push_back({ (int)nTree.getProperty("p"), (int)nTree.getProperty("x"), (int)nTree.getProperty("w") });
             }
-            t->midiClips.add(clip);
+            t->getMidiClips().add(clip);
             playlistUI.addMidiClipToView(t, clip);
         }
 

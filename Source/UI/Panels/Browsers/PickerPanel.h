@@ -2,8 +2,10 @@
 #include <JuceHeader.h>
 #include "../../../Theme/CustomTheme.h"
 #include "../../../Tracks/UI/TrackContainer.h"
-#include "../../MidiClipRenderer.h"   
-#include "../../WaveformRenderer.h"   
+#include "../../../Clips/Audio/AudioClip.h"
+#include "../../../Clips/Midi/MidiPattern.h"
+#include "../../../Clips/Audio/UI/AudioClipRenderer.h"
+#include "../../../Clips/Midi/UI/MidiPatternRenderer.h"
 #include <vector>
 #include <algorithm>
 
@@ -11,8 +13,8 @@ struct PickerItem {
     juce::String name;
     juce::Colour color;
     int type; // 0 = Audio, 1 = Midi, 2 = Automation
-    AudioClipData* audioRef = nullptr;
-    MidiClipData* midiRef = nullptr;
+    AudioClip* audioRef = nullptr;
+    MidiPattern* midiRef = nullptr;
     AutomationClipData* autoRef = nullptr;
     int useCount = 0;
 
@@ -57,16 +59,16 @@ public:
 
         // 1. Escaneamos los tracks activos (suman 1 al useCount)
         for (auto* t : trackContainer->getTracks()) {
-            for (auto* a : t->audioClips) newItems.push_back({ a->name, t->getColor(), 0, a, nullptr, nullptr, 1 });
-            for (auto* m : t->midiClips) newItems.push_back({ m->name, t->getColor(), 1, nullptr, m, nullptr, 1 });
+            for (auto* a : t->getAudioClips()) newItems.push_back({ a->getName(), t->getColor(), 0, a, nullptr, nullptr, 1 });
+            for (auto* m : t->getMidiClips()) newItems.push_back({ m->getName(), t->getColor(), 1, nullptr, m, nullptr, 1 });
         }
 
         // 2. Escaneamos el pool de inactivos (suman 0 al useCount)
         for (auto* a : trackContainer->unusedAudioPool) {
-            newItems.push_back({ a->name, juce::Colours::darkgrey, 0, a, nullptr, nullptr, 0 });
+            newItems.push_back({ a->getName(), juce::Colours::darkgrey, 0, a, nullptr, nullptr, 0 });
         }
         for (auto* m : trackContainer->unusedMidiPool) {
-            newItems.push_back({ m->name, m->color, 1, nullptr, m, nullptr, 0 });
+            newItems.push_back({ m->getName(), m->getColor(), 1, nullptr, m, nullptr, 0 });
         }
         
         // 3. Escaneamos automaciones 
@@ -116,7 +118,6 @@ public:
         return "PickerDrag|" + typeStr + "|" + item.name;
     }
 
-    // --- NUEVO: Clic Derecho para borrado permanente ---
     void listBoxItemClicked(int row, const juce::MouseEvent& e) override {
         if (row < 0 || row >= items.size()) return;
         auto item = items[row];
@@ -161,13 +162,13 @@ public:
         g.fillRoundedRectangle(clipRect.toFloat(), 4.0f);
 
         if (item.type == 1 && item.midiRef != nullptr) {
-            float miniZoom = (float)clipRect.getWidth() / std::max(10.0f, item.midiRef->width);
-            float startOffset = item.midiRef->startX * miniZoom;
-            MidiClipRenderer::drawMidiClip(g, *item.midiRef, clipRect, item.color, item.name, false, miniZoom, startOffset);
+            float miniZoom = (float)clipRect.getWidth() / std::max(10.0f, item.midiRef->getWidth());
+            float startOffset = item.midiRef->getStartX() * miniZoom;
+            MidiPatternRenderer::drawMidiPattern(g, *item.midiRef, clipRect, item.color, item.name, false, miniZoom, (int)startOffset, 0.0);
         }
         else if (item.type == 0 && item.audioRef != nullptr) {
-            double miniZoom = (double)clipRect.getWidth() / std::max(0.1, (double)item.audioRef->width);
-            WaveformRenderer::drawWaveform(g, *item.audioRef, clipRect.toFloat(), item.color, WaveformViewMode::Combined, miniZoom, 0.0, 0.0);
+            double miniZoom = (double)clipRect.getWidth() / std::max(0.1, (double)item.audioRef->getWidth());
+            AudioClipRenderer::drawAudioClip(g, *item.audioRef, clipRect.toFloat(), item.color, WaveformViewMode::Combined, miniZoom, 0.0, 0.0);
         }
         else if (item.type == 2 && item.autoRef != nullptr) {
             g.setColour(item.color.brighter());
@@ -230,4 +231,4 @@ private:
     std::vector<PickerItem> items;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PickerPanel)
-};
+};

@@ -34,12 +34,12 @@ void AutomationEditor::buttonClicked(juce::Button* button) {
     }
 }
 
-void AutomationEditor::setClipReference(MidiClipData* clip) {
+void AutomationEditor::setClipReference(MidiPattern* clip) {
     juce::ScopedLock sl(dataLock);
     clipRef = clip;
 
     if (clipRef != nullptr) {
-        float sX = clipRef->startX;
+        float sX = clipRef->getStartX();
         if (clipRef->autoVol.nodes.empty()) {
             clipRef->autoVol.defaultValue = 0.8f;
             clipRef->autoVol.nodes.push_back({ sX, 0.8f, 0.0f, AutomationMath::SingleCurve });
@@ -106,8 +106,8 @@ void AutomationEditor::grabNodesUnderNotes(const std::set<int>& selectedIndices)
         for (size_t nIdx = 0; nIdx < lane->nodes.size(); ++nIdx) {
             float nx = lane->nodes[nIdx].x; bool isInside = false;
             for (int idx : selectedIndices) {
-                if (idx < clipRef->notes.size()) {
-                    const auto& note = clipRef->notes[idx];
+                if (idx < (int)clipRef->getNotes().size()) {
+                    const auto& note = clipRef->getNotes()[idx];
                     if (nx >= note.x && nx <= note.x + note.width) { isInside = true; break; }
                 }
             }
@@ -280,13 +280,13 @@ void AutomationEditor::paint(juce::Graphics& g) {
         g.drawText("Shape mode. Ghost preview active. Drag to draw, click to repeat. Hold Ctrl for temporary pointer.", keyW + 15, toolbarH + 10, getWidth() - keyW - 30, 20, juce::Justification::topLeft);
     }
 
-    if (clipRef != nullptr && !clipRef->notes.empty()) {
+    if (clipRef != nullptr && !clipRef->getNotes().empty()) {
         juce::ScopedLock sl(dataLock);
         g.setColour(juce::Colours::white.withAlpha(0.18f));
         float rowH = 22.0f * vZoom; float pH = 600.0f;
         if (getParentComponent() != nullptr) pH = (float)getParentComponent()->getHeight() - (float)getHeight() - 90.0f;
 
-        for (const auto& n : clipRef->notes) {
+        for (const auto& n : clipRef->getNotes()) {
             int nx = (int)(n.x * hZoom) + keyW - (int)hScroll; int nw = (int)(n.width * hZoom);
             if (nx + nw < keyW || nx > getWidth()) continue;
             float absoluteY = (127 - n.pitch) * rowH; float yInPR = absoluteY - vScroll;
@@ -336,8 +336,8 @@ void AutomationEditor::paint(juce::Graphics& g) {
 
     // --- NUEVO: SOMBREADO VISUAL DE LOS LIMITES DEL PATRON ---
     if (clipRef != nullptr) {
-        int startScreenX = (int)(clipRef->startX * hZoom) + keyW - (int)hScroll;
-        int endScreenX = (int)((clipRef->startX + clipRef->width) * hZoom) + keyW - (int)hScroll;
+        int startScreenX = (int)(clipRef->getStartX() * hZoom) + keyW - (int)hScroll;
+        int endScreenX = (int)((clipRef->getStartX() + clipRef->getWidth()) * hZoom) + keyW - (int)hScroll;
 
         g.setColour(juce::Colours::black.withAlpha(0.5f));
         if (startScreenX > keyW) {
@@ -356,7 +356,7 @@ void AutomationEditor::paint(juce::Graphics& g) {
         if (autoSelector.getSelectedId() == 4) {
             float tx = (tooltipPos.x - keyW + hScroll) / hZoom; int baseP = -1;
             if (clipRef != nullptr) {
-                for (const auto& n : clipRef->notes) { if (tx >= n.x && tx <= n.x + n.width) { baseP = n.pitch; break; } }
+                for (const auto& n : clipRef->getNotes()) { if (tx >= n.x && tx <= n.x + n.width) { baseP = n.pitch; break; } }
             }
             if (baseP != -1) {
                 float semitones = (tooltipValue - 0.5f) * 24.0f;
@@ -390,7 +390,7 @@ void AutomationEditor::paint(juce::Graphics& g) {
     if (autoSelector.getSelectedId() == 4) {
         int currentPlayingPitch = -1;
         if (clipRef != nullptr) {
-            for (const auto& n : clipRef->notes) {
+            for (const auto& n : clipRef->getNotes()) {
                 if (currentPlayheadX >= n.x && currentPlayheadX <= n.x + n.width) { currentPlayingPitch = n.pitch; break; }
             }
         }
