@@ -1,10 +1,10 @@
 #pragma once
 #include <JuceHeader.h>
 #include "../UI/Buttons/ToolbarButtons.h"
-#include "../UI/TopMenuBar/TopMenuBar.h"
-#include "../UI/BottomDock.h"
+#include "../UI/Bars/TopMenuBar/TopMenuBar.h"
+#include "../UI/Docks/BottomDock/BottomDock.h"
 #include "../UI/Panels/Effects/EffectsPanel.h"
-#include "../UI/LeftSidebar.h"
+#include "../UI/Docks/LeftSidebar/LeftSidebar.h"
 #include "../Tracks/UI/TrackContainer.h"
 
 class InterfaceBridge {

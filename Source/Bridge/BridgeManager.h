@@ -6,10 +6,9 @@
 #include "../Mixer/MixerComponent.h"
 #include "../UI/Panels/Effects/EffectsPanel.h"
 #include "../UI/Panels/Instruments/InstrumentPanel.h"
-#include "../UI/TransportBar.h"
-#include "../UI/TopMenuBar/TopMenuBar.h"
-#include "../UI/BottomDock.h"
-#include "../UI/LeftSidebar.h"
+#include "../UI/Bars/TopMenuBar/TopMenuBar.h"
+#include "../UI/Docks/BottomDock/BottomDock.h"
+#include "../UI/Docks/LeftSidebar/LeftSidebar.h"
 #include "../Engine/Core/AudioEngine.h"
 
 struct BridgeDependencies {
@@ -21,7 +20,6 @@ struct BridgeDependencies {
     MixerChannelUI* masterChannelUI; // NUEVO - El Master Channel complejo
     EffectsPanel& effectsPanelUI;
     InstrumentPanel& instrumentPanelUI; // <-- NUEVO
-    TransportBar& transportBar;
     TopMenuBar& topMenuBar;
     BottomDock& bottomDock;
     LeftSidebar& leftSidebar;

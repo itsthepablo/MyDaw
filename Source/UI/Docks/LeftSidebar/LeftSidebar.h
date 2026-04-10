@@ -1,8 +1,8 @@
 #pragma once
 #include <JuceHeader.h>
-#include "Panels/Browsers/PickerPanel.h"
-#include "Panels/Browsers/FileBrowserPanel.h" 
-#include "../Theme/CustomTheme.h"
+#include "../../Panels/Browsers/PickerPanel.h"
+#include "../../Panels/Browsers/FileBrowserPanel.h" 
+#include "../../../Theme/CustomTheme.h"
 
 class LeftSidebar : public juce::Component {
 public:

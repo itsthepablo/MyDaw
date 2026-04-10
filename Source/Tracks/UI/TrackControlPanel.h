@@ -4,7 +4,7 @@
 #include "../../Mixer/Bridges/MixerParameterBridge.h"
 #include "../../PluginHost/VSTHost.h" 
 #include "../../UI/Knobs/FloatingValueSlider.h" 
-#include "../../UI/LevelMeter.h"
+#include "../../UI/Meters/LevelMeter.h"
 #include "../../Modules/LoudnessTrack/UI/LoudnessMeter.h"
 #include "../LookAndFeel/TrackLookAndFeel.h"
 

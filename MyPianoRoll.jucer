@@ -28,6 +28,8 @@
           </GROUP>
           <GROUP id="{MiLF00}" name="LookAndFeel">
             <FILE id="mPLFh1" name="MidiPatternLF.h" compile="0" resource="0" file="Source/Clips/Midi/LookAndFeel/MidiPatternLF.h"/>
+            <FILE id="arQwvG" name="MidiPatternStyles.h" compile="0" resource="0"
+                  file="Source/Clips/Midi/LookAndFeel/MidiPatternStyles.h"/>
           </GROUP>
           <FILE id="mPp1C1" name="MidiPattern.cpp" compile="1" resource="0" file="Source/Clips/Midi/MidiPattern.cpp"/>
           <FILE id="mPhh11" name="MidiPattern.h" compile="0" resource="0" file="Source/Clips/Midi/MidiPattern.h"/>
@@ -94,8 +96,7 @@
                   file="Source/Modules/LoudnessTrack/DSP/LoudnessTrackDSP.h"/>
           </GROUP>
           <GROUP id="{70EC0780-2AEF-0ECB-DCBB-1908926AE37F}" name="UI">
-            <FILE id="nhC3ZN" name="LoudnessMeter.h" compile="0" resource="0"
-                  file="Source/Modules/LoudnessTrack/UI/LoudnessMeter.h"/>
+            <FILE id="nhC3ZN" name="LoudnessMeter.h" compile="0" resource="0" file="Source/Modules/LoudnessTrack/UI/LoudnessMeter.h"/>
             <FILE id="bqEEJg" name="LoudnessTrackRenderer.h" compile="0" resource="0"
                   file="Source/Modules/LoudnessTrack/UI/LoudnessTrackRenderer.h"/>
           </GROUP>
@@ -169,6 +170,20 @@
         <FILE id="ghMFvY" name="UtilityPlugin.h" compile="0" resource="0" file="Source/Native_Plugins/UtilityPlugin.h"/>
       </GROUP>
       <GROUP id="{721FC522-4CF1-05D4-BC36-D97CDC4B59FC}" name="UI">
+        <GROUP id="{B4A15D0C-1234-5678-ABCD-EF0123456789}" name="Bars">
+          <GROUP id="{FC2AFCB8-7B6C-E19E-B615-A10781D21F88}" name="TopMenuBar">
+            <FILE id="SrXLf0" name="BpmDragControl.h" compile="0" resource="0"
+                  file="Source/UI/Bars/TopMenuBar/BpmDragControl.h"/>
+            <FILE id="AHkCdj" name="RecordButton.h" compile="0" resource="0" file="Source/UI/Bars/TopMenuBar/RecordButton.h"/>
+            <FILE id="gpbhzW" name="SvgButton.h" compile="0" resource="0" file="Source/UI/Bars/TopMenuBar/SvgButton.h"/>
+            <FILE id="W6CH76" name="SvgToggleButton.h" compile="0" resource="0"
+                  file="Source/UI/Bars/TopMenuBar/SvgToggleButton.h"/>
+            <FILE id="nKVcEQ" name="TopMenuBar.h" compile="0" resource="0" file="Source/UI/Bars/TopMenuBar/TopMenuBar.h"/>
+            <FILE id="fauvAY" name="TopMenuButton.h" compile="0" resource="0" file="Source/UI/Bars/TopMenuBar/TopMenuButton.h"/>
+            <FILE id="VMoPm2" name="WindowControlButton.h" compile="0" resource="0"
+                  file="Source/UI/Bars/TopMenuBar/WindowControlButton.h"/>
+          </GROUP>
+        </GROUP>
         <GROUP id="{F278595C-9DD2-AB70-2017-5867DB256D4C}" name="Panels">
           <GROUP id="{0C36019D-F522-6343-38A2-83441157C025}" name="Effects">
             <GROUP id="{1A66A052-11AC-C72C-034A-510725269499}" name="Bridges">
@@ -197,36 +212,36 @@
           <GROUP id="{C44D871A-9876-1234-ADCE-B3412B789012}" name="Browsers">
             <FILE id="h6clO8" name="FileBrowserPanel.h" compile="0" resource="0"
                   file="Source/UI/Panels/Browsers/FileBrowserPanel.h"/>
-            <FILE id="BK4wwE" name="PickerPanel.h" compile="0" resource="0"
-                  file="Source/UI/Panels/Browsers/PickerPanel.h"/>
+            <FILE id="BK4wwE" name="PickerPanel.h" compile="0" resource="0" file="Source/UI/Panels/Browsers/PickerPanel.h"/>
           </GROUP>
           <GROUP id="{AB71F7C6-ABCD-4D68-9F78-3F1D7B4C9E24}" name="ChannelRack">
             <FILE id="mmFN15" name="ChannelRackPanel.h" compile="0" resource="0"
                   file="Source/UI/Panels/ChannelRack/ChannelRackPanel.h"/>
           </GROUP>
+          <FILE id="D6vTfs" name="HintPanel.h" compile="0" resource="0" file="Source/UI/Panels/HintPanel.h"/>
         </GROUP>
-        <FILE id="arQwvG" name="MidiPatternStyles.h" compile="0" resource="0"
-              file="Source/UI/MidiPatternStyles.h"/>
-
-        <GROUP id="{FC2AFCB8-7B6C-E19E-B615-A10781D21F88}" name="TopMenuBar">
-          <FILE id="SrXLf0" name="BpmDragControl.h" compile="0" resource="0"
-                file="Source/UI/TopMenuBar/BpmDragControl.h"/>
-          <FILE id="AHkCdj" name="RecordButton.h" compile="0" resource="0" file="Source/UI/TopMenuBar/RecordButton.h"/>
-          <FILE id="gpbhzW" name="SvgButton.h" compile="0" resource="0" file="Source/UI/TopMenuBar/SvgButton.h"/>
-          <FILE id="W6CH76" name="SvgToggleButton.h" compile="0" resource="0"
-                file="Source/UI/TopMenuBar/SvgToggleButton.h"/>
-          <FILE id="nKVcEQ" name="TopMenuBar.h" compile="0" resource="0" file="Source/UI/TopMenuBar/TopMenuBar.h"/>
-          <FILE id="fauvAY" name="TopMenuButton.h" compile="0" resource="0" file="Source/UI/TopMenuBar/TopMenuButton.h"/>
-          <FILE id="VMoPm2" name="WindowControlButton.h" compile="0" resource="0"
-                file="Source/UI/TopMenuBar/WindowControlButton.h"/>
+        <GROUP id="{D00CKS00-ABCD-1234-EF00-123456789012}" name="Docks">
+          <GROUP id="{B71F7D42-ABCD-1234-EF01-123456789012}" name="BottomDock">
+            <FILE id="G1m4fc" name="BottomDock.h" compile="0" resource="0" file="Source/UI/Docks/BottomDock/BottomDock.h"/>
+            <FILE id="kfwxKj" name="BottomDockResizer.h" compile="0" resource="0"
+                  file="Source/UI/Docks/BottomDock/BottomDockResizer.h"/>
+          </GROUP>
+          <GROUP id="{L71F7D42-ABCD-1234-EF02-123456789013}" name="LeftSidebar">
+            <FILE id="M86NJQ" name="LeftSidebar.h" compile="0" resource="0" file="Source/UI/Docks/LeftSidebar/LeftSidebar.h"/>
+            <FILE id="lP5IIW" name="SidebarResizer.h" compile="0" resource="0"
+                  file="Source/UI/Docks/LeftSidebar/SidebarResizer.h"/>
+          </GROUP>
         </GROUP>
-        <GROUP id="{D4E608E9-5EDD-7C63-EF71-C30B716729F9}" name="GainStation">
-          <FILE id="StO5Tq" name="GainStationDSP.h" compile="0" resource="0"
-                file="Source/UI/GainStation/GainStationDSP.h"/>
-          <FILE id="rkmvy0" name="GainStationMeter.h" compile="0" resource="0"
-                file="Source/UI/GainStation/GainStationMeter.h"/>
-          <FILE id="hMqUst" name="GainStationPanel.h" compile="0" resource="0"
-                file="Source/UI/GainStation/GainStationPanel.h"/>
+        <GROUP id="{M71F7D42-ABCD-1234-EF03-123456789014}" name="Meters">
+          <FILE id="B6VI8M" name="LevelMeter.h" compile="0" resource="0" file="Source/UI/Meters/LevelMeter.h"/>
+          <FILE id="yioUXf" name="ResourceMeter.h" compile="0" resource="0" file="Source/UI/Meters/ResourceMeter.h"/>
+        </GROUP>
+        <GROUP id="{W71F7D42-ABCD-1234-EF04-123456789015}" name="Windows">
+          <FILE id="eosDxo" name="SplashWindow.h" compile="0" resource="0" file="Source/UI/Windows/SplashWindow.h"/>
+        </GROUP>
+        <GROUP id="{R71F7D42-ABCD-1234-EF05-123456789016}" name="Renderers">
+          <FILE id="vxUryM" name="AutomationRenderer.h" compile="0" resource="0"
+                file="Source/UI/Renderers/AutomationRenderer.h"/>
         </GROUP>
         <GROUP id="{E7B85CD9-616C-D134-AD51-768267AEA5F4}" name="Commands">
           <FILE id="L8vNYa" name="CommandIDs.h" compile="0" resource="0" file="Source/UI/Commands/CommandIDs.h"/>
@@ -252,21 +267,8 @@
           <FILE id="DNLFnt" name="ToolbarButtons.h" compile="0" resource="0"
                 file="Source/UI/Buttons/ToolbarButtons.h"/>
         </GROUP>
-        <FILE id="vxUryM" name="AutomationRenderer.h" compile="0" resource="0"
-              file="Source/UI/AutomationRenderer.h"/>
         <FILE id="BvdwDj" name="UIManager.cpp" compile="1" resource="0" file="Source/UI/UIManager.cpp"/>
         <FILE id="bmzdqo" name="UIManager.h" compile="0" resource="0" file="Source/UI/UIManager.h"/>
-        <FILE id="eosDxo" name="SplashWindow.h" compile="0" resource="0" file="Source/UI/SplashWindow.h"/>
-        <FILE id="D6vTfs" name="HintPanel.h" compile="0" resource="0" file="Source/UI/HintPanel.h"/>
-        <FILE id="B6VI8M" name="LevelMeter.h" compile="0" resource="0" file="Source/UI/LevelMeter.h"/>
-        <FILE id="kfwxKj" name="BottomDockResizer.h" compile="0" resource="0"
-              file="Source/UI/BottomDockResizer.h"/>
-        <FILE id="G1m4fc" name="BottomDock.h" compile="0" resource="0" file="Source/UI/BottomDock.h"/>
-        <FILE id="M86NJQ" name="LeftSidebar.h" compile="0" resource="0" file="Source/UI/LeftSidebar.h"/>
-        <FILE id="yioUXf" name="ResourceMeter.h" compile="0" resource="0" file="Source/UI/ResourceMeter.h"/>
-        <FILE id="lP5IIW" name="SidebarResizer.h" compile="0" resource="0"
-              file="Source/UI/SidebarResizer.h"/>
-        <FILE id="NkM4y4" name="TransportBar.h" compile="0" resource="0" file="Source/UI/TransportBar.h"/>
       </GROUP>
       <GROUP id="{DE716C5C-395E-36B2-27F4-94E8BA4A1B7D}" name="Engine">
         <GROUP id="{C5ABA81C-AA5B-F434-FDEC-1F29839225C6}" name="Core">
@@ -409,7 +411,8 @@
       <GROUP id="{F98E9492-EAA4-A856-6CC6-2352DAB93A59}" name="Tracks">
         <GROUP id="{A1B2C3D4-E5F6-4A5B-8C7D-9E0F1A2B3C4D}" name="Data">
           <FILE id="tD9p2X" name="TrackData.h" compile="0" resource="0" file="Source/Tracks/Data/TrackData.h"/>
-          <FILE id="sN3p1Q" name="TrackSnapshots.h" compile="0" resource="0" file="Source/Tracks/Data/TrackSnapshots.h"/>
+          <FILE id="sN3p1Q" name="TrackSnapshots.h" compile="0" resource="0"
+                file="Source/Tracks/Data/TrackSnapshots.h"/>
         </GROUP>
         <GROUP id="{B2C3D4E5-F6A7-4B8C-9D0E-1F2A3B4C5D6E}" name="UI">
           <FILE id="LJbzpQ" name="MasterTrackStrip.cpp" compile="1" resource="0"
@@ -461,14 +464,15 @@
           <FILE id="stemWH" name="StemRendererWindow.h" compile="0" resource="0"
                 file="Source/RenderEngine/StemRenderer/StemRendererWindow.h"/>
         </GROUP>
+        <FILE id="RndCtH" name="RenderController.h" compile="0" resource="0"
+              file="Source/RenderEngine/RenderController.h"/>
         <FILE id="HQ3qTp" name="OfflineRenderer.cpp" compile="1" resource="0"
               file="Source/RenderEngine/OfflineRenderer.cpp"/>
         <FILE id="obkThX" name="OfflineRenderer.h" compile="0" resource="0"
               file="Source/RenderEngine/OfflineRenderer.h"/>
         <FILE id="RndErC" name="RenderEngine.cpp" compile="1" resource="0"
               file="Source/RenderEngine/RenderEngine.cpp"/>
-        <FILE id="RndErH" name="RenderEngine.h" compile="0" resource="0"
-              file="Source/RenderEngine/RenderEngine.h"/>
+        <FILE id="RndErH" name="RenderEngine.h" compile="0" resource="0" file="Source/RenderEngine/RenderEngine.h"/>
         <FILE id="TpAnlP" name="TruePeakAnalyzer.h" compile="0" resource="0"
               file="Source/RenderEngine/TruePeakAnalyzer.h"/>
       </GROUP>

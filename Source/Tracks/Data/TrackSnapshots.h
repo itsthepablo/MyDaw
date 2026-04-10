@@ -1,7 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include <vector>
-#include "../../UI/MidiPatternStyles.h"
+#include "../../Clips/Midi/LookAndFeel/MidiPatternStyles.h"
 #include "../../Data/AutomationData.h"
 
 // ============================================================

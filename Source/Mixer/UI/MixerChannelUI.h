@@ -2,7 +2,7 @@
 #include <JuceHeader.h>
 #include "../../Data/Track.h"
 #include "../Bridges/MixerParameterBridge.h"
-#include "../../UI/LevelMeter.h"
+#include "../../UI/Meters/LevelMeter.h"
 #include "../LookAndFeel/MixerLookAndFeel.h"
 #include "MixerRacks.h"
 

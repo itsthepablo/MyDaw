@@ -4,7 +4,7 @@
 #include "../InstrumentPanel.h"
 #include "../../Effects/EffectsPanel.h"
 #include "../../../../Native_Plugins/BaseEffect.h"
-#include "../../../BottomDock.h"
+#include "../../../Docks/BottomDock/BottomDock.h"
 #include "../../../../PluginHost/VSTHost.h"
 #include "../../../../Native_Plugins/Orion/OrionPlugin.h"
 #include "../../../../Engine/Core/AudioEngine.h" 

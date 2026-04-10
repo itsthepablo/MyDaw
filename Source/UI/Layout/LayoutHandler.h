@@ -4,14 +4,12 @@
 #include "../../Playlist/PlaylistComponent.h"
 #include "../../PianoRoll/PianoRollComponent.h"
 #include "../../Mixer/MixerComponent.h"
-#include "../../UI/BottomDock.h"
-#include "../../UI/LeftSidebar.h"
-#include "../../UI/SidebarResizer.h"
-#include "../../UI/TopMenuBar/TopMenuBar.h"
-#include "../../UI/HintPanel.h"
-#include "../../UI/TransportBar.h"
-
-#include "../../UI/ResourceMeter.h"
+#include "../Docks/BottomDock/BottomDock.h"
+#include "../Docks/LeftSidebar/LeftSidebar.h"
+#include "../Docks/LeftSidebar/SidebarResizer.h"
+#include "../Bars/TopMenuBar/TopMenuBar.h"
+#include "../Panels/HintPanel.h"
+#include "../Meters/ResourceMeter.h"
 
 // Definimos ViewMode aquí o lo importamos si es accesible globalmente
 #ifndef VIEWMODE_DEFINED
@@ -26,7 +24,6 @@ struct LayoutDependencies {
     TopMenuBar& topMenuBar;
     HintPanel& hintPanel;
     ResourceMeter* resourceMeter; // Puntero porque es unique_ptr
-    TransportBar& transportBar;
     
     PianoRollComponent& pianoRollUI;
     juce::TextButton& closePianoRollBtn;

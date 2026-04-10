@@ -1,14 +1,12 @@
 #pragma once
 #include <JuceHeader.h>
-#include "../UI/TransportBar.h"
-#include "../UI/TopMenuBar/TopMenuBar.h"
+#include "../UI/Bars/TopMenuBar/TopMenuBar.h"
 #include "../PianoRoll/PianoRollComponent.h"
 #include "../Playlist/PlaylistComponent.h"
 
 class TransportBridge {
 public:
-    static void connect(TransportBar& bar,
-        TopMenuBar& topMenu,
+    static void connect(TopMenuBar& topMenu,
         PianoRollComponent& pianoRoll,
         PlaylistComponent& playlist)
     {

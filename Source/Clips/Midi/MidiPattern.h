@@ -1,7 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include "../../GlobalData.h"
-#include "../../UI/MidiPatternStyles.h"
+#include "LookAndFeel/MidiPatternStyles.h"
 #include "../../Data/AutomationData.h"
 #include <vector>
 

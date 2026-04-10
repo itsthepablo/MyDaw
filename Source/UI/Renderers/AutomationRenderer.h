@@ -1,6 +1,6 @@
 #pragma once
 #include <JuceHeader.h>
-#include "../Data/AutomationData.h"
+#include "../../Data/AutomationData.h"
 
 class AutomationRenderer {
 public:

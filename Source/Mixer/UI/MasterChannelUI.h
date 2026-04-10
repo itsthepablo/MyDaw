@@ -3,7 +3,7 @@
 #include <functional>
 #include <memory>
 #include "MixerChannelUI.h"
-#include "../../UI/LevelMeter.h"
+#include "../../UI/Meters/LevelMeter.h"
 
 // ==============================================================================
 // MASTER CHANNEL UI

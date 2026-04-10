@@ -6,7 +6,7 @@
 #include "BpmDragControl.h"
 #include "RecordButton.h"
 #include "SvgToggleButton.h"
-#include "../../Theme/CustomTheme.h"
+#include "../../../Theme/CustomTheme.h"
 
 class TopMenuBar : public juce::Component, public juce::Timer {
 public:

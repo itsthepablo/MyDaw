@@ -1,6 +1,6 @@
 #pragma once
 #include <JuceHeader.h>
-#include "../../../UI/MidiPatternStyles.h"
+#include "MidiPatternStyles.h"
 
 /**
  * MidiPatternLookAndFeel: Define la estética de los patrones MIDI.

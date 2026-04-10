@@ -3,7 +3,6 @@
 void UIManager::setupUI(DAWUIComponents& ui, juce::Component& parent, std::function<void()> onClosePianoRoll) {
     parent.addAndMakeVisible(ui.topMenuBar);
     parent.addAndMakeVisible(ui.hintPanel);
-    parent.addAndMakeVisible(ui.transportBar);
     
     if (ui.resourceMeter != nullptr)
         parent.addAndMakeVisible(*ui.resourceMeter);

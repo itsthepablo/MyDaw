@@ -1,6 +1,6 @@
 #pragma once
 #include <JuceHeader.h>
-#include "../../Theme/CustomTheme.h"
+#include "../../../Theme/CustomTheme.h"
 
 class SvgButton : public juce::Button {
 public:

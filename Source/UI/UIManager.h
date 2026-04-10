@@ -7,17 +7,16 @@
 // MasterChannelUI eliminado - se usará MixerChannelUI para el Master
 #include "Panels/Effects/EffectsPanel.h"
 #include "Panels/Instruments/InstrumentPanel.h"
-#include "../UI/TransportBar.h"
-#include "../UI/Buttons/ToolbarButtons.h"
-#include "../UI/ResourceMeter.h"
 #include "Panels/Browsers/PickerPanel.h"
 #include "Panels/Browsers/FileBrowserPanel.h"
 #include "Panels/ChannelRack/ChannelRackPanel.h"
-#include "../UI/LeftSidebar.h"
-#include "../UI/BottomDock.h"       
-#include "../UI/SidebarResizer.h" 
-#include "../UI/HintPanel.h"   
-#include "TopMenuBar/TopMenuBar.h"
+#include "Panels/HintPanel.h"
+#include "Meters/ResourceMeter.h"
+#include "Docks/LeftSidebar/LeftSidebar.h"
+#include "Docks/LeftSidebar/SidebarResizer.h"
+#include "Docks/BottomDock/BottomDock.h"
+#include "Bars/TopMenuBar/TopMenuBar.h"
+#include "../UI/Buttons/ToolbarButtons.h"
 
 struct DAWUIComponents {
     TopMenuBar topMenuBar;
@@ -40,7 +39,6 @@ struct DAWUIComponents {
     FileBrowserPanel fileBrowserPanelUI;
     LeftSidebar leftSidebar{ pickerPanelUI, fileBrowserPanelUI };
     SidebarResizer sidebarResizer;
-    TransportBar transportBar;
     
     MasterTrackStrip masterStrip;
     std::unique_ptr<Track> masterTrackObj;
