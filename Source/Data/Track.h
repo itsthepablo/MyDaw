@@ -1,7 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
-#include "../GlobalData.h" 
-#include "../Native_Plugins/BaseEffect.h"
+#include "GlobalData.h" 
+#include "../NativePlugins/BaseEffect.h"
 #include "../Clips/Audio/AudioClip.h"
 #include "../Clips/Midi/MidiPattern.h"
 #include "../Tracks/Data/TrackData.h"

@@ -4,7 +4,7 @@
 #include "../../Engine/SimpleBalance.h"
 #include "../../Engine/SimpleMidSide.h"
 #include <juce_dsp/juce_dsp.h>
-#include "../../Native_Plugins/ChannelEQ/ChannelEQ_DSP.h"
+#include "../../NativePlugins/ChannelEQ/ChannelEQ_DSP.h"
 
 /**
  * TrackDSP: Encapsula la lógica de procesamiento de audio específica de un track.

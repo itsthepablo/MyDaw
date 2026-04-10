@@ -11,7 +11,7 @@
 #include "ScrollBar/PlaylistNavigator.h" 
 #include "ScrollBar/VerticalNavigator.h" 
 #include "../UI/Knobs/FloatingValueSlider.h"
-#include "../Native_Plugins/ChannelEQ/ChannelEQ_GUI.h"
+#include "../NativePlugins/ChannelEQ/ChannelEQ_GUI.h"
 
 
 class PlaylistComponent : public juce::Component,

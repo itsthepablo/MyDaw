@@ -2,7 +2,7 @@
 #include "MainComponent.h"
 #include "Theme/CustomTheme.h" 
 #include "UI/Windows/SplashWindow.h"
-#include "FileAssociationHandler.h"
+#include "Project/FileAssociationHandler.h"
 
 class MyPianoRoll_AppApplication : public juce::JUCEApplication
 {

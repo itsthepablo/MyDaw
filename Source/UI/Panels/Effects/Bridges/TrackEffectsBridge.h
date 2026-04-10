@@ -3,8 +3,8 @@
 #include "../../../../Tracks/UI/TrackContainer.h"
 #include "../EffectsPanel.h"
 #include "../../../../Playlist/PlaylistComponent.h"
-#include "../../../../Native_Plugins/UtilityPlugin.h" 
-#include "../../../../Native_Plugins/Orion/OrionPlugin.h"
+#include "../../../../NativePlugins/Utility/UtilityPlugin.h" 
+#include "../../../../NativePlugins/Orion/OrionPlugin.h"
 
 #include "../../../../Engine/Core/AudioEngine.h"
 

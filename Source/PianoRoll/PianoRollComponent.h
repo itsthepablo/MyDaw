@@ -3,7 +3,7 @@
 #include <vector>
 #include <set>
 #include <functional>
-#include "../GlobalData.h" 
+#include "../Data/GlobalData.h" 
 #include "../Data/Track.h" 
 #include "AutomationEditor.h" 
 

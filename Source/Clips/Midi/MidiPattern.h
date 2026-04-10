@@ -1,6 +1,6 @@
 #pragma once
 #include <JuceHeader.h>
-#include "../../GlobalData.h"
+#include "../../Data/GlobalData.h"
 #include "LookAndFeel/MidiPatternStyles.h"
 #include "../../Data/AutomationData.h"
 #include <vector>

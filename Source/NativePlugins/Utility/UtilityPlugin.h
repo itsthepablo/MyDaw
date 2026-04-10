@@ -1,6 +1,6 @@
 #pragma once
 #include <JuceHeader.h>
-#include "BaseEffect.h"
+#include "../BaseEffect.h"
 #include <atomic>
 
 // ==============================================================================

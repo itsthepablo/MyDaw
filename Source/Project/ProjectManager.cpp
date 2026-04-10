@@ -1,6 +1,6 @@
 #include "ProjectManager.h"
 #include "../PluginHost/VSTHost.h"
-#include "../Native_Plugins/UtilityPlugin.h"
+#include "../NativePlugins/Utility/UtilityPlugin.h"
 #include "../Modules/Routing/Data/RoutingData.h"
 #include "../Modules/Routing/Data/SendData.h"
 

@@ -2,7 +2,7 @@
 #include <JuceHeader.h>
 #include <set>
 #include <map>
-#include "../GlobalData.h" 
+#include "../Data/GlobalData.h" 
 #include "../Clips/Midi/MidiPattern.h"
 
 // NO TOCAR NI SIMPLIFICAR HASTA QUE YO LO ORDENE

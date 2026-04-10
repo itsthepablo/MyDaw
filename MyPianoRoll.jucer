@@ -139,12 +139,10 @@
           </GROUP>
         </GROUP>
       </GROUP>
-      <GROUP id="{C4B4A205-E119-6FE9-C7E0-09229B5E0910}" name="Assets">
-        <FILE id="R0gvs4" name="IconAssets.h" compile="0" resource="0" file="Source/Assets/IconAssets.h"/>
-      </GROUP>
       <GROUP id="{5084A00A-956A-36A1-615F-4F83AADCFCE7}" name="Data">
         <FILE id="XkBcIL" name="AutomationData.h" compile="0" resource="0"
               file="Source/Data/AutomationData.h"/>
+        <FILE id="L5O99I" name="GlobalData.h" compile="0" resource="0" file="Source/Data/GlobalData.h"/>
         <FILE id="H2n5m1" name="Track.cpp" compile="1" resource="0" file="Source/Data/Track.cpp"/>
         <FILE id="QSBRZT" name="Track.h" compile="0" resource="0" file="Source/Data/Track.h"/>
       </GROUP>
@@ -153,21 +151,25 @@
               file="Source/Project/ProjectManager.cpp"/>
         <FILE id="Oc47os" name="ProjectManager.h" compile="0" resource="0"
               file="Source/Project/ProjectManager.h"/>
+        <FILE id="nuc93N" name="FileAssociationHandler.h" compile="0" resource="0"
+              file="Source/Project/FileAssociationHandler.h"/>
       </GROUP>
       <GROUP id="{AFD9DDCE-5185-EFD2-051F-092FE115DBAB}" name="Images">
         <FILE id="HNJ2Wb" name="daw_icon.png" compile="0" resource="1" file="Source/Images/daw_icon.png"/>
       </GROUP>
-      <GROUP id="{1F0EA522-B943-AF42-C851-3209A0EC109F}" name="Native_Plugins">
+      <GROUP id="{1F0EA522-B943-AF42-C851-3209A0EC109F}" name="NativePlugins">
         <GROUP id="{B5A52067-6500-F592-A014-0A5913ABEDDF}" name="ChannelEQ">
-          <FILE id="OMMBZM" name="ChannelEQ_DSP.h" compile="0" resource="0" file="Source/Native_Plugins/ChannelEQ/ChannelEQ_DSP.h"/>
-          <FILE id="xnkwew" name="ChannelEQ_GUI.h" compile="0" resource="0" file="Source/Native_Plugins/ChannelEQ/ChannelEQ_GUI.h"/>
+          <FILE id="OMMBZM" name="ChannelEQ_DSP.h" compile="0" resource="0" file="Source/NativePlugins/ChannelEQ/ChannelEQ_DSP.h"/>
+          <FILE id="xnkwew" name="ChannelEQ_GUI.h" compile="0" resource="0" file="Source/NativePlugins/ChannelEQ/ChannelEQ_GUI.h"/>
         </GROUP>
         <GROUP id="{057B74F5-6107-C964-0936-C31DB5EB3FAF}" name="Orion">
-          <FILE id="ofhMlj" name="OrionPlugin.h" compile="0" resource="0" file="Source/Native_Plugins/Orion/OrionPlugin.h"/>
-          <FILE id="Az01y0" name="OrionSynth.h" compile="0" resource="0" file="Source/Native_Plugins/Orion/OrionSynth.h"/>
+          <FILE id="ofhMlj" name="OrionPlugin.h" compile="0" resource="0" file="Source/NativePlugins/Orion/OrionPlugin.h"/>
+          <FILE id="Az01y0" name="OrionSynth.h" compile="0" resource="0" file="Source/NativePlugins/Orion/OrionSynth.h"/>
         </GROUP>
-        <FILE id="fK5R3n" name="BaseEffect.h" compile="0" resource="0" file="Source/Native_Plugins/BaseEffect.h"/>
-        <FILE id="ghMFvY" name="UtilityPlugin.h" compile="0" resource="0" file="Source/Native_Plugins/UtilityPlugin.h"/>
+        <GROUP id="{UT1L1TY-0000-1234-ABCD-EF0123456789}" name="Utility">
+          <FILE id="ghMFvY" name="UtilityPlugin.h" compile="0" resource="0" file="Source/NativePlugins/Utility/UtilityPlugin.h"/>
+        </GROUP>
+        <FILE id="fK5R3n" name="BaseEffect.h" compile="0" resource="0" file="Source/NativePlugins/BaseEffect.h"/>
       </GROUP>
       <GROUP id="{721FC522-4CF1-05D4-BC36-D97CDC4B59FC}" name="UI">
         <GROUP id="{B4A15D0C-1234-5678-ABCD-EF0123456789}" name="Bars">
@@ -434,6 +436,7 @@
         </GROUP>
       </GROUP>
       <GROUP id="{9F2E0E2B-DA67-CB81-440A-F014789C271E}" name="Theme">
+        <FILE id="R0gvs4" name="IconAssets.h" compile="0" resource="0" file="Source/Theme/IconAssets.h"/>
         <FILE id="vwtk4p" name="CustomTheme.cpp" compile="1" resource="0" file="Source/Theme/CustomTheme.cpp"/>
         <FILE id="dQKlMy" name="CustomTheme.h" compile="0" resource="0" file="Source/Theme/CustomTheme.h"/>
         <FILE id="e5hg7f" name="ThemeManagerPanel.h" compile="0" resource="0"
@@ -476,11 +479,6 @@
         <FILE id="TpAnlP" name="TruePeakAnalyzer.h" compile="0" resource="0"
               file="Source/RenderEngine/TruePeakAnalyzer.h"/>
       </GROUP>
-      <FILE id="gDy3yM" name="ProjectManager.h" compile="0" resource="0"
-            file="Source/ProjectManager.h"/>
-      <FILE id="nuc93N" name="FileAssociationHandler.h" compile="0" resource="0"
-            file="Source/FileAssociationHandler.h"/>
-      <FILE id="L5O99I" name="GlobalData.h" compile="0" resource="0" file="Source/GlobalData.h"/>
       <FILE id="EwYe1F" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
       <FILE id="aTUeza" name="MainComponent.h" compile="0" resource="0" file="Source/MainComponent.h"/>
       <FILE id="UoniC2" name="MainComponent.cpp" compile="1" resource="0"

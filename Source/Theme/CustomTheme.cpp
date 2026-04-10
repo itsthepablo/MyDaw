@@ -1,5 +1,5 @@
 #include "CustomTheme.h"
-#include "../Assets/IconAssets.h"
+#include "IconAssets.h"
 
 CustomTheme::CustomTheme()
 {
