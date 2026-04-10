@@ -163,11 +163,15 @@
           <FILE id="xnkwew" name="ChannelEQ_GUI.h" compile="0" resource="0" file="Source/NativePlugins/ChannelEQ/ChannelEQ_GUI.h"/>
         </GROUP>
         <GROUP id="{057B74F5-6107-C964-0936-C31DB5EB3FAF}" name="Orion">
+          <FILE id="ORI0N1" name="OrionEditor.h" compile="0" resource="0" file="Source/NativePlugins/Orion/OrionEditor.h"/>
           <FILE id="ofhMlj" name="OrionPlugin.h" compile="0" resource="0" file="Source/NativePlugins/Orion/OrionPlugin.h"/>
+          <FILE id="ORI0N2" name="OrionPlugin.cpp" compile="1" resource="0" file="Source/NativePlugins/Orion/OrionPlugin.cpp"/>
           <FILE id="Az01y0" name="OrionSynth.h" compile="0" resource="0" file="Source/NativePlugins/Orion/OrionSynth.h"/>
         </GROUP>
         <GROUP id="{UT1L1TY-0000-1234-ABCD-EF0123456789}" name="Utility">
+          <FILE id="UTL001" name="UtilityEditor.h" compile="0" resource="0" file="Source/NativePlugins/Utility/UtilityEditor.h"/>
           <FILE id="ghMFvY" name="UtilityPlugin.h" compile="0" resource="0" file="Source/NativePlugins/Utility/UtilityPlugin.h"/>
+          <FILE id="UTL002" name="UtilityPlugin.cpp" compile="1" resource="0" file="Source/NativePlugins/Utility/UtilityPlugin.cpp"/>
         </GROUP>
         <FILE id="fK5R3n" name="BaseEffect.h" compile="0" resource="0" file="Source/NativePlugins/BaseEffect.h"/>
       </GROUP>
@@ -217,10 +221,13 @@
             <FILE id="BK4wwE" name="PickerPanel.h" compile="0" resource="0" file="Source/UI/Panels/Browsers/PickerPanel.h"/>
           </GROUP>
           <GROUP id="{AB71F7C6-ABCD-4D68-9F78-3F1D7B4C9E24}" name="ChannelRack">
-            <FILE id="mmFN15" name="ChannelRackPanel.h" compile="0" resource="0"
-                  file="Source/UI/Panels/ChannelRack/ChannelRackPanel.h"/>
+            <FILE id="rack01" name="RackChannel.h" compile="0" resource="0" file="Source/UI/Panels/ChannelRack/RackChannel.h"/>
+            <FILE id="rack02" name="ChannelRackRow.h" compile="0" resource="0" file="Source/UI/Panels/ChannelRack/ChannelRackRow.h"/>
+            <FILE id="mmFN15" name="ChannelRackPanel.h" compile="0" resource="0" file="Source/UI/Panels/ChannelRack/ChannelRackPanel.h"/>
+            <FILE id="rack03" name="ChannelRackPanel.cpp" compile="1" resource="0" file="Source/UI/Panels/ChannelRack/ChannelRackPanel.cpp"/>
           </GROUP>
           <FILE id="D6vTfs" name="HintPanel.h" compile="0" resource="0" file="Source/UI/Panels/HintPanel.h"/>
+          <FILE id="hint01" name="HintPanel.cpp" compile="1" resource="0" file="Source/UI/Panels/HintPanel.cpp"/>
         </GROUP>
         <GROUP id="{D00CKS00-ABCD-1234-EF00-123456789012}" name="Docks">
           <GROUP id="{B71F7D42-ABCD-1234-EF01-123456789012}" name="BottomDock">
