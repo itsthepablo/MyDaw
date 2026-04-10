@@ -1,10 +1,10 @@
 #pragma once
 #include <JuceHeader.h>
-#include <vector>
-#include "../PianoRoll/AutomationMath.h"
-#include "AutomationData.h"
 
-// 1. ESTRUCTURAS BÁSICAS
+// ==============================================================================
+// 1. ESTRUCTURAS BÁSICAS (Plane Old Data)
+// ============================================================
+
 struct Note {
     int pitch;
     int x;
@@ -22,4 +22,3 @@ struct NoteDragState {
     int startPitch;
     int startWidth;
 };
-

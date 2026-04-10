@@ -142,6 +142,7 @@
       <GROUP id="{5084A00A-956A-36A1-615F-4F83AADCFCE7}" name="Data">
         <FILE id="XkBcIL" name="AutomationData.h" compile="0" resource="0"
               file="Source/Data/AutomationData.h"/>
+        <FILE id="AUTO01" name="AutomationData.cpp" compile="1" resource="0" file="Source/Data/AutomationData.cpp"/>
         <FILE id="L5O99I" name="GlobalData.h" compile="0" resource="0" file="Source/Data/GlobalData.h"/>
         <FILE id="H2n5m1" name="Track.cpp" compile="1" resource="0" file="Source/Data/Track.cpp"/>
         <FILE id="QSBRZT" name="Track.h" compile="0" resource="0" file="Source/Data/Track.h"/>
@@ -174,6 +175,7 @@
           <FILE id="UTL002" name="UtilityPlugin.cpp" compile="1" resource="0" file="Source/NativePlugins/Utility/UtilityPlugin.cpp"/>
         </GROUP>
         <FILE id="fK5R3n" name="BaseEffect.h" compile="0" resource="0" file="Source/NativePlugins/BaseEffect.h"/>
+        <FILE id="BASE01" name="BaseEffect.cpp" compile="1" resource="0" file="Source/NativePlugins/BaseEffect.cpp"/>
       </GROUP>
       <GROUP id="{721FC522-4CF1-05D4-BC36-D97CDC4B59FC}" name="UI">
         <GROUP id="{B4A15D0C-1234-5678-ABCD-EF0123456789}" name="Bars">
