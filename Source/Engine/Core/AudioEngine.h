@@ -59,9 +59,11 @@ public:
     // --- INYECCIÓN 3: Método puro para limpiar el motor antes de exportar ---
     void resetForRender() {
         clock.currentSamplePos = 0; // CORREGIDO
-        clock.justSeeked = true;
-
-        auto* topo = routingMatrix.getAudioThreadState();
+        clock.currentPh = 0.0f;     // Reset absoluto de posición espacial (Notas MIDI)
+        clock.nextPh = 0.0f;        // Reset absoluto de fase de avance (Notas MIDI)
+        clock.justSeeked = false; // <-- CRITICO PARA BIT-TRANSPARENCY (EVITAR FADE-IN EN RENDER)
+        clock.wasPlayingLastBlock = false; // Reset de colas de Delay y reverbs VST
+        transportState.isStoppingNow.store(false, std::memory_order_relaxed); auto* topo = routingMatrix.getAudioThreadState();
         if (topo) {
             for (auto* track : topo->activeTracks) {
                 track->audioBuffer.clear();

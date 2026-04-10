@@ -207,12 +207,7 @@
         </GROUP>
         <FILE id="arQwvG" name="MidiPatternStyles.h" compile="0" resource="0"
               file="Source/UI/MidiPatternStyles.h"/>
-        <GROUP id="{370703D0-1732-1E2E-EE22-515A559A3353}" name="OfflineRenderer">
-          <FILE id="HQ3qTp" name="OfflineRenderer.cpp" compile="1" resource="0"
-                file="Source/UI/OfflineRenderer/OfflineRenderer.cpp"/>
-          <FILE id="obkThX" name="OfflineRenderer.h" compile="0" resource="0"
-                file="Source/UI/OfflineRenderer/OfflineRenderer.h"/>
-        </GROUP>
+
         <GROUP id="{FC2AFCB8-7B6C-E19E-B615-A10781D21F88}" name="TopMenuBar">
           <FILE id="SrXLf0" name="BpmDragControl.h" compile="0" resource="0"
                 file="Source/UI/TopMenuBar/BpmDragControl.h"/>
@@ -458,6 +453,24 @@
               file="Source/PianoRoll/PianoRollComponent.cpp"/>
         <FILE id="sGaZIn" name="PianoRollComponent.h" compile="0" resource="0"
               file="Source/PianoRoll/PianoRollComponent.h"/>
+      </GROUP>
+      <GROUP id="{370703D0-1732-1E2E-EE22-515A559A3353}" name="RenderEngine">
+        <GROUP id="{STEM-RNDR-GRP}" name="StemRenderer">
+          <FILE id="stemWC" name="StemRendererWindow.cpp" compile="1" resource="0"
+                file="Source/RenderEngine/StemRenderer/StemRendererWindow.cpp"/>
+          <FILE id="stemWH" name="StemRendererWindow.h" compile="0" resource="0"
+                file="Source/RenderEngine/StemRenderer/StemRendererWindow.h"/>
+        </GROUP>
+        <FILE id="HQ3qTp" name="OfflineRenderer.cpp" compile="1" resource="0"
+              file="Source/RenderEngine/OfflineRenderer.cpp"/>
+        <FILE id="obkThX" name="OfflineRenderer.h" compile="0" resource="0"
+              file="Source/RenderEngine/OfflineRenderer.h"/>
+        <FILE id="RndErC" name="RenderEngine.cpp" compile="1" resource="0"
+              file="Source/RenderEngine/RenderEngine.cpp"/>
+        <FILE id="RndErH" name="RenderEngine.h" compile="0" resource="0"
+              file="Source/RenderEngine/RenderEngine.h"/>
+        <FILE id="TpAnlP" name="TruePeakAnalyzer.h" compile="0" resource="0"
+              file="Source/RenderEngine/TruePeakAnalyzer.h"/>
       </GROUP>
       <FILE id="gDy3yM" name="ProjectManager.h" compile="0" resource="0"
             file="Source/ProjectManager.h"/>

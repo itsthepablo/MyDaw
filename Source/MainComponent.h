@@ -4,7 +4,8 @@
 // 1. INCLUDES DE UI PRIMERO (CRÍTICO PARA QUE AUDIOENGINE COMPILE)
 #include "UI/UIManager.h" 
 #include "UI/Layout/LayoutHandler.h"
-#include "UI/OfflineRenderer/OfflineRenderer.h" // --- INYECCIÓN 1: Ventana de render ---
+#include "RenderEngine/OfflineRenderer.h" // --- INYECCIÓN 1: Ventana de render ---
+#include "RenderEngine/StemRenderer/StemRendererWindow.h" // NUEVO STEM RENDERER
 
 // 2. INCLUDES RESTANTES DESPUÉS DE LA UI
 #include "Project/ProjectManager.h"
@@ -44,6 +45,9 @@ private:
     void closePianoRoll();
     void saveProject();
     void startExport(); // --- INYECCIÓN 2: Función ejecutora ---
+    
+    // --- NUEVO: Exportación Múltiple (Stems) ---
+    void showStemRenderer();
 
     juce::ApplicationCommandManager commandManager;
     std::unique_ptr<DAWCommandHandler> commandHandler;
@@ -57,6 +61,11 @@ private:
     // --- INYECCIÓN 3: Variables del Render ---
     std::unique_ptr<OfflineRenderer> offlineRenderer;
     std::atomic<bool> isOfflineRendering{ false };
+    
+    // --- NUEVO: ESTADO DEL RENDERING MULTITRACK (STEMS) ---
+    std::unique_ptr<StemRendererHost> stemRendererWindow;
+    std::map<int, bool> preRenderMuteStates;
+    std::map<int, bool> preRenderSoloStates;
     // ----------------------------------------
 
     bool isBottomDockVisible = true;

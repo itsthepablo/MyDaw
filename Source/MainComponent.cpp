@@ -50,6 +50,8 @@ void MainComponent::setupCallbacks() {
         themeWindow->setVisible(true);
         themeWindow->toFront(true);
     };
+    
+    ui.topMenuBar.onExportStemsRequested = [this] { showStemRenderer(); };
 
     // --- CONEXIÓN METRÓNOMO (UI -> DSP) ---
     ui.topMenuBar.metronomeBtn.onClick = [this] {
@@ -422,7 +424,11 @@ void MainComponent::startExport() {
     isOfflineRendering.store(true);
     audioEngine.setNonRealtime(true);
     audioEngine.resetForRender();
+    
+    // Forzar transporte correcto
     audioEngine.transportState.isPlaying.store(true);
+    // Para desactivar el bucle infinito al exportar, corremos el limite del Loop al final del tiempo!
+    audioEngine.transportState.loopEndPos.store(std::numeric_limits<float>::max(), std::memory_order_relaxed);
 
     double currentBpm = ui.playlistUI.getBpm();
     double timelinePixels = ui.playlistUI.getTimelineLength();
@@ -433,6 +439,162 @@ void MainComponent::startExport() {
     offlineRenderer->toFront(true);
 
     offlineRenderer->showConfig(lengthSecs);
+}
+
+// --- LOGICA RENDERING STEMS MULTITRACK SECUENCIAL ---
+void MainComponent::showStemRenderer() {
+    std::vector<TrackStemInfo> stems;
+    for (auto* t : ui.trackContainer.getTracks()) {
+        if (t->getType() == TrackType::Loudness || t->getType() == TrackType::Balance || t->getType() == TrackType::MidSide) 
+            continue;
+        
+        TrackStemInfo info;
+        info.id = t->getId();
+        info.name = t->getName();
+        info.parentId = t->parentId;
+        info.type = t->getType();
+        info.folderDepth = t->folderDepth;
+        info.selected = true;
+        stems.push_back(info);
+    }
+    
+    stemRendererWindow = std::make_unique<StemRendererHost>(stems);
+    stemRendererWindow->onExportStarts = [this](std::vector<int> tracks) {
+        if (tracks.empty()) return;
+        
+        stemRendererWindow->setVisible(false);
+        
+        // --- 1. Inicializar Snapshot de Mutes ---
+        preRenderMuteStates.clear();
+        preRenderSoloStates.clear();
+        for (auto* t : ui.trackContainer.getTracks()) {
+            preRenderMuteStates[t->getId()] = t->mixerData.isMuted.load();
+            preRenderSoloStates[t->getId()] = t->mixerData.isSoloed.load();
+        }
+        
+        // --- 2. Preparar el OfflineRenderer original ---
+        if (!offlineRenderer) {
+            offlineRenderer = std::make_unique<OfflineRenderer>();
+            addChildComponent(offlineRenderer.get());
+            
+            offlineRenderer->onClose = [this] {
+                offlineRenderer->setVisible(false);
+                if (isOfflineRendering.load()) {
+                    isOfflineRendering.store(false);
+                    audioEngine.setNonRealtime(false);
+                    audioEngine.transportState.isPlaying.store(false);
+                    audioEngine.prepareToPlay(512, deviceManager.getAudioDeviceSetup().sampleRate);
+                    audioEngine.resetForRender();
+                }
+            };
+        }
+        
+        offlineRenderer->onGetTrackName = [this](int trackId) -> juce::String {
+            for (auto* t : ui.trackContainer.getTracks()) {
+                if (t->getId() == trackId) {
+                    return t->getName().replaceCharacter(' ', '_').retainCharacters("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-");
+                }
+            }
+            return "Track_" + juce::String(trackId);
+        };
+        
+        // LAMBDA MÁGICO: Routing Jerárquico Multitrack & Stem Auto-Mute
+        offlineRenderer->onPrepareStemTrack = [this](int trackId) {
+            const juce::ScopedLock sl(audioMutex);
+            auto& allTracks = ui.trackContainer.getTracks();
+            
+            for (auto* t : allTracks) { 
+                t->mixerData.isMuted.store(true); 
+                t->mixerData.isSoloed.store(false);
+            }
+            
+            Track* target = nullptr;
+            for (auto* t : allTracks) { if (t->getId() == trackId) target = t; }
+            if (!target) return;
+            
+            target->mixerData.isMuted.store(false);
+            
+            if (target->getType() == TrackType::Folder) {
+                // Modo STEM: Se exporta LA CARPETA, prender Hijos.
+                bool changed = true;
+                while (changed) {
+                    changed = false;
+                    for (auto* child : allTracks) {
+                        if (child->mixerData.isMuted.load()) {
+                            for (auto* p : allTracks) {
+                                if (p->getId() == child->parentId && !p->mixerData.isMuted.load() && p->getType() == TrackType::Folder) {
+                                    child->mixerData.isMuted.store(false);
+                                    changed = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Modo MULTITRACK: Prender Carpetas Padres ruta hacia Master
+                int currParentId = target->parentId;
+                while (currParentId != -1) {
+                    bool found = false;
+                    for (auto* t : allTracks) {
+                        if (t->getId() == currParentId) {
+                            t->mixerData.isMuted.store(false);
+                            currParentId = t->parentId;
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) break; 
+                }
+            }
+        };
+        
+        offlineRenderer->onAllStemsFinished = [this]() {
+            const juce::ScopedLock sl(audioMutex);
+            for (auto* t : ui.trackContainer.getTracks()) {
+                if (preRenderMuteStates.count(t->getId())) {
+                    t->mixerData.isMuted.store(preRenderMuteStates[t->getId()]);
+                }
+                if (preRenderSoloStates.count(t->getId())) {
+                    t->mixerData.isSoloed.store(preRenderSoloStates[t->getId()]);
+                }
+            }
+        };
+        
+        offlineRenderer->onPrepareEngine = [this](double sampleRate) {
+            audioEngine.prepareToPlay(4096, sampleRate);
+            audioEngine.resetForRender();
+            for (auto* t : ui.trackContainer.getTracks()) { t->prepare(sampleRate, 4096); }
+            if (ui.masterTrackObj) ui.masterTrackObj->prepare(sampleRate, 4096);
+        };
+        
+        offlineRenderer->onProcessOfflineBlock = [this](juce::AudioBuffer<float>& buffer, int numSamples) {
+            juce::AudioSourceChannelInfo info(&buffer, 0, numSamples);
+            audioEngine.processBlock(info);
+        };
+        
+        offlineRenderer->engine->onProcessOfflineBlock = offlineRenderer->onProcessOfflineBlock;
+        offlineRenderer->engine->onPrepareEngine = offlineRenderer->onPrepareEngine;
+        offlineRenderer->setPendingStems(tracks);
+        
+        double currentBpm = ui.playlistUI.getBpm();
+        double timelinePixels = ui.playlistUI.getTimelineLength();
+        double lengthSecs = (timelinePixels / 320.0) * 4.0 * (60.0 / currentBpm);
+        
+        isOfflineRendering.store(true);
+        audioEngine.setNonRealtime(true);
+        audioEngine.resetForRender();
+        audioEngine.transportState.isPlaying.store(true);
+        audioEngine.transportState.loopEndPos.store(std::numeric_limits<float>::max(), std::memory_order_relaxed);
+        
+        offlineRenderer->setBounds(getLocalBounds().withSizeKeepingCentre(700, 500));
+        offlineRenderer->toFront(true);
+        offlineRenderer->setVisible(true);
+        offlineRenderer->showConfig(lengthSecs); // <-- MUESTRA LA PUTA VENTANA!
+    };
+    
+    stemRendererWindow->setVisible(true);
+    stemRendererWindow->toFront(true);
 }
 // ------------------------------------------------------------
 

@@ -26,7 +26,8 @@ public:
 
     std::function<void()> onSaveRequested;
     std::function<void()> onExportRequested; 
-    std::function<void()> onThemeManagerRequested; // --- NUEVA FUNCIÓN: Abrir Theme Manager ---
+    std::function<void()> onExportStemsRequested;
+    std::function<void()> onThemeManagerRequested;
     std::function<double()> requestPlaybackTimeInSeconds;
 
     std::function<void()> onTogglePicker, onToggleFiles, onToggleMixer, onToggleRack, onToggleFx;
@@ -202,7 +203,8 @@ public:
             menu.addItem(4, "Guardar como...", true, false);
             // --- INYECCIÓN 2: Opción en el Menú ---
             menu.addSeparator();
-            menu.addItem(5, "Exportar Audio (WAV)...", true, false);
+            menu.addItem(5, "Exportar Master (WAV)...", true, false);
+            menu.addItem(6, "Exportar Stems (Multitrack)...", true, false);
             // --------------------------------------
         }
         else if (menuName == "CREATE") {
@@ -231,6 +233,9 @@ public:
                 }
                 if (result == 5 && onExportRequested) {
                     onExportRequested();
+                }
+                if (result == 6 && onExportStemsRequested) {
+                    onExportStemsRequested();
                 }
                 if (result == 10 && onThemeManagerRequested) {
                     onThemeManagerRequested();

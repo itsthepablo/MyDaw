@@ -125,6 +125,18 @@ public:
         return maxTime;
     }
 
+    double getMaxAudioDurationSecs() const {
+        double maxPixels = 0.0;
+        // Buscar el borde final de todos los clips
+        for (const auto& clip : clips) {
+            double clipEnd = (double)clip.startX + (double)clip.width;
+            if (clipEnd > maxPixels) maxPixels = clipEnd;
+        }
+        if (maxPixels == 0.0) return 1.0; // Render mínimo si el proyecto está vacío
+        // Convertir de pixeles a Segundos
+        return (maxPixels / 320.0) * 4.0 * (60.0 / bpm);
+    }
+
     void setBpm(double newBpm) { bpm = newBpm; repaint(); }
     double getBpm() const { return bpm; }
 
