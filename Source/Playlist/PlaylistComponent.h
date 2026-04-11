@@ -27,6 +27,7 @@ public:
     // --- NUEVO: Antena receptora del Reloj Maestro ---
     std::function<float()> getPlaybackPosition;
     std::function<void(float)> onPlayheadSeekRequested;
+    std::function<void(float)> onZoomChanged;
 
     std::function<void(TrackType)> onNewTrackRequested;
     std::function<void(int)> onVerticalScroll;

@@ -124,6 +124,12 @@ void AudioClipRenderer::renderSeamlessLayer(juce::Graphics& g, const AudioClip& 
     const float maxX = area.getRight() + 10.0f;
     auto clampY = [&](float y) { return juce::jlimit(area.getY(), area.getBottom(), y); };
 
+    // --- PARCHE ANTI-LAG (CLIPPING) ---
+    const juce::Rectangle<int> clipBounds = g.getClipBounds();
+    const float xOff = area.getX();
+    double visibleS0 = startSample + (double)(clipBounds.getX() - xOff) / pixelsPerSample - (2.0 / pixelsPerSample);
+    double visibleS1 = startSample + (double)(clipBounds.getRight() - xOff) / pixelsPerSample + (2.0 / pixelsPerSample);
+
     if (spp < 2.0) {
         // Renderizado Micro (Líneas entre muestras)
         const auto& buffer = clip.getBuffer();
@@ -133,6 +139,11 @@ void AudioClipRenderer::renderSeamlessLayer(juce::Graphics& g, const AudioClip& 
 
         long long s0 = (long long)std::floor(startSample);
         long long s1 = (long long)std::ceil(endSample);
+        
+        // Aplicar recorte al bucle micro
+        s0 = std::max(s0, (long long)std::floor(visibleS0));
+        s1 = std::min(s1, (long long)std::ceil(visibleS1));
+
         float lastX = 0.0f, lastY = 0.0f;
         bool first = true;
         
@@ -166,31 +177,92 @@ void AudioClipRenderer::renderSeamlessLayer(juce::Graphics& g, const AudioClip& 
     long long idxStart = (long long)std::floor(startSample / sppLOD) - 1;
     long long idxEnd = (long long)std::ceil(endSample / sppLOD) + 1;
 
-    for (long long i = idxStart; i < idxEnd; ++i) {
-        double s = (double)i * sppLOD;
-        AudioPeak pFine = getBlendedPeak(clip, s, levelFine, mode, chanIdx);
-        AudioPeak pCoarse = getBlendedPeak(clip, s, levelCoarse, mode, chanIdx);
-        float maxV = pFine.maxPos * (1.0f - alpha) + pCoarse.maxPos * alpha;
-        float minV = pFine.minNeg * (1.0f - alpha) + pCoarse.minNeg * alpha;
+    // Aplicar recorte al bucle macro (picos)
+    idxStart = std::max(idxStart, (long long)std::floor(visibleS0 / sppLOD) - 1);
+    idxEnd = std::min(idxEnd, (long long)std::ceil(visibleS1 / sppLOD) + 1);
 
-        if (isStereo && mode == WaveformViewMode::Combined) {
-            AudioPeak pfR = getBlendedPeak(clip, s, levelFine, mode, 1);
-            AudioPeak pcR = getBlendedPeak(clip, s, levelCoarse, mode, 1);
-            maxV = std::max(maxV, pfR.maxPos * (1.0f - alpha) + pcR.maxPos * alpha);
-            minV = std::min(minV, pfR.minNeg * (1.0f - alpha) + pcR.minNeg * alpha);
+    // --- MODO ESCUDO CONDICIONAL ---
+    // Solo activamos la agregación si estamos en el "Valle de la Muerte" (levelFine < 0 y spp >= 2.0)
+    // donde hay demasiadas muestras para dibujar una a una pero no hay Mipmaps disponibles.
+    if (levelFine < 0 && spp >= 2.0) {
+        float lastPx = -1e9f;
+        float currentY0 = midY;
+        float currentY1 = midY;
+        bool hasPending = false;
+
+        for (long long i = idxStart; i < idxEnd; ++i) {
+            double s = (double)i * sppLOD;
+            AudioPeak pFine = getBlendedPeak(clip, s, levelFine, mode, chanIdx);
+            AudioPeak pCoarse = getBlendedPeak(clip, s, levelCoarse, mode, chanIdx);
+            float maxV = pFine.maxPos * (1.0f - alpha) + pCoarse.maxPos * alpha;
+            float minV = pFine.minNeg * (1.0f - alpha) + pCoarse.minNeg * alpha;
+
+            if (isStereo && mode == WaveformViewMode::Combined) {
+                AudioPeak pfR = getBlendedPeak(clip, s, levelFine, mode, 1);
+                AudioPeak pcR = getBlendedPeak(clip, s, levelCoarse, mode, 1);
+                maxV = std::max(maxV, pfR.maxPos * (1.0f - alpha) + pcR.maxPos * alpha);
+                minV = std::min(minV, pfR.minNeg * (1.0f - alpha) + pcR.minNeg * alpha);
+            }
+            
+            float px = (float)((s - startSample) * pixelsPerSample) + area.getX();
+            float pyTop = clampY(midY - (maxV * halfH * 0.95f));
+            float pyBottom = clampY(midY - (minV * halfH * 0.95f));
+
+            // Agregación Sub-píxel: solo dibujamos cuando px ha avanzado aproximadamente 1 píxel,
+            // pero manteniendo la posición FLOAT exacta para evitar el jitter.
+            if (px >= lastPx + 0.95f) { 
+                if (hasPending && lastPx >= area.getX() && lastPx < area.getRight()) {
+                    float width = std::max(1.0f, px - lastPx);
+                    g.fillRect(lastPx, currentY0, width, currentY1 - currentY0);
+                    
+                    if (spp < 64.0) {
+                        g.setColour(color.withAlpha(0.3f));
+                        g.fillRect(lastPx, currentY0 - 1.0f, width, 2.0f);
+                        g.fillRect(lastPx, currentY1 - 1.0f, width, 2.0f);
+                        g.setColour(color.withAlpha(1.0f));
+                    }
+                }
+                lastPx = px;
+                currentY0 = pyTop;
+                currentY1 = pyBottom;
+                hasPending = true;
+            } else {
+                currentY0 = std::min(currentY0, pyTop);
+                currentY1 = std::max(currentY1, pyBottom);
+            }
         }
         
-        float px = (float)((s - startSample) * pixelsPerSample) + area.getX();
-        float pyTop = clampY(midY - (maxV * halfH * 0.95f));
-        float pyBottom = clampY(midY - (minV * halfH * 0.95f));
-        
-        if (px >= area.getX() && px < area.getRight()) {
-            g.fillRect(px, pyTop, 1.0f, pyBottom - pyTop);
-            if (spp < 64.0) { // Borde estético
-                g.setColour(color.withAlpha(0.3f));
-                g.fillRect(px, pyTop - 1.0f, 1.0f, 2.0f);
-                g.fillRect(px, pyBottom - 1.0f, 1.0f, 2.0f);
-                g.setColour(color.withAlpha(1.0f));
+        if (hasPending && lastPx >= area.getX() && lastPx < area.getRight()) {
+            g.fillRect(lastPx, currentY0, 1.0f, currentY1 - currentY0);
+        }
+    } else {
+        // --- MOTOR ORIGINAL (SIN TOCAR) ---
+        for (long long i = idxStart; i < idxEnd; ++i) {
+            double s = (double)i * sppLOD;
+            AudioPeak pFine = getBlendedPeak(clip, s, levelFine, mode, chanIdx);
+            AudioPeak pCoarse = getBlendedPeak(clip, s, levelCoarse, mode, chanIdx);
+            float maxV = pFine.maxPos * (1.0f - alpha) + pCoarse.maxPos * alpha;
+            float minV = pFine.minNeg * (1.0f - alpha) + pCoarse.minNeg * alpha;
+
+            if (isStereo && mode == WaveformViewMode::Combined) {
+                AudioPeak pfR = getBlendedPeak(clip, s, levelFine, mode, 1);
+                AudioPeak pcR = getBlendedPeak(clip, s, levelCoarse, mode, 1);
+                maxV = std::max(maxV, pfR.maxPos * (1.0f - alpha) + pcR.maxPos * alpha);
+                minV = std::min(minV, pfR.minNeg * (1.0f - alpha) + pcR.minNeg * alpha);
+            }
+            
+            float px = (float)((s - startSample) * pixelsPerSample) + area.getX();
+            float pyTop = clampY(midY - (maxV * halfH * 0.95f));
+            float pyBottom = clampY(midY - (minV * halfH * 0.95f));
+            
+            if (px >= area.getX() && px < area.getRight()) {
+                g.fillRect(px, pyTop, 1.0f, pyBottom - pyTop);
+                if (spp < 64.0) { // Borde estético
+                    g.setColour(color.withAlpha(0.3f));
+                    g.fillRect(px, pyTop - 1.0f, 1.0f, 2.0f);
+                    g.fillRect(px, pyBottom - 1.0f, 1.0f, 2.0f);
+                    g.setColour(color.withAlpha(1.0f));
+                }
             }
         }
     }

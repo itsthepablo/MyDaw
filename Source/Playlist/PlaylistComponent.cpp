@@ -44,13 +44,14 @@ PlaylistComponent::PlaylistComponent() {
   };
 
   hNavigator.onScrollMoved = [this](double) { repaint(); };
-  hNavigator.onZoomChanged = [this](double newZoom, double newStart) {
-    hZoom = newZoom;
-    hNavigator.setRangeLimits(0.0, getTimelineLength() * hZoom);
-    hNavigator.setCurrentRange(newStart, (double)(getWidth() - vBarWidth));
-    updateScrollBars();
-    repaint();
-  };
+    hNavigator.onZoomChanged = [this](double newZoom, double newStart) {
+      hZoom = newZoom;
+      hNavigator.setRangeLimits(0.0, getTimelineLength() * hZoom);
+      hNavigator.setCurrentRange(newStart, (double)(getWidth() - vBarWidth));
+      updateScrollBars();
+      if (onZoomChanged) onZoomChanged(hZoom);
+      repaint();
+    };
 
   hNavigator.onDrawMinimap = [this](juce::Graphics &g,
                                     juce::Rectangle<int> bounds) {
@@ -380,6 +381,7 @@ void PlaylistComponent::mouseWheelMove(const juce::MouseEvent &e,
     if (w.isReversed)
       zoomFactor = 1.0 / zoomFactor;
     hZoom = juce::jlimit(0.01, 100000.0, hZoom * zoomFactor);
+    if (onZoomChanged) onZoomChanged(hZoom);
     double newStart = (mouseAbsX * hZoom) - e.x;
     hNavigator.setRangeLimits(0.0, getTimelineLength() * hZoom);
     hNavigator.setCurrentRange(newStart, (double)(getWidth() - vBarWidth));

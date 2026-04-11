@@ -105,6 +105,11 @@ void MainComponent::setupCallbacks() {
         ui.trackContainer.setVOffset(scrollPos);
         };
 
+    ui.playlistUI.onZoomChanged = [this](float zoom) {
+        ui.topMenuBar.setZoomInfo((double)zoom);
+    };
+    ui.topMenuBar.setZoomInfo(ui.playlistUI.hZoom);
+
     ui.trackContainer.onScrollWheel = [this](float deltaY) {
         double currentStart = ui.playlistUI.vBar.getCurrentRangeStart();
         double currentSize = ui.playlistUI.vBar.getCurrentRangeSize();

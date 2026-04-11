@@ -142,7 +142,8 @@
       <GROUP id="{5084A00A-956A-36A1-615F-4F83AADCFCE7}" name="Data">
         <FILE id="XkBcIL" name="AutomationData.h" compile="0" resource="0"
               file="Source/Data/AutomationData.h"/>
-        <FILE id="AUTO01" name="AutomationData.cpp" compile="1" resource="0" file="Source/Data/AutomationData.cpp"/>
+        <FILE id="AUTO01" name="AutomationData.cpp" compile="1" resource="0"
+              file="Source/Data/AutomationData.cpp"/>
         <FILE id="L5O99I" name="GlobalData.h" compile="0" resource="0" file="Source/Data/GlobalData.h"/>
         <FILE id="H2n5m1" name="Track.cpp" compile="1" resource="0" file="Source/Data/Track.cpp"/>
         <FILE id="QSBRZT" name="Track.h" compile="0" resource="0" file="Source/Data/Track.h"/>
@@ -172,7 +173,8 @@
         <GROUP id="{UT1L1TY-0000-1234-ABCD-EF0123456789}" name="Utility">
           <FILE id="UTL001" name="UtilityEditor.h" compile="0" resource="0" file="Source/NativePlugins/Utility/UtilityEditor.h"/>
           <FILE id="ghMFvY" name="UtilityPlugin.h" compile="0" resource="0" file="Source/NativePlugins/Utility/UtilityPlugin.h"/>
-          <FILE id="UTL002" name="UtilityPlugin.cpp" compile="1" resource="0" file="Source/NativePlugins/Utility/UtilityPlugin.cpp"/>
+          <FILE id="UTL002" name="UtilityPlugin.cpp" compile="1" resource="0"
+                file="Source/NativePlugins/Utility/UtilityPlugin.cpp"/>
         </GROUP>
         <FILE id="fK5R3n" name="BaseEffect.h" compile="0" resource="0" file="Source/NativePlugins/BaseEffect.h"/>
         <FILE id="BASE01" name="BaseEffect.cpp" compile="1" resource="0" file="Source/NativePlugins/BaseEffect.cpp"/>
@@ -224,9 +226,12 @@
           </GROUP>
           <GROUP id="{AB71F7C6-ABCD-4D68-9F78-3F1D7B4C9E24}" name="ChannelRack">
             <FILE id="rack01" name="RackChannel.h" compile="0" resource="0" file="Source/UI/Panels/ChannelRack/RackChannel.h"/>
-            <FILE id="rack02" name="ChannelRackRow.h" compile="0" resource="0" file="Source/UI/Panels/ChannelRack/ChannelRackRow.h"/>
-            <FILE id="mmFN15" name="ChannelRackPanel.h" compile="0" resource="0" file="Source/UI/Panels/ChannelRack/ChannelRackPanel.h"/>
-            <FILE id="rack03" name="ChannelRackPanel.cpp" compile="1" resource="0" file="Source/UI/Panels/ChannelRack/ChannelRackPanel.cpp"/>
+            <FILE id="rack02" name="ChannelRackRow.h" compile="0" resource="0"
+                  file="Source/UI/Panels/ChannelRack/ChannelRackRow.h"/>
+            <FILE id="mmFN15" name="ChannelRackPanel.h" compile="0" resource="0"
+                  file="Source/UI/Panels/ChannelRack/ChannelRackPanel.h"/>
+            <FILE id="rack03" name="ChannelRackPanel.cpp" compile="1" resource="0"
+                  file="Source/UI/Panels/ChannelRack/ChannelRackPanel.cpp"/>
           </GROUP>
           <FILE id="D6vTfs" name="HintPanel.h" compile="0" resource="0" file="Source/UI/Panels/HintPanel.h"/>
           <FILE id="hint01" name="HintPanel.cpp" compile="1" resource="0" file="Source/UI/Panels/HintPanel.cpp"/>

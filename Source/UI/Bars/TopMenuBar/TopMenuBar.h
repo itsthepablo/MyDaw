@@ -97,13 +97,14 @@ public:
 
         addAndMakeVisible(stopBtn);
 
-        addAndMakeVisible(timeDisplayLabel);
-        timeDisplayLabel.setText("00:00:00", juce::dontSendNotification);
-        timeDisplayLabel.setColour(juce::Label::backgroundColourId, juce::Colours::black.withAlpha(0.5f));
-        timeDisplayLabel.setColour(juce::Label::textColourId, juce::Colours::greenyellow);
-        timeDisplayLabel.setJustificationType(juce::Justification::centred);
-        timeDisplayLabel.setFont(juce::Font(juce::Font::getDefaultMonospacedFontName(), 24.0f, juce::Font::bold));
         timeDisplayLabel.setBorderSize(juce::BorderSize<int>(2));
+
+        addAndMakeVisible(zoomDisplayLabel);
+        zoomDisplayLabel.setText("Zoom: 100%", juce::dontSendNotification);
+        zoomDisplayLabel.setColour(juce::Label::backgroundColourId, juce::Colours::black.withAlpha(0.3f));
+        zoomDisplayLabel.setColour(juce::Label::textColourId, juce::Colours::orange);
+        zoomDisplayLabel.setJustificationType(juce::Justification::centred);
+        zoomDisplayLabel.setFont(juce::Font(12.0f, juce::Font::bold));
 
         addAndMakeVisible(bpmControl);
 
@@ -176,6 +177,11 @@ public:
                 timeDisplayLabel.setText(timeStr, juce::dontSendNotification);
             }
         }
+    }
+
+    void setZoomInfo(double hZoom) {
+        int zoomPercent = (int)(hZoom * 100.0);
+        zoomDisplayLabel.setText("Zoom: " + juce::String(zoomPercent) + "%", juce::dontSendNotification);
     }
 
     void mouseDown(const juce::MouseEvent& e) override {
@@ -306,7 +312,8 @@ private:
         playlistToggleBtn.setBounds(cx - 463, 6, 40, 40);
         playBtn.setBounds(cx - 423, 12, 30, 30);
         stopBtn.setBounds(cx - 383, 12, 30, 30);
-        timeDisplayLabel.setBounds(cx - 179, 6, 163, 40);
+        timeDisplayLabel.setBounds(cx - 110, 6, 163, 40);
+        zoomDisplayLabel.setBounds(772, 12, 85, 28);
 
         recordBtn.setBounds(622, 6, 40, 40);
         bpmControl.setBounds(665, 12, 70, 30);
@@ -330,6 +337,7 @@ private:
     TopMenuButton btnHelp{ "HELP" };
 
     juce::Label timeDisplayLabel;
+    juce::Label zoomDisplayLabel;
     WindowControlButton minBtn{ WindowControlButton::Minimize };
     WindowControlButton maxBtn{ WindowControlButton::Maximize };
     WindowControlButton closeBtn{ WindowControlButton::Close };
