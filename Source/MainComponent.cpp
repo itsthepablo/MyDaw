@@ -10,6 +10,10 @@ MainComponent::MainComponent() {
     UIManager::setupUI(ui, *this, [this] { closePianoRoll(); });
     ui.onResized = [this] { resized(); };
 
+    // Registrar Analizador y VU Meter en el Engine
+    audioEngine.analyzerToFeed.store(&ui.inspectorPanelUI.analyzer);
+    audioEngine.vuToFeed.store(&ui.vuMeterUI.getEngine());
+
     setupCallbacks();
     setupBridges();
 
@@ -124,6 +128,7 @@ void MainComponent::setupCallbacks() {
         ui.trackContainer.selectTrack(t, juce::ModifierKeys());
         ui.effectsPanelUI.setTrack(t);
         ui.instrumentPanelUI.setTrack(t);
+        audioEngine.selectedTrackForAnalysis.store(t);
         };
 
     // --- CONEXIÓN MASTER TRACK ---
@@ -131,6 +136,7 @@ void MainComponent::setupCallbacks() {
         ui.trackContainer.deselectAllTracks();
         ui.bottomDock.showTab(BottomDock::EffectsTab);
         ui.effectsPanelUI.setTrack(mt);
+        audioEngine.selectedTrackForAnalysis.store(mt);
         isBottomDockVisible = true;
         resized();
     };
@@ -258,6 +264,8 @@ void MainComponent::setupBridges() {
 
 void MainComponent::prepareToPlay(int samples, double s) {
     audioEngine.prepareToPlay(samples, s);
+    ui.inspectorPanelUI.setSampleRate(s);
+    ui.vuMeterUI.getEngine().setSampleRate(s);
 
     // Alocar recursos estables para pistas cargadas previamente via Proyecto
     for (auto* t : ui.trackContainer.getTracks()) {

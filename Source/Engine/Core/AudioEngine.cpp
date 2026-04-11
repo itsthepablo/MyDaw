@@ -5,6 +5,9 @@
 #include "../Nodes/TrackProcessor.h"
 #include "../../Mixer/Bridges/MixerParameterBridge.h"
 #include "../../Mixer/DSP/MixerDSP.h"
+#include "../../NativePlugins/FFTAnalyzerPlugin/SimpleAnalyzer.h"
+#include "../../NativePlugins/VUMeter/VUBallistics.h"
+#include "../../Data/Track.h"
 
 void AudioEngine::prepareToPlay(int samples, double s) {
     currentSampleRate = s; 
@@ -186,4 +189,34 @@ void AudioEngine::processBlock(const juce::AudioSourceChannelInfo& bufferToFill)
     SafetyProcessors::applyHardClipper(*bufferToFill.buffer,
         bufferToFill.startSample,
         bufferToFill.numSamples, 1.0f);
+
+    // --- MONITOR TAP (Inspector Analyzer & VU Meter) ---
+    auto* analyzerPtr = static_cast<SimpleAnalyzer*>(analyzerToFeed.load(std::memory_order_relaxed));
+    auto* vuPtr = static_cast<VUBallistics*>(vuToFeed.load(std::memory_order_relaxed));
+
+    if (analyzerPtr || vuPtr)
+    {
+        if (auto* trackToMonitor = selectedTrackForAnalysis.load(std::memory_order_relaxed))
+        {
+            const float* audioL = (trackToMonitor == masterTrack) 
+                                     ? bufferToFill.buffer->getReadPointer(0, bufferToFill.startSample)
+                                     : trackToMonitor->audioBuffer.getReadPointer(0);
+            
+            const float* audioR = nullptr;
+            if (trackToMonitor == masterTrack) {
+                if (bufferToFill.buffer->getNumChannels() > 1)
+                    audioR = bufferToFill.buffer->getReadPointer(1, bufferToFill.startSample);
+                else
+                    audioR = audioL;
+            } else {
+                if (trackToMonitor->audioBuffer.getNumChannels() > 1)
+                    audioR = trackToMonitor->audioBuffer.getReadPointer(1);
+                else
+                    audioR = audioL;
+            }
+
+            if (analyzerPtr) analyzerPtr->pushBuffer(audioL, bufferToFill.numSamples);
+            if (vuPtr) vuPtr->processStereo(audioL, audioR, bufferToFill.numSamples);
+        }
+    }
 }

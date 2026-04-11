@@ -30,5 +30,9 @@ public:
     void setNonRealtime(bool isNonRealtime);
     void setMasterTrack(Track* t) { masterTrack = t; }
 
+    std::atomic<Track*> selectedTrackForAnalysis { nullptr };
+    std::atomic<void*> analyzerToFeed { nullptr }; // Cast to SimpleAnalyzer* in cpp
+    std::atomic<void*> vuToFeed { nullptr };       // Cast to VUBallistics* in cpp
+
     void processBlock(const juce::AudioSourceChannelInfo& bufferToFill) noexcept;
 };

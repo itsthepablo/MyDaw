@@ -188,6 +188,24 @@
           <FILE id="UTL002" name="UtilityPlugin.cpp" compile="1" resource="0"
                 file="Source/NativePlugins/Utility/UtilityPlugin.cpp"/>
         </GROUP>
+        <GROUP id="{FFT-ANL-GRP}" name="FFTAnalyzerPlugin">
+          <FILE id="FFTDefH" name="JucePluginDefs.h" compile="0" resource="0" file="Source/NativePlugins/FFTAnalyzerPlugin/JucePluginDefs.h"/>
+          <FILE id="SmpAnz" name="SimpleAnalyzer.h" compile="0" resource="0"
+                file="Source/NativePlugins/FFTAnalyzerPlugin/SimpleAnalyzer.h"/>
+          <FILE id="KfftC" name="kiss_fft.c" compile="1" resource="0" file="Source/NativePlugins/FFTAnalyzerPlugin/kiss_fft.c"/>
+          <FILE id="KfftH" name="kiss_fft.h" compile="0" resource="0" file="Source/NativePlugins/FFTAnalyzerPlugin/kiss_fft.h"/>
+          <FILE id="KfftG" name="_kiss_fft_guts.h" compile="0" resource="0" file="Source/NativePlugins/FFTAnalyzerPlugin/_kiss_fft_guts.h"/>
+          <FILE id="FFTPrcC" name="PluginProcessor.cpp" compile="1" resource="0"
+                file="Source/NativePlugins/FFTAnalyzerPlugin/PluginProcessor.cpp"/>
+          <FILE id="FFTPrcH" name="PluginProcessor.h" compile="0" resource="0"
+                file="Source/NativePlugins/FFTAnalyzerPlugin/PluginProcessor.h"/>
+          <FILE id="FFTEdC" name="PluginEditor.cpp" compile="1" resource="0"
+                file="Source/NativePlugins/FFTAnalyzerPlugin/PluginEditor.cpp"/>
+          <FILE id="FFTEdH" name="PluginEditor.h" compile="0" resource="0" file="Source/NativePlugins/FFTAnalyzerPlugin/PluginEditor.h"/>
+        </GROUP>
+        <GROUP id="{VU-MTR-DSP-GRP}" name="VUMeter">
+          <FILE id="VUBalsH" name="VUBallistics.h" compile="0" resource="0" file="Source/NativePlugins/VUMeter/VUBallistics.h"/>
+        </GROUP>
         <FILE id="fK5R3n" name="BaseEffect.h" compile="0" resource="0" file="Source/NativePlugins/BaseEffect.h"/>
         <FILE id="BASE01" name="BaseEffect.cpp" compile="1" resource="0" file="Source/NativePlugins/BaseEffect.cpp"/>
       </GROUP>
@@ -230,6 +248,14 @@
                   file="Source/UI/Panels/Instruments/InstrumentPanel.cpp"/>
             <FILE id="XB6lrf" name="InstrumentPanel.h" compile="0" resource="0"
                   file="Source/UI/Panels/Instruments/InstrumentPanel.h"/>
+          </GROUP>
+          <GROUP id="{INS-PCTR-GRP}" name="Inspector">
+            <FILE id="InsPch" name="InspectorPanel.h" compile="0" resource="0"
+                  file="Source/UI/Panels/Inspector/InspectorPanel.h"/>
+          </GROUP>
+          <GROUP id="{VU-MTR-UI-GRP}" name="VUMeter">
+            <FILE id="VuMtrH" name="VUMeterComponent.h" compile="0" resource="0"
+                  file="Source/UI/Panels/VUMeter/VUMeterComponent.h"/>
           </GROUP>
           <GROUP id="{C44D871A-9876-1234-ADCE-B3412B789012}" name="Browsers">
             <FILE id="h6clO8" name="FileBrowserPanel.h" compile="0" resource="0"

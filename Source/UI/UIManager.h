@@ -10,11 +10,13 @@
 #include "Panels/Browsers/PickerPanel.h"
 #include "Panels/Browsers/FileBrowserPanel.h"
 #include "Panels/ChannelRack/ChannelRackPanel.h"
+#include "Panels/Inspector/InspectorPanel.h"
 #include "Panels/HintPanel.h"
 #include "Meters/ResourceMeter.h"
 #include "Docks/LeftSidebar/LeftSidebar.h"
 #include "Docks/LeftSidebar/SidebarResizer.h"
 #include "Docks/BottomDock/BottomDock.h"
+#include "Panels/VUMeter/VUMeterComponent.h"
 #include "Bars/TopMenuBar/TopMenuBar.h"
 #include "../UI/Buttons/ToolbarButtons.h"
 
@@ -34,7 +36,9 @@ struct DAWUIComponents {
     ChannelRackPanel rackPanelUI;
     EffectsPanel effectsPanelUI;
     InstrumentPanel instrumentPanelUI;
-    BottomDock bottomDock{ rackPanelUI, effectsPanelUI, instrumentPanelUI, miniMixerUI };
+    InspectorPanel inspectorPanelUI;
+    VUMeterComponent vuMeterUI; // Se inicializa con referencia a VUBallistics después
+    BottomDock bottomDock{ rackPanelUI, effectsPanelUI, instrumentPanelUI, miniMixerUI, inspectorPanelUI, vuMeterUI };
     PickerPanel pickerPanelUI;
     FileBrowserPanel fileBrowserPanelUI;
     LeftSidebar leftSidebar{ pickerPanelUI, fileBrowserPanelUI };
