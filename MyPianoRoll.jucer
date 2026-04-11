@@ -7,7 +7,11 @@
     <GROUP id="{832B9725-4498-E7CC-3428-6D1D4B31D6DB}" name="Source">
       <GROUP id="{C1IpS0}" name="Clips">
         <GROUP id="{AuD1O0}" name="Audio">
+          <FILE id="CjTOAM" name="AudioClipStyles.h" compile="0" resource="0"
+                file="Source/Clips/Audio/AudioClipStyles.h"/>
           <GROUP id="{AuU1I0}" name="UI">
+            <FILE id="hmsJfn" name="AudioClipActions.h" compile="0" resource="0"
+                  file="Source/Clips/Audio/UI/AudioClipActions.h"/>
             <FILE id="aCrCp1" name="AudioClipRenderer.cpp" compile="1" resource="0"
                   file="Source/Clips/Audio/UI/AudioClipRenderer.cpp"/>
             <FILE id="aCrRh1" name="AudioClipRenderer.h" compile="0" resource="0"

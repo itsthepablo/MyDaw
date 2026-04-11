@@ -1,4 +1,6 @@
 #include "AudioClipRenderer.h"
+#include "../AudioClip.h"
+#include "../AudioClipStyles.h"
 
 void AudioClipRenderer::drawAudioClip(juce::Graphics& g, 
                                      const AudioClip& clip, 
@@ -19,13 +21,23 @@ void AudioClipRenderer::drawAudioClip(juce::Graphics& g,
     area = area.toNearestInt().toFloat(); // ALINEACIÓN FORZADA A PÍXELES FÍSICOS
 
     // 1. Dibujar Fondo y Outline mediante LookAndFeel (siempre, incluso cargando)
-    activeLF.drawAudioClipBackground(g, area, trackColor, clip.getIsSelected());
+    activeLF.drawAudioClipBackground(g, area, trackColor, clip.getIsSelected(), clip.getStyle());
 
-    // 2. Dibujar Cabecera con nombre (siempre)
-    juce::Rectangle<float> headerRect = area.withHeight(14.0f);
-    activeLF.drawAudioClipHeader(g, headerRect, clip.getName(), trackColor);
+    // --- LÓGICA DE CABECERA "STICKY" (ANCLADA AL VIEWPORT) ---
+    // Calculamos el color de la onda primero para el texto
+    juce::Colour waveColor = activeLF.getWaveformColor(trackColor, clip.getStyle());
 
-    // 3. Preparar área de dibujo de forma de onda
+    float visibleX = std::max(0.0f, area.getX());
+    float stickyWidth = area.getRight() - visibleX;
+    
+    // El rectángulo donde se dibujará la cabecera (background + texto)
+    // Se desliza por el borde izquierdo (0.0f) mientras el clip esté cruzando el viewport.
+    juce::Rectangle<float> headerRect(visibleX, area.getY(), std::max(0.0f, stickyWidth), 14.0f);
+
+    // 2. Dibujar Cabecera con nombre (Sticky)
+    activeLF.drawAudioClipHeader(g, headerRect, clip.getName(), trackColor, clip.getStyle(), waveColor);
+
+    // 3. Preparar área de dibujo de forma de onda (estática con el clip)
     juce::Rectangle<float> waveformArea = area.withTrimmedTop(18.0f);
 
     if (!clip.isLoaded()) {
@@ -56,7 +68,6 @@ void AudioClipRenderer::drawAudioClip(juce::Graphics& g,
     }
 
     // --- RENDERIZADO DE FORMA DE ONDA ---
-    juce::Colour waveColor = activeLF.getWaveformColor(trackColor);
     g.setColour(waveColor);
     
     if (viewMode == WaveformViewMode::SeparateLR && clip.getBuffer().getNumChannels() > 1) {
@@ -69,8 +80,8 @@ void AudioClipRenderer::drawAudioClip(juce::Graphics& g,
 }
 
 double AudioClipRenderer::calculateLODLevel(double spp) {
-    if (spp <= 2.0) return -1.0; 
-    if (spp <= 256.0) return (std::log(spp / 2.0) / std::log(128.0)) - 1.0; 
+    if (spp <= 1.0) return -1.0; 
+    if (spp <= 256.0) return (std::log(spp) / std::log(256.0)) - 1.0; 
     return std::log(spp / 256.0) / std::log(4.0);
 }
 
@@ -198,22 +209,28 @@ void AudioClipRenderer::renderSeamlessLayer(juce::Graphics& g, const AudioClip& 
         float currentY1 = midY;
         bool hasPending = false;
         
-        // Agregación de densidad: para SPP extremo (levelFine < 0), limitamos a un máximo de ~3 puntos por píxel (0.3f) para evitar latencia (Lag).
-        // Para SPP normal (levelFine >= 0), almacenamos todos los vértices del mipmap (0.0f) para conservar la nitidez de máxima calidad original.
-        float pxThreshold = (levelFine < 0) ? 0.3f : 0.0f;
+        // Lógica de densidad restaurada a tu versión original perfecta del Git.
+        // Agregamos una atenuación local exclusiva cerca de SPP 2.0 para el Morphing de agudos.
+        float pxBase = (levelFine < 0) ? 0.3f : 0.0f;
+        float pxThreshold = (levelFine < 0) ? std::min(pxBase, std::max(0.0f, (float)(spp - 2.0) / 14.0f * pxBase)) : 0.0f;
 
         for (long long i = idxStart; i < idxEnd; ++i) {
             double s = (double)i * sppLOD;
             AudioPeak pFine = getBlendedPeak(clip, s, levelFine, mode, chanIdx);
             AudioPeak pCoarse = getBlendedPeak(clip, s, levelCoarse, mode, chanIdx);
-            float maxV = pFine.maxPos * (1.0f - alpha) + pCoarse.maxPos * alpha;
-            float minV = pFine.minNeg * (1.0f - alpha) + pCoarse.minNeg * alpha;
+            
+            // Atenuamos el "inflate" del Mipmap solo cerca de la barrera Micro, dejando tu fórmula intacta.
+            float effectiveAlpha = alpha;
+            if (levelFine < 0) effectiveAlpha *= std::min(1.0f, std::max(0.0f, (float)(spp - 2.0) / 14.0f));
+
+            float maxV = pFine.maxPos * (1.0f - effectiveAlpha) + pCoarse.maxPos * effectiveAlpha;
+            float minV = pFine.minNeg * (1.0f - effectiveAlpha) + pCoarse.minNeg * effectiveAlpha;
 
             if (isStereo && mode == WaveformViewMode::Combined) {
                 AudioPeak pfR = getBlendedPeak(clip, s, levelFine, mode, 1);
                 AudioPeak pcR = getBlendedPeak(clip, s, levelCoarse, mode, 1);
-                maxV = std::max(maxV, pfR.maxPos * (1.0f - alpha) + pcR.maxPos * alpha);
-                minV = std::min(minV, pfR.minNeg * (1.0f - alpha) + pcR.minNeg * alpha);
+                maxV = std::max(maxV, pfR.maxPos * (1.0f - effectiveAlpha) + pcR.maxPos * effectiveAlpha);
+                minV = std::min(minV, pfR.minNeg * (1.0f - effectiveAlpha) + pcR.minNeg * effectiveAlpha);
             }
             
             float px = (float)((s - startSample) * pixelsPerSample) + area.getX();
@@ -251,33 +268,63 @@ void AudioClipRenderer::renderSeamlessLayer(juce::Graphics& g, const AudioClip& 
             // Gracias a que calculateLODLevel acerca matemáticamente los bordes en SPP bajos, 
             // la línea "adelgaza" físicamente como un río que se estrecha.
             g.setColour(color);
-            g.fillPath(wavePath); 
             
-            if (spp < 64.0) { 
-                // El borde exterior comienza con opacidad 0.3 (efecto aguja DAW profesional).
-                // Al rozar SPP 2.0, gana consistencia (1.0) justo cuando el grosor de la onda se cierra a cero,
-                // logrando un fundido invisible con el modo Micro (g.drawLine de 1.5px).
-                float strokeAlpha = 0.3f;
-                if (spp < 6.0) {
-                    float factor = 1.0f - std::max(0.0f, (float)(spp - 2.0) / 4.0f);
-                    strokeAlpha = 0.3f + 0.7f * factor;
-                }
-                g.setColour(color.withAlpha(strokeAlpha));
+            WaveformStyle style = clip.getStyle();
+            
+            if (style == WaveformStyle::Silhouette) {
+                // Modo Silueta: Solo borde, sin relleno
                 g.strokePath(wavePath, juce::PathStrokeType(1.5f));
+            } else if (style == WaveformStyle::VerticalGradient) {
+                // Modo Gradiente Vertical: De centro a bordes
+                juce::ColourGradient grad(color, 0.0f, midY, color.withAlpha(0.2f), 0.0f, area.getY(), false);
+                grad.addColour(0.5, color);
+                grad.addColour(1.0, color.withAlpha(0.2f));
+                g.setGradientFill(grad);
+                g.fillPath(wavePath);
+                g.setColour(color.withAlpha(0.6f));
+                g.strokePath(wavePath, juce::PathStrokeType(1.0f));
+            } else if (style == WaveformStyle::NeonGlow) {
+                // Modo Neon: Capas de brillo con alpha decreciente
+                for (float i = 6.0f; i > 1.0f; i -= 1.0f) {
+                    g.setColour(color.withAlpha(0.1f * (1.0f - (i / 7.0f))));
+                    g.strokePath(wavePath, juce::PathStrokeType(i));
+                }
+                g.setColour(color);
+                g.fillPath(wavePath);
+                g.setColour(juce::Colours::white.withAlpha(0.4f)); 
+                g.strokePath(wavePath, juce::PathStrokeType(1.0f));
+            } else {
+                // Modo Normal
+                g.fillPath(wavePath); 
+                
+                if (spp < 64.0) { 
+                    // El borde exterior comienza con opacidad 0.3 (efecto aguja DAW profesional).
+                    // Al rozar SPP 2.0, gana consistencia (1.0) justo cuando el grosor de la onda se cierra a cero,
+                    // logrando un fundido invisible con el modo Micro (g.drawLine de 1.5px).
+                    float strokeAlpha = 0.3f;
+                    if (spp < 6.0) {
+                        float factor = 1.0f - std::max(0.0f, (float)(spp - 2.0) / 4.0f);
+                        strokeAlpha = 0.3f + 0.7f * factor;
+                    }
+                    g.setColour(color.withAlpha(strokeAlpha));
+                    g.strokePath(wavePath, juce::PathStrokeType(1.5f));
+                }
             }
         }
     }
 
-    // --- DIAGNÓSTICO VISUAL ---
-    g.setColour(juce::Colours::black.withAlpha(0.7f));
-    g.fillRect(area.getX(), area.getY(), 110.0f, 58.0f);
-    g.setColour(juce::Colours::orange);
-    g.setFont(10.0f);
-    float scale = (float)g.getInternalContext().getPhysicalPixelScaleFactor();
-    g.drawText("Scale: " + juce::String(scale, 2), area.getX() + 5, area.getY() + 5, 100, 12, juce::Justification::left);
-    g.drawText("SPP: " + juce::String(spp, 1), area.getX() + 5, area.getY() + 18, 100, 12, juce::Justification::left);
-    g.drawText("LOD: " + juce::String(lodVal, 2), area.getX() + 5, area.getY() + 31, 100, 12, juce::Justification::left);
-    g.drawText("Alpha: " + juce::String(alpha, 2), area.getX() + 5, area.getY() + 44, 100, 12, juce::Justification::left);
+    // --- DIAGNÓSTICO VISUAL (OCULTABLE) ---
+    if (AudioClip::isDebugInfoEnabled()) {
+        g.setColour(juce::Colours::black.withAlpha(0.7f));
+        g.fillRect(area.getX(), area.getY(), 110.0f, 58.0f);
+        g.setColour(juce::Colours::orange);
+        g.setFont(10.0f);
+        float scale = (float)g.getInternalContext().getPhysicalPixelScaleFactor();
+        g.drawText("Scale: " + juce::String(scale, 2), area.getX() + 5, area.getY() + 5, 100, 12, juce::Justification::left);
+        g.drawText("SPP: " + juce::String(spp, 1), area.getX() + 5, area.getY() + 18, 100, 12, juce::Justification::left);
+        g.drawText("LOD: " + juce::String(lodVal, 2), area.getX() + 5, area.getY() + 31, 100, 12, juce::Justification::left);
+        g.drawText("Alpha: " + juce::String(alpha, 2), area.getX() + 5, area.getY() + 44, 100, 12, juce::Justification::left);
+    }
 }
 
 void AudioClipRenderer::drawSpectrogram(juce::Graphics& g, const AudioClip& clip, juce::Rectangle<float> area, 

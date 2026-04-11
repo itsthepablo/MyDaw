@@ -5,6 +5,7 @@
 #include "../../Clips/Midi/UI/MidiPatternRenderer.h"
 #include "../../Clips/Audio/AudioClip.h"
 #include "../../Clips/Midi/MidiPattern.h"
+#include "../../Clips/Audio/UI/AudioClipActions.h"
 
 class PointerTool : public PlaylistTool {
 public:
@@ -88,9 +89,14 @@ public:
             if (p.clips[cIdx].trackPtr != nullptr) p.setSelectedTrack(p.clips[cIdx].trackPtr);
             
             if (e.mods.isRightButtonDown()) {
-                auto* linkedMidi = p.clips[cIdx].linkedMidi;
+                auto* linkedAudio = p.clips[cIdx].linkedAudio;
+                if (linkedAudio != nullptr) {
+                    AudioClipActions::showContextMenu(linkedAudio, p, e, cIdx);
+                    return;
+                }
 
                 juce::PopupMenu m;
+                auto* linkedMidi = p.clips[cIdx].linkedMidi;
                 if (linkedMidi != nullptr) {
                     m.addItem(1, "Make Unique");
                     m.addItem(2, "Rename");
@@ -176,6 +182,7 @@ public:
                         p.repaint();
                     }
                     });
+
                 return;
             }
 

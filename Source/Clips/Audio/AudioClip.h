@@ -1,6 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include "../../Tracks/Data/TrackData.h"
+#include "AudioClipStyles.h"
 #include <vector>
 #include <atomic>
 
@@ -51,6 +52,9 @@ public:
 
     bool isLoaded() const { return isLoadedFlag.load(std::memory_order_relaxed); }
 
+    WaveformStyle getStyle() const { return style; }
+    void setStyle(WaveformStyle s) { style = s; }
+
     juce::AudioBuffer<float>& getBuffer() { return fileBuffer; }
     const juce::AudioBuffer<float>& getBuffer() const { return fileBuffer; }
 
@@ -60,6 +64,10 @@ public:
     juce::String getSourceFilePath() const { return sourceFilePath; }
 
     void generateCache();
+    
+    // --- DEBUG / DIAGNÓSTICO ---
+    static bool isDebugInfoEnabled() { return showWaveformDebugInfo; }
+    static void setDebugInfoEnabled(bool enabled) { showWaveformDebugInfo = enabled; }
 
     // --- DATOS DE PICOS (MIP-MAPS) ---
     const std::vector<AudioPeak>& getPeaksL(int lod) const;
@@ -75,7 +83,9 @@ private:
     float originalWidth = 0.0f;
     bool isMuted = false;
     bool isSelected = false;
+    WaveformStyle style = WaveformStyle::Default;
     std::atomic<bool> isLoadedFlag{ false };
+    static bool showWaveformDebugInfo;
     
     juce::String sourceFilePath;
     juce::AudioBuffer<float> fileBuffer;

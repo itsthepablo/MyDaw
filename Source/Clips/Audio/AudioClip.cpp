@@ -1,4 +1,7 @@
 #include "AudioClip.h"
+#include <cmath>
+
+bool AudioClip::showWaveformDebugInfo = false;
 
 AudioClip::AudioClip() 
 {
@@ -24,6 +27,7 @@ AudioClip& AudioClip::operator=(const AudioClip& other)
         originalWidth = other.originalWidth;
         isMuted = other.isMuted;
         isSelected = other.isSelected;
+        style = other.style;
         isLoadedFlag.store(other.isLoadedFlag.load());
         sourceFilePath = other.sourceFilePath;
         fileBuffer.makeCopyOf(other.fileBuffer);
