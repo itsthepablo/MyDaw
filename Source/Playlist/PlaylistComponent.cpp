@@ -380,7 +380,7 @@ void PlaylistComponent::mouseWheelMove(const juce::MouseEvent &e,
     double zoomFactor = (w.deltaY > 0) ? 1.15 : (1.0 / 1.15);
     if (w.isReversed)
       zoomFactor = 1.0 / zoomFactor;
-    hZoom = juce::jlimit(0.01, 100000.0, hZoom * zoomFactor);
+    hZoom = juce::jlimit(0.01, 71960.0, hZoom * zoomFactor);
     if (onZoomChanged) onZoomChanged(hZoom);
     double newStart = (mouseAbsX * hZoom) - e.x;
     hNavigator.setRangeLimits(0.0, getTimelineLength() * hZoom);
