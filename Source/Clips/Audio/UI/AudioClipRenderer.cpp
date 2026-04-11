@@ -16,6 +16,7 @@ void AudioClipRenderer::drawAudioClip(juce::Graphics& g,
 
     const int width = (int)area.getWidth();
     if (width <= 0 || area.getHeight() <= 0) return;
+    area = area.toNearestInt().toFloat(); // ALINEACIÓN FORZADA A PÍXELES FÍSICOS
 
     // 1. Dibujar Fondo y Outline mediante LookAndFeel (siempre, incluso cargando)
     activeLF.drawAudioClipBackground(g, area, trackColor, clip.getIsSelected());
@@ -181,14 +182,25 @@ void AudioClipRenderer::renderSeamlessLayer(juce::Graphics& g, const AudioClip& 
     idxStart = std::max(idxStart, (long long)std::floor(visibleS0 / sppLOD) - 1);
     idxEnd = std::min(idxEnd, (long long)std::ceil(visibleS1 / sppLOD) + 1);
 
-    // --- MODO ESCUDO CONDICIONAL ---
-    // Solo activamos la agregación si estamos en el "Valle de la Muerte" (levelFine < 0 y spp >= 2.0)
-    // donde hay demasiadas muestras para dibujar una a una pero no hay Mipmaps disponibles.
-    if (levelFine < 0 && spp >= 2.0) {
+    if (idxEnd <= idxStart) return;
+
+    // --- MOTOR VECTORIAL UNIFICADO (MÁXIMA CALIDAD, CERO JITTER, CERO PERSIANAS) ---
+    // Usamos juce::Path para que las primitivas fluyan juntas sin solapamiento (Moiré)
+    // y utilicen sus coordenadas exactas en coma flotante nativamente (cero jitter).
+    if (spp >= 2.0) {
+        std::vector<juce::Point<float>> tops;
+        std::vector<juce::Point<float>> bottoms;
+        tops.reserve((size_t)(idxEnd - idxStart + 2));
+        bottoms.reserve((size_t)(idxEnd - idxStart + 2));
+
         float lastPx = -1e9f;
         float currentY0 = midY;
         float currentY1 = midY;
         bool hasPending = false;
+        
+        // Agregación de densidad: para SPP extremo (levelFine < 0), limitamos a un máximo de ~3 puntos por píxel (0.3f) para evitar latencia (Lag).
+        // Para SPP normal (levelFine >= 0), almacenamos todos los vértices del mipmap (0.0f) para conservar la nitidez de máxima calidad original.
+        float pxThreshold = (levelFine < 0) ? 0.3f : 0.0f;
 
         for (long long i = idxStart; i < idxEnd; ++i) {
             double s = (double)i * sppLOD;
@@ -207,22 +219,13 @@ void AudioClipRenderer::renderSeamlessLayer(juce::Graphics& g, const AudioClip& 
             float px = (float)((s - startSample) * pixelsPerSample) + area.getX();
             float pyTop = clampY(midY - (maxV * halfH * 0.95f));
             float pyBottom = clampY(midY - (minV * halfH * 0.95f));
-
-            // Agregación Sub-píxel: solo dibujamos cuando px ha avanzado aproximadamente 1 píxel,
-            // pero manteniendo la posición FLOAT exacta para evitar el jitter.
-            if (px >= lastPx + 0.95f) { 
-                if (hasPending && lastPx >= area.getX() && lastPx < area.getRight()) {
-                    float width = std::max(1.0f, px - lastPx);
-                    g.fillRect(lastPx, currentY0, width, currentY1 - currentY0);
-                    
-                    if (spp < 64.0) {
-                        g.setColour(color.withAlpha(0.3f));
-                        g.fillRect(lastPx, currentY0 - 1.0f, width, 2.0f);
-                        g.fillRect(lastPx, currentY1 - 1.0f, width, 2.0f);
-                        g.setColour(color.withAlpha(1.0f));
-                    }
+            
+            if (px >= lastPx + pxThreshold) {
+                if (hasPending && lastPx >= area.getX() - 5.0f && lastPx < area.getRight() + 5.0f) {
+                    tops.push_back({lastPx, currentY0});
+                    bottoms.push_back({lastPx, currentY1});
                 }
-                lastPx = px;
+                lastPx = px; // No se aplica std::floor ni std::round para preservar el deslizamiento suave
                 currentY0 = pyTop;
                 currentY1 = pyBottom;
                 hasPending = true;
@@ -231,41 +234,39 @@ void AudioClipRenderer::renderSeamlessLayer(juce::Graphics& g, const AudioClip& 
                 currentY1 = std::max(currentY1, pyBottom);
             }
         }
-        
-        if (hasPending && lastPx >= area.getX() && lastPx < area.getRight()) {
-            g.fillRect(lastPx, currentY0, 1.0f, currentY1 - currentY0);
-        }
-    } else {
-        // --- MOTOR ORIGINAL (SIN TOCAR) ---
-        for (long long i = idxStart; i < idxEnd; ++i) {
-            double s = (double)i * sppLOD;
-            AudioPeak pFine = getBlendedPeak(clip, s, levelFine, mode, chanIdx);
-            AudioPeak pCoarse = getBlendedPeak(clip, s, levelCoarse, mode, chanIdx);
-            float maxV = pFine.maxPos * (1.0f - alpha) + pCoarse.maxPos * alpha;
-            float minV = pFine.minNeg * (1.0f - alpha) + pCoarse.minNeg * alpha;
 
-            if (isStereo && mode == WaveformViewMode::Combined) {
-                AudioPeak pfR = getBlendedPeak(clip, s, levelFine, mode, 1);
-                AudioPeak pcR = getBlendedPeak(clip, s, levelCoarse, mode, 1);
-                maxV = std::max(maxV, pfR.maxPos * (1.0f - alpha) + pcR.maxPos * alpha);
-                minV = std::min(minV, pfR.minNeg * (1.0f - alpha) + pcR.minNeg * alpha);
-            }
+        if (hasPending && lastPx >= area.getX() - 5.0f && lastPx < area.getRight() + 5.0f) {
+            tops.push_back({lastPx, currentY0});
+            bottoms.push_back({lastPx, currentY1});
+        }
+
+        if (!tops.empty()) {
+            juce::Path wavePath;
+            wavePath.startNewSubPath(tops[0]);
+            for (size_t i = 1; i < tops.size(); ++i) wavePath.lineTo(tops[i]);
+            for (size_t i = bottoms.size(); i-- > 0;) wavePath.lineTo(bottoms[i]);
+            wavePath.closeSubPath();
             
-            float px = (float)((s - startSample) * pixelsPerSample) + area.getX();
-            float pyTop = clampY(midY - (maxV * halfH * 0.95f));
-            float pyBottom = clampY(midY - (minV * halfH * 0.95f));
+            g.setColour(color);
+            g.fillPath(wavePath); // Polígono único masivo que aborta la posibilidad de Moiré interno
             
-            if (px >= area.getX() && px < area.getRight()) {
-                g.fillRect(px, pyTop, 1.0f, pyBottom - pyTop);
-                if (spp < 64.0) { // Borde estético
-                    g.setColour(color.withAlpha(0.3f));
-                    g.fillRect(px, pyTop - 1.0f, 1.0f, 2.0f);
-                    g.fillRect(px, pyBottom - 1.0f, 1.0f, 2.0f);
-                    g.setColour(color.withAlpha(1.0f));
-                }
+            if (spp < 64.0) { // Trazo perimetral vectorizado
+                g.setColour(color.withAlpha(0.3f));
+                g.strokePath(wavePath, juce::PathStrokeType(1.5f));
             }
         }
     }
+
+    // --- DIAGNÓSTICO VISUAL ---
+    g.setColour(juce::Colours::black.withAlpha(0.7f));
+    g.fillRect(area.getX(), area.getY(), 110.0f, 58.0f);
+    g.setColour(juce::Colours::orange);
+    g.setFont(10.0f);
+    float scale = (float)g.getInternalContext().getPhysicalPixelScaleFactor();
+    g.drawText("Scale: " + juce::String(scale, 2), area.getX() + 5, area.getY() + 5, 100, 12, juce::Justification::left);
+    g.drawText("SPP: " + juce::String(spp, 1), area.getX() + 5, area.getY() + 18, 100, 12, juce::Justification::left);
+    g.drawText("LOD: " + juce::String(lodVal, 2), area.getX() + 5, area.getY() + 31, 100, 12, juce::Justification::left);
+    g.drawText("Alpha: " + juce::String(alpha, 2), area.getX() + 5, area.getY() + 44, 100, 12, juce::Justification::left);
 }
 
 void AudioClipRenderer::drawSpectrogram(juce::Graphics& g, const AudioClip& clip, juce::Rectangle<float> area, 
