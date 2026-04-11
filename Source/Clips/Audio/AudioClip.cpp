@@ -1,5 +1,6 @@
 #include "AudioClip.h"
 #include <cmath>
+#include <thread>
 
 bool AudioClip::showWaveformDebugInfo = false;
 
@@ -142,7 +143,10 @@ void AudioClip::generateCache()
         }
     }
 
-    generateSpectrogram();
+    // EL ESPECTROGRAMA YA NO SE GENERA AQUÍ. 
+    // Ahora se genera bajo demanda mediante ensureSpectrogramIsGenerated().
+    spectrogramGenerated.store(false);
+    spectrogramInProgress.store(false);
 }
 
 std::vector<AudioPeak> AudioClip::buildLOD(const std::vector<AudioPeak>& source, int factor)
@@ -164,22 +168,45 @@ std::vector<AudioPeak> AudioClip::buildLOD(const std::vector<AudioPeak>& source,
     return lod;
 }
 
+void AudioClip::ensureSpectrogramIsGenerated()
+{
+    // Si ya está listo o ya hay uno en progreso, no hacemos nada
+    if (spectrogramGenerated.load() || spectrogramInProgress.load())
+        return;
+
+    // Lanzar generación en segundo plano para no bloquear la UI
+    spectrogramInProgress.store(true);
+    
+    // Usamos un hilo suelto (detached) para este procesamiento asíncrono.
+    // En una app más compleja usaríamos un ThreadPool.
+    std::thread([this]() {
+        generateSpectrogram();
+    }).detach();
+}
+
 void AudioClip::generateSpectrogram()
 {
     const int numSamples = fileBuffer.getNumSamples();
     if (numSamples <= 0) return;
 
-    auto getHeatColor = [](float magnitude) -> juce::Colour {
-        magnitude = juce::jlimit(0.0f, 1.0f, magnitude);
-        juce::Colour c = juce::Colour(20, 22, 25);
-        if (magnitude < 0.2f) return c.interpolatedWith(juce::Colours::darkred, magnitude * 5.0f);
-        if (magnitude < 0.6f) return juce::Colours::darkred.interpolatedWith(juce::Colours::orange, (magnitude - 0.2f) / 0.4f);
-        return juce::Colours::orange.interpolatedWith(juce::Colours::yellow, (magnitude - 0.6f) / 0.4f);
+    auto getHeatColor = [](float intensity) -> juce::Colour {
+        intensity = juce::jlimit(0.0f, 1.0f, intensity);
+        // Paleta de Calor Profesional (Fuego/Magma)
+        if (intensity < 0.1f) return juce::Colour(10, 12, 15).interpolatedWith(juce::Colours::darkred.darker(0.8f), intensity * 10.0f);
+        if (intensity < 0.35f) return juce::Colours::darkred.darker(0.8f).interpolatedWith(juce::Colours::darkred, (intensity - 0.1f) / 0.25f);
+        if (intensity < 0.6f) return juce::Colours::darkred.interpolatedWith(juce::Colours::orangered, (intensity - 0.35f) / 0.25f);
+        if (intensity < 0.85f) return juce::Colours::orangered.interpolatedWith(juce::Colours::orange, (intensity - 0.6f) / 0.25f);
+        return juce::Colours::orange.interpolatedWith(juce::Colours::yellow, (intensity - 0.85f) / 0.15f);
     };
 
-    const int fftOrder = 10;
+    const int fftOrder = 11; // 2048 puntos para alta definición vertical
     const int fftSize = 1 << fftOrder;
-    const int hopSize = 256;
+    
+    // --- RESOLUCION ADAPTATIVA ---
+    // Si el archivo es muy largo, aumentamos el hopSize para no generar imagenes gigantescas
+    // que tardan una eternidad en calcularse. Capamos a aprox 4096 columnas.
+    int hopSize = std::max(64, numSamples / 4096); 
+    spectrogramHopSize = (double)hopSize;
 
     juce::dsp::FFT fft(fftOrder);
     juce::dsp::WindowingFunction<float> window((size_t)fftSize, juce::dsp::WindowingFunction<float>::hann);
@@ -187,8 +214,10 @@ void AudioClip::generateSpectrogram()
     int totalFrames = numSamples / hopSize;
     if (totalFrames > 0) {
         int imgHeight = fftSize / 2;
-        spectrogramImage = juce::Image(juce::Image::ARGB, totalFrames, imgHeight, true);
-        juce::Image::BitmapData bmpData(spectrogramImage, juce::Image::BitmapData::writeOnly);
+        
+        // Creamos la imagen en el hilo de fondo
+        juce::Image newImage(juce::Image::ARGB, totalFrames, imgHeight, true);
+        juce::Image::BitmapData bmpData(newImage, juce::Image::BitmapData::writeOnly);
 
         std::vector<float> fftData((size_t)(fftSize * 2), 0.0f);
         const float* audioData = fileBuffer.getReadPointer(0);
@@ -206,14 +235,21 @@ void AudioClip::generateSpectrogram()
             for (int bin = 0; bin < imgHeight; ++bin) {
                 float rawMag = fftData[bin];
                 float intensity = 0.0f;
-                if (rawMag > 0.0001f) {
-                    intensity = juce::jmin(1.0f, (float)std::log10(1.0f + rawMag * 50.0f) / 3.0f);
+                if (rawMag > 1e-7f) {
+                    float dB = 20.0f * std::log10(std::max(1e-8f, rawMag));
+                    intensity = juce::jlimit(0.0f, 1.0f, (dB + 80.0f) / 80.0f);
                 }
                 juce::Colour heat = getHeatColor(intensity);
                 bmpData.setPixelColour(frame, imgHeight - bin - 1, heat);
             }
         }
+        
+        // Asignamos la imagen y marcamos como completa
+        spectrogramImage = newImage;
     }
+    
+    spectrogramGenerated.store(true);
+    spectrogramInProgress.store(false);
 }
 
 const std::vector<AudioPeak>& AudioClip::getPeaksL(int lod) const 

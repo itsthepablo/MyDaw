@@ -123,7 +123,7 @@ private:
     juce::AudioFormatManager thumbnailFormatManager;
     juce::AudioThumbnailCache thumbnailCache { 10 };
 
-    WaveformViewMode waveformViewMode = WaveformViewMode::Combined;
+    WaveformViewMode waveformViewMode = WaveformViewMode::SeparateLR;
     juce::OwnedArray<AudioClip> audioClips;
     juce::OwnedArray<MidiPattern> midiClips;
 

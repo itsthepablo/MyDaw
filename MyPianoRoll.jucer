@@ -16,6 +16,14 @@
                   file="Source/Clips/Audio/UI/AudioClipRenderer.cpp"/>
             <FILE id="aCrRh1" name="AudioClipRenderer.h" compile="0" resource="0"
                   file="Source/Clips/Audio/UI/AudioClipRenderer.h"/>
+            <FILE id="gHPV3o" name="AudioSpectrogramRenderer.cpp" compile="1" resource="0"
+                  file="Source/Clips/Audio/UI/AudioSpectrogramRenderer.cpp"/>
+            <FILE id="GLDDNk" name="AudioSpectrogramRenderer.h" compile="0" resource="0"
+                  file="Source/Clips/Audio/UI/AudioSpectrogramRenderer.h"/>
+            <FILE id="CiI2oQ" name="AudioWaveformRenderer.cpp" compile="1" resource="0"
+                  file="Source/Clips/Audio/UI/AudioWaveformRenderer.cpp"/>
+            <FILE id="G9Fvxe" name="AudioWaveformRenderer.h" compile="0" resource="0"
+                  file="Source/Clips/Audio/UI/AudioWaveformRenderer.h"/>
           </GROUP>
           <GROUP id="{AuLF00}" name="LookAndFeel">
             <FILE id="aCLFh1" name="AudioClipLF.h" compile="0" resource="0" file="Source/Clips/Audio/LookAndFeel/AudioClipLF.h"/>

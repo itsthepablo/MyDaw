@@ -62,8 +62,15 @@ public:
     juce::AudioThumbnail* getThumbnail() { return thumbnail.get(); }
     void setThumbnail(std::unique_ptr<juce::AudioThumbnail> t) { thumbnail = std::move(t); }
     juce::String getSourceFilePath() const { return sourceFilePath; }
+    
+    double getSpectrogramHopSize() const { return spectrogramHopSize; }
 
     void generateCache();
+    
+    // --- NUEVO: GESTION DIFERIDA DEL ESPECTROGRAMA ---
+    void ensureSpectrogramIsGenerated();
+    bool isSpectrogramValid() const { return spectrogramGenerated.load(std::memory_order_relaxed); }
+    bool isSpectrogramLoading() const { return spectrogramInProgress.load(std::memory_order_relaxed); }
     
     // --- DEBUG / DIAGNÓSTICO ---
     static bool isDebugInfoEnabled() { return showWaveformDebugInfo; }
@@ -83,7 +90,7 @@ private:
     float originalWidth = 0.0f;
     bool isMuted = false;
     bool isSelected = false;
-    WaveformStyle style = WaveformStyle::Default;
+    WaveformStyle style = WaveformStyle::NoBackground;
     std::atomic<bool> isLoadedFlag{ false };
     static bool showWaveformDebugInfo;
     
@@ -95,6 +102,9 @@ private:
     std::vector<std::vector<AudioPeak>> peaksL, peaksR, peaksMid, peaksSide; // [lod][pixel]
 
     juce::Image spectrogramImage;
+    double spectrogramHopSize = 64.0;
+    std::atomic<bool> spectrogramGenerated{ false };
+    std::atomic<bool> spectrogramInProgress{ false };
     std::unique_ptr<juce::AudioThumbnail> thumbnail;
 
     // Cache Helpers

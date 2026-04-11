@@ -62,7 +62,7 @@ private:
     float offsetX = 0.0f;
     bool isMuted = false;
     bool isSelected = false;
-    MidiStyleType style = MidiStyleType::Classic;
+    MidiStyleType style = MidiStyleType::Modern;
     juce::Colour color;
     
     std::vector<Note> notes;
