@@ -69,8 +69,8 @@ void AudioClipRenderer::drawAudioClip(juce::Graphics& g,
 }
 
 double AudioClipRenderer::calculateLODLevel(double spp) {
-    if (spp <= 1.0) return -1.0; 
-    if (spp <= 256.0) return (std::log(spp) / std::log(256.0)) - 1.0; 
+    if (spp <= 2.0) return -1.0; 
+    if (spp <= 256.0) return (std::log(spp / 2.0) / std::log(128.0)) - 1.0; 
     return std::log(spp / 256.0) / std::log(4.0);
 }
 
@@ -247,11 +247,22 @@ void AudioClipRenderer::renderSeamlessLayer(juce::Graphics& g, const AudioClip& 
             for (size_t i = bottoms.size(); i-- > 0;) wavePath.lineTo(bottoms[i]);
             wavePath.closeSubPath();
             
+            // La onda SIEMPRE es sólida (maciza). Nunca se hace hueca ni se difumina.
+            // Gracias a que calculateLODLevel acerca matemáticamente los bordes en SPP bajos, 
+            // la línea "adelgaza" físicamente como un río que se estrecha.
             g.setColour(color);
-            g.fillPath(wavePath); // Polígono único masivo que aborta la posibilidad de Moiré interno
+            g.fillPath(wavePath); 
             
-            if (spp < 64.0) { // Trazo perimetral vectorizado
-                g.setColour(color.withAlpha(0.3f));
+            if (spp < 64.0) { 
+                // El borde exterior comienza con opacidad 0.3 (efecto aguja DAW profesional).
+                // Al rozar SPP 2.0, gana consistencia (1.0) justo cuando el grosor de la onda se cierra a cero,
+                // logrando un fundido invisible con el modo Micro (g.drawLine de 1.5px).
+                float strokeAlpha = 0.3f;
+                if (spp < 6.0) {
+                    float factor = 1.0f - std::max(0.0f, (float)(spp - 2.0) / 4.0f);
+                    strokeAlpha = 0.3f + 0.7f * factor;
+                }
+                g.setColour(color.withAlpha(strokeAlpha));
                 g.strokePath(wavePath, juce::PathStrokeType(1.5f));
             }
         }
