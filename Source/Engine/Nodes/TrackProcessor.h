@@ -8,6 +8,7 @@
 #include "../../Modules/MidSideTrack/DSP/MidSideTrackDSP.h"
 #include "../../UI/Panels/Effects/EffectsPanel.h"
 #include "../Routing/RoutingMatrix.h" // NUEVO: Para TopoState
+#include "../Routing/PDCManager.h"
 
 class TrackProcessor {
 public:

@@ -235,6 +235,7 @@
             <FILE id="h6clO8" name="FileBrowserPanel.h" compile="0" resource="0"
                   file="Source/UI/Panels/Browsers/FileBrowserPanel.h"/>
             <FILE id="BK4wwE" name="PickerPanel.h" compile="0" resource="0" file="Source/UI/Panels/Browsers/PickerPanel.h"/>
+            <FILE id="PkPnC1" name="PickerPanel.cpp" compile="1" resource="0" file="Source/UI/Panels/Browsers/PickerPanel.cpp"/>
           </GROUP>
           <GROUP id="{AB71F7C6-ABCD-4D68-9F78-3F1D7B4C9E24}" name="ChannelRack">
             <FILE id="rack01" name="RackChannel.h" compile="0" resource="0" file="Source/UI/Panels/ChannelRack/RackChannel.h"/>
@@ -302,6 +303,7 @@
         <GROUP id="{C5ABA81C-AA5B-F434-FDEC-1F29839225C6}" name="Core">
           <FILE id="QMKHtl" name="AudioClock.h" compile="0" resource="0" file="Source/Engine/Core/AudioClock.h"/>
           <FILE id="VuLA2o" name="AudioEngine.h" compile="0" resource="0" file="Source/Engine/Core/AudioEngine.h"/>
+          <FILE id="AEGC74" name="AudioEngine.cpp" compile="1" resource="0" file="Source/Engine/Core/AudioEngine.cpp"/>
           <FILE id="zvP8Ax" name="SafetyProcessors.h" compile="0" resource="0"
                 file="Source/Engine/Core/SafetyProcessors.h"/>
           <FILE id="xN9gVY" name="TransportState.h" compile="0" resource="0"
@@ -495,6 +497,8 @@
         </GROUP>
         <FILE id="RndCtH" name="RenderController.h" compile="0" resource="0"
               file="Source/RenderEngine/RenderController.h"/>
+        <FILE id="RndCtC" name="RenderController.cpp" compile="1" resource="0"
+              file="Source/RenderEngine/RenderController.cpp"/>
         <FILE id="HQ3qTp" name="OfflineRenderer.cpp" compile="1" resource="0"
               file="Source/RenderEngine/OfflineRenderer.cpp"/>
         <FILE id="obkThX" name="OfflineRenderer.h" compile="0" resource="0"

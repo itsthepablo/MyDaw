@@ -6,6 +6,7 @@
 #include <map>
 #include "../Core/AudioClock.h"
 #include "../Routing/RoutingMatrix.h"
+#include "../Routing/PDCManager.h"
 #include "../Nodes/TrackProcessor.h"
 #include "../../Mixer/DSP/MixerDSP.h"
 
