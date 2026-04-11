@@ -2,7 +2,7 @@
 #include <JuceHeader.h>
 #include "../AudioClip.h"
 #include "../LookAndFeel/AudioClipLF.h"
-#include "../../../Data/GlobalData.h"
+#include "../../../GlobalData.h"
 
 /**
  * AudioClipRenderer: Se encarga de dibujar el AudioClip en la pantalla.
