@@ -2,15 +2,20 @@
 #include <JuceHeader.h>
 #include "../../Panels/SelectedTrack/SelectedTrackPanel.h"
 #include "../../Meters/LevelMeter.h"
+#include "../../../Tracks/LookAndFeel/TrackLookAndFeel.h"
 
 /**
  * RightDock: El contenedor del lado derecho de la pantalla.
  * Aloja el panel de "Selected Track" y gestiona su tamano.
  */
-class RightDock : public juce::Component {
+class RightDock : public juce::Component,
+                  private juce::Timer {
 public:
     RightDock() {
         addAndMakeVisible(selectedTrackPanel);
+        
+        // --- CONFIGURAR LOOK AND FEEL DE COLOR DINÁMICO ---
+        collapsedMeter.setLookAndFeel(&dockMeterLF);
         
         // --- 1. BOTÓN PARA EXPANDIR (Abajo en el eje Z) ---
         addAndMakeVisible(expandBtn);
@@ -44,8 +49,11 @@ public:
 
         updateVisibility();
     }
-
-    ~RightDock() override = default;
+    
+    ~RightDock() override {
+        stopTimer();
+        collapsedMeter.setLookAndFeel(nullptr);
+    }
 
     /**
      * Devuelve el ancho idoneo.
@@ -56,8 +64,17 @@ public:
     }
 
     void setTrack(Track* t) {
+        currentTrack = t;
         selectedTrackPanel.setTrack(t);
         collapsedMeter.setTrack(t);
+        
+        if (currentTrack != nullptr) {
+            dockMeterLF.setTrackColour(currentTrack->getColor());
+            collapsedMeter.repaint();
+            startTimerHz(30);
+        } else {
+            stopTimer();
+        }
     }
 
     void paint(juce::Graphics& g) override {
@@ -104,8 +121,17 @@ public:
     std::function<void()> onLayoutChanged;
     SelectedTrackPanel selectedTrackPanel;
     LevelMeter collapsedMeter;
+    TrackLevelMeterLF dockMeterLF;
 
 private:
+    void timerCallback() override {
+        if (currentTrack != nullptr) {
+            dockMeterLF.setTrackColour(currentTrack->getColor());
+            collapsedMeter.repaint();
+        }
+    }
+
+    Track* currentTrack = nullptr;
     juce::TextButton expandBtn, hideBtn;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(RightDock)
 };
