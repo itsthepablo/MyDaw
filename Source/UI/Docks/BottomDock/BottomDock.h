@@ -13,6 +13,7 @@ public:
     enum Tab { RackTab, EffectsTab, InstrumentTab, MixerTab, InspectorTab };
 
     std::function<void()> onClose;
+    std::function<void(Tab)> onTabChanged;
 
     BottomDock(ChannelRackPanel& rack, EffectsPanel& fx, InstrumentPanel& inst, MixerComponent& mixer, InspectorPanel& inspector, VUMeterComponent& vu)
         : rackPanel(rack), effectsPanel(fx), instrumentPanel(inst), miniMixer(mixer), inspectorPanel(inspector), vuMeter(vu)
@@ -106,6 +107,8 @@ public:
         else if (tab == EffectsTab) effectsTabBtn.setToggleState(true, juce::dontSendNotification);
         else if (tab == MixerTab) mixerTabBtn.setToggleState(true, juce::dontSendNotification);
         else instrumentTabBtn.setToggleState(true, juce::dontSendNotification);
+
+        if (onTabChanged) onTabChanged(tab);
 
         resized();
     }

@@ -9,11 +9,13 @@
 #include "RenderEngine/RenderController.h"
 
 // 2. INCLUDES RESTANTES DESPUÉS DE LA UI
+#include "UI/Layout/ViewManager.h"
 #include "Project/ProjectManager.h"
 #include "Engine/Core/AudioEngine.h"
 #include "Bridge/BridgeManager.h"
 #include "UI/Commands/DAWCommandHandler.h"
 #include "Theme/ThemeManagerWindow.h" // NUEVO: Ventana de temas
+#include "Tracks/TrackManager.h"
 
 class MainComponent : public juce::AudioAppComponent,
     public juce::ApplicationCommandTarget,
@@ -50,8 +52,9 @@ private:
     juce::ApplicationCommandManager commandManager;
     std::unique_ptr<DAWCommandHandler> commandHandler;
 
-    ViewMode currentView = ViewMode::Arrangement;
     DAWUIComponents ui;
+    ViewManager viewManager{ ui, *this };
+    TrackManager trackManager{ ui, audioEngine, audioMutex };
 
     juce::CriticalSection audioMutex;
     AudioEngine audioEngine;
@@ -59,15 +62,6 @@ private:
     // --- RENDER ---
     RenderController renderController{ ui, audioEngine, *this, audioMutex, isOfflineRendering };
     std::atomic<bool> isOfflineRendering{ false };
-
-    bool isBottomDockVisible = true;
-    int bottomDockHeight = 300;
-    bool isLeftSidebarVisible = true;
-    int leftSidebarWidth = 200;
-
-    bool isPianoRollVisible = false;
-    bool prePianoRollLeftSidebar = true;
-    bool prePianoRollBottomDock = true;
 
     std::unique_ptr<juce::FileChooser> fileChooser;
     std::unique_ptr<ThemeManagerWindow> themeWindow; // NUEVO: Instancia persistente

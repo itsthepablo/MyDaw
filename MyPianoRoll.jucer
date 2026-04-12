@@ -189,7 +189,8 @@
                 file="Source/NativePlugins/Utility/UtilityPlugin.cpp"/>
         </GROUP>
         <GROUP id="{FFT-ANL-GRP}" name="FFTAnalyzerPlugin">
-          <FILE id="FFTDefH" name="JucePluginDefs.h" compile="0" resource="0" file="Source/NativePlugins/FFTAnalyzerPlugin/JucePluginDefs.h"/>
+          <FILE id="FFTDefH" name="JucePluginDefs.h" compile="0" resource="0"
+                file="Source/NativePlugins/FFTAnalyzerPlugin/JucePluginDefs.h"/>
           <FILE id="SmpAnz" name="SimpleAnalyzer.h" compile="0" resource="0"
                 file="Source/NativePlugins/FFTAnalyzerPlugin/SimpleAnalyzer.h"/>
           <FILE id="KfftC" name="kiss_fft.c" compile="1" resource="0" file="Source/NativePlugins/FFTAnalyzerPlugin/kiss_fft.c"/>
@@ -316,6 +317,8 @@
           <FILE id="TZjXHr" name="LayoutHandler.cpp" compile="1" resource="0"
                 file="Source/UI/Layout/LayoutHandler.cpp"/>
           <FILE id="BOvzG7" name="LayoutHandler.h" compile="0" resource="0" file="Source/UI/Layout/LayoutHandler.h"/>
+          <FILE id="vMngr1" name="ViewManager.cpp" compile="1" resource="0" file="Source/UI/Layout/ViewManager.cpp"/>
+          <FILE id="vMngr2" name="ViewManager.h" compile="0" resource="0" file="Source/UI/Layout/ViewManager.h"/>
         </GROUP>
         <GROUP id="{BBB205AE-7F6B-3B00-30AE-2BAC363F4EF5}" name="Knobs">
           <FILE id="vKUjPw" name="FLKnobLookAndFeel.h" compile="0" resource="0"
@@ -496,6 +499,9 @@
                 file="Source/Tracks/LookAndFeel/TrackLookAndFeel.h"/>
         </GROUP>
       </GROUP>
+      <FILE id="TrMng2" name="TrackManager.h" compile="0" resource="0" file="Source/Tracks/TrackManager.h"/>
+      <FILE id="TrMng1" name="TrackManager.cpp" compile="1" resource="0"
+            file="Source/Tracks/TrackManager.cpp"/>
       <GROUP id="{9F2E0E2B-DA67-CB81-440A-F014789C271E}" name="Theme">
         <FILE id="R0gvs4" name="IconAssets.h" compile="0" resource="0" file="Source/Theme/IconAssets.h"/>
         <FILE id="vwtk4p" name="CustomTheme.cpp" compile="1" resource="0" file="Source/Theme/CustomTheme.cpp"/>

@@ -8,6 +8,7 @@ MainComponent::MainComponent() {
     ui.resourceMeter = std::make_unique<ResourceMeter>(*this);
 
     UIManager::setupUI(ui, *this, [this] { closePianoRoll(); });
+    viewManager.setup();
     ui.onResized = [this] { resized(); };
 
     // Registrar Analizador y VU Meter en el Engine
@@ -39,7 +40,7 @@ void MainComponent::setupCommands() {
 }
 
 void MainComponent::setupCallbacks() {
-    ui.topMenuBar.viewToggleBtn.onClick = [this] { toggleViewMode(); };
+    ui.topMenuBar.viewToggleBtn.onClick = [this] { viewManager.toggleViewMode(); };
     ui.topMenuBar.onSaveRequested = [this] { saveProject(); };
     ui.topMenuBar.onExportRequested = [this] { renderController.startExport(this); };
     ui.topMenuBar.onThemeManagerRequested = [this] {
@@ -62,44 +63,7 @@ void MainComponent::setupCallbacks() {
         audioEngine.metronome.setEnabled(ui.topMenuBar.metronomeBtn.getToggleState());
         };
     ui.trackContainer.onToggleAnalysisTrack = [this](TrackType type, bool visible) {
-        Track* targetTrack = nullptr;
-        int trackIndex = -1;
-        auto& tracks = ui.trackContainer.getTracks();
-        for (int i = 0; i < tracks.size(); ++i) {
-            if (tracks[i]->getType() == type) {
-                targetTrack = tracks[i];
-                trackIndex = i;
-                break;
-            }
-        }
-
-        if (visible) {
-            if (targetTrack == nullptr) {
-                targetTrack = ui.trackContainer.addTrack(type);
-                double currentSR = audioEngine.currentSampleRate > 0 ? audioEngine.currentSampleRate : 44100.0;
-                targetTrack->dsp.postLoudness.prepare(currentSR, 512);
-                targetTrack->dsp.postBalance.prepare(currentSR, 512);
-                targetTrack->dsp.postMidSide.prepare(currentSR);
-                targetTrack->prepare(currentSR, 4096); // INYECCIÓN: PREPARAR ENGINE PARA QUE SUENE (Regla #1)
-                
-                if (type == TrackType::Loudness) { targetTrack->setColor(juce::Colours::orange); targetTrack->setName("Loudness Track"); }
-                else if (type == TrackType::Balance) { targetTrack->setColor(juce::Colours::cyan); targetTrack->setName("Balance Track"); }
-                else if (type == TrackType::MidSide) { targetTrack->setColor(juce::Colours::magenta); targetTrack->setName("Mid-Side Track"); }
-            }
-            targetTrack->isShowingInChildren = true;
-        } else {
-            if (trackIndex != -1) {
-                // Físicamente borrar el track usando la lógica existente de onDeleteTrack
-                // Pasamos por el callback asignado abajo para mantener consistencia
-                ui.trackContainer.onDeleteTrack(trackIndex);
-            }
-        }
-        
-        ui.trackContainer.recalculateFolderHierarchy();
-        ui.trackContainer.resized();
-        ui.trackContainer.repaint();
-        ui.playlistUI.updateScrollBars();
-        ui.playlistUI.repaint();
+        trackManager.handleToggleAnalysisTrack(type, visible);
     };
 
     ui.topMenuBar.onNewTrackRequested = [this](TrackType type) { ui.trackContainer.addTrack(type); };
@@ -135,52 +99,22 @@ void MainComponent::setupCallbacks() {
 
     ui.masterStrip.onEffectsRequested = [this](Track* mt) {
         selectTrackExclusive(mt, true);
-        ui.bottomDock.showTab(BottomDock::EffectsTab);
-        isBottomDockVisible = true;
-        resized();
+        viewManager.showBottomDock(BottomDock::EffectsTab);
     };
 
 
     ui.trackContainer.onOpenEffects = [this](Track& track) {
         selectTrackExclusive(&track, false);
-        ui.bottomDock.showTab(BottomDock::EffectsTab);
-        isBottomDockVisible = true;
-        resized();
+        viewManager.showBottomDock(BottomDock::EffectsTab);
     };
 
     ui.trackContainer.onTrackAdded = [this] {
-        auto* newTrack = ui.trackContainer.getTracks().getLast();
-        if (newTrack) {
-            // MAX SIZE estricto para evitar bounds overwrite failures
-            int maxSamples = 8192;
-            newTrack->audioBuffer.setSize(2, maxSamples, false, true, false);
-            newTrack->instrumentMixBuffer.setSize(2, maxSamples, false, true, false);
-            newTrack->tempSynthBuffer.setSize(2, maxSamples, false, true, false);
-            newTrack->midSideBuffer.setSize(1, maxSamples, false, true, false);
-            
-            // INYECCIÓN VITAL: Preparar el track y el onlineEQ para que no se bypassen (Regla #1)
-            double currentSR = audioEngine.currentSampleRate > 0 ? audioEngine.currentSampleRate : 44100.0;
-            newTrack->prepare(currentSR, 4096);
-            
-            // pdcBuffer se aloca bajo demanda en commitSnapshot() cuando el track
-            // recibe contenido (clips, patterns o plugins). Tracks vacios no lo necesitan.
-            // DOUBLE BUFFER: inicializar snapshot vacio antes de exponer el track al audio thread
-            newTrack->commitSnapshot();
-        }
-        audioEngine.routingMatrix.commitNewTopology(ui.trackContainer.getTracks());
-        
-        // BUG FIX: Sincronizar playlist al añadir tracks (incluyendo carpetas)
-        ui.playlistUI.updateScrollBars();
-        ui.playlistUI.repaint();
-        };
+        trackManager.handleTrackAdded(ui.trackContainer.getTracks().getLast());
+    };
 
     ui.trackContainer.onTracksReordered = [this] {
-        audioEngine.routingMatrix.commitNewTopology(ui.trackContainer.getTracks());
-        
-        // BUG FIX: Sincronizar playlist tras reordenar o plegar/desplegar carpetas
-        ui.playlistUI.updateScrollBars();
-        ui.playlistUI.repaint();
-        };
+        trackManager.handleTracksReordered();
+    };
 
 
     ui.pickerPanelUI.onDeleteRequested = [this](juce::String name, bool isMidi) {
@@ -189,46 +123,12 @@ void MainComponent::setupCallbacks() {
         ui.pickerPanelUI.refreshList();
         };
 
-    ui.leftSidebar.onClose = [this] { isLeftSidebarVisible = false; resized(); };
-    ui.bottomDock.onClose = [this] { isBottomDockVisible = false; resized(); };
-
-    ui.sidebarResizer.onResizeDelta = [this](int d) {
-        leftSidebarWidth = juce::jlimit(150, 600, leftSidebarWidth + d);
-        resized();
-        };
-
-    // bottomDockResizer.onResizeDelta eliminado (altura fija)
-
     ui.playlistUI.onMidiClipDeleted = [this](MidiPattern* c) {
         if (ui.pianoRollUI.getActiveClip() == c) closePianoRoll();
         };
 
     ui.trackContainer.onDeleteTrack = [this](int index) {
-        const juce::ScopedLock sl(audioMutex);
-        if (index >= 0 && index < ui.trackContainer.getTracks().size()) {
-            Track* trackToDelete = ui.trackContainer.getTracks()[index];
-            BridgeManager::cleanupTrack(trackToDelete, ui.pianoRollUI, [this] { closePianoRoll(); });
-
-            if (trackToDelete->getType() == TrackType::Loudness) ui.trackContainer.setAnalysisTrackToggleState(TrackType::Loudness, false);
-            else if (trackToDelete->getType() == TrackType::Balance) ui.trackContainer.setAnalysisTrackToggleState(TrackType::Balance, false);
-            else if (trackToDelete->getType() == TrackType::MidSide) ui.trackContainer.setAnalysisTrackToggleState(TrackType::MidSide, false);
-
-            ui.playlistUI.purgeClipsOfTrack(trackToDelete);
-            ui.trackContainer.removeTrack(index); 
-            audioEngine.routingMatrix.commitNewTopology(ui.trackContainer.getTracks());
-
-            ui.playlistUI.updateScrollBars();
-            ui.playlistUI.repaint();
-            ui.pickerPanelUI.refreshList();
-
-            if (ui.bottomDock.getCurrentTab() == BottomDock::EffectsTab)
-                ui.effectsPanelUI.setTrack(nullptr);
-
-            if (ui.bottomDock.getCurrentTab() == BottomDock::InstrumentTab)
-                ui.instrumentPanelUI.setTrack(nullptr);
-
-            resized();
-        }
+        trackManager.handleDeleteTrack(index, [this] { closePianoRoll(); });
     };
 
     // --- CONEXIÓN SIDECHAIN (DATA SOURCE) ---
@@ -270,15 +170,12 @@ void MainComponent::setupBridges() {
         ui.masterChannelUI.get(), ui.effectsPanelUI,
         ui.instrumentPanelUI, 
         ui.topMenuBar, ui.bottomDock, ui.leftSidebar, audioEngine, audioMutex,
-        isBottomDockVisible, isLeftSidebarVisible,
-        [this] { openPianoRoll(); }, [this] { closePianoRoll(); },
-        [this] { resized(); }, [this] { toggleViewMode(); },
+        viewManager.getBottomDockVisibleRef(), viewManager.getLeftSidebarVisibleRef(),
+        [this] { viewManager.openPianoRoll(); }, [this] { viewManager.closePianoRoll(); },
+        [this] { viewManager.resized(); }, [this] { viewManager.toggleViewMode(); },
         [this] {
-            if (isPianoRollVisible) closePianoRoll();
-            currentView = ViewMode::Arrangement;
-            isBottomDockVisible = true;
-            ui.bottomDock.showTab(BottomDock::EffectsTab);
-            resized();
+            if (viewManager.isPianoRollVisibleNow()) viewManager.closePianoRoll();
+            viewManager.showBottomDock(BottomDock::EffectsTab);
         },
         ui.masterTrackObj.get()
         });
@@ -289,41 +186,7 @@ void MainComponent::prepareToPlay(int samples, double s) {
     ui.inspectorPanelUI.setSampleRate(s);
     ui.vuMeterUI.getEngine().setSampleRate(s);
 
-    // Alocar recursos estables para pistas cargadas previamente via Proyecto
-    for (auto* t : ui.trackContainer.getTracks()) {
-        int maxSamples = 8192;
-        t->audioBuffer.setSize(2, maxSamples, false, true, false);
-        t->instrumentMixBuffer.setSize(2, maxSamples, false, true, false);
-        t->tempSynthBuffer.setSize(2, maxSamples, false, true, false);
-        t->midSideBuffer.setSize(1, maxSamples, false, true, false);
-        t->audioBuffer.clear();
-        // pdcBuffer: solo alocar si el track tiene plugins (ahorra 4MB por pista vacia).
-        // Si ya tenia tamano por carga previa de plugins, lo respetamos y limpiamos.
-        bool hasPlugins = !t->plugins.isEmpty();
-        if (hasPlugins) {
-            t->dsp.pdcBuffer.clear();
-        }
-        // DOUBLE BUFFER: publicar snapshot inicial con los clips/notas cargados del proyecto
-        t->prepare(s, samples);
-        t->commitSnapshot();
-    }
-
-    // PREPARAR MASTER TRACK
-    if (ui.masterTrackObj) {
-        int maxSamples = 8192;
-        auto* mt = ui.masterTrackObj.get();
-        mt->audioBuffer.setSize(2, maxSamples, false, true, false);
-        mt->instrumentMixBuffer.setSize(2, maxSamples, false, true, false);
-        mt->tempSynthBuffer.setSize(2, maxSamples, false, true, false);
-        mt->midSideBuffer.setSize(1, maxSamples, false, true, false);
-        mt->audioBuffer.clear();
-        mt->prepare(s, samples);
-        mt->commitSnapshot();
-        audioEngine.setMasterTrack(mt);
-    }
-
-    // Primera carga topologica
-    audioEngine.routingMatrix.commitNewTopology(ui.trackContainer.getTracks());
+    trackManager.prepareTracks(s, samples);
 }
 
 void MainComponent::getNextAudioBlock(const juce::AudioSourceChannelInfo& buffer) {
@@ -366,30 +229,9 @@ void MainComponent::paint(juce::Graphics& g) {
     }
 }
 
-void MainComponent::toggleViewMode() {
-    currentView = (currentView == ViewMode::Arrangement) ? ViewMode::Mixer : ViewMode::Arrangement;
-    resized();
-}
-
-void MainComponent::openPianoRoll() {
-    if (!isPianoRollVisible) {
-        prePianoRollLeftSidebar = isLeftSidebarVisible;
-        prePianoRollBottomDock = isBottomDockVisible;
-        isPianoRollVisible = true;
-        currentView = ViewMode::Arrangement;
-        resized();
-    }
-}
-
-void MainComponent::closePianoRoll() {
-    if (isPianoRollVisible) {
-        isPianoRollVisible = false;
-        isLeftSidebarVisible = prePianoRollLeftSidebar;
-        isBottomDockVisible = prePianoRollBottomDock;
-        ui.pianoRollUI.setActiveClip(nullptr);
-        resized();
-    }
-}
+void MainComponent::toggleViewMode() { viewManager.toggleViewMode(); }
+void MainComponent::openPianoRoll() { viewManager.openPianoRoll(); }
+void MainComponent::closePianoRoll() { viewManager.closePianoRoll(); }
 
 void MainComponent::loadProject(const juce::File& file) {
     ProjectManager::loadProject(file, ui.trackContainer, audioEngine, &audioMutex, ui.playlistUI, ui.effectsPanelUI, ui.pickerPanelUI, [this] { resized(); });
@@ -401,12 +243,7 @@ void MainComponent::saveProject() {
 
 
 void MainComponent::resized() {
-    LayoutHandler::performLayout({
-        getLocalBounds(), ui.topMenuBar, ui.hintPanel, ui.resourceMeter.get(),
-        ui.pianoRollUI, ui.closePianoRollBtn, ui.mixerUI, *ui.masterChannelUI, ui.trackContainer, ui.playlistUI,
-        ui.bottomDock, ui.leftSidebar, ui.sidebarResizer, ui.masterStrip, ui.rightDock,
-        currentView, isPianoRollVisible, isBottomDockVisible, bottomDockHeight, isLeftSidebarVisible, leftSidebarWidth
-        });
+    viewManager.resized();
 }
 
 juce::ApplicationCommandTarget* MainComponent::getNextCommandTarget() { return commandHandler.get(); }

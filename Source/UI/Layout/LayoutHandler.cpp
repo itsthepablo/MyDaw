@@ -65,10 +65,18 @@ void LayoutHandler::performLayout(LayoutDependencies d) {
 
             if (d.isBottomDockVisible) {
                 d.bottomDock.setVisible(true);
-                d.bottomDock.setBounds(area.removeFromBottom(d.bottomDockHeight));
+                
+                auto bottomArea = area.removeFromBottom(d.bottomDockHeight);
+                
+                // El resizer solo se muestra si el Bottom Dock es visible.
+                // Sin embargo, su visibilidad real se controla en MainComponent basándose en la pestaña.
+                // Aquí solo definimos dónde DEBE ESTAR si es visible.
+                d.bottomDockResizer.setBounds(bottomArea.removeFromTop(4)); 
+                d.bottomDock.setBounds(bottomArea);
             }
             else {
                 d.bottomDock.setVisible(false);
+                d.bottomDockResizer.setVisible(false);
             }
 
             if (d.isLeftSidebarVisible) {

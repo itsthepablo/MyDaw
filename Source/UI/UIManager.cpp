@@ -11,8 +11,8 @@ void UIManager::setupUI(DAWUIComponents& ui, juce::Component& parent, std::funct
     parent.addAndMakeVisible(ui.sidebarResizer);
     parent.addAndMakeVisible(ui.trackContainer);
     parent.addAndMakeVisible(ui.playlistUI);
-    // bottomDockResizer eliminado
     parent.addAndMakeVisible(ui.bottomDock);
+    parent.addAndMakeVisible(ui.bottomDockResizer);
     parent.addAndMakeVisible(ui.mixerUI);
     // masterChannelUI se añade abajo después de ser creado
     parent.addAndMakeVisible(ui.pianoRollUI);
@@ -33,6 +33,7 @@ void UIManager::setupUI(DAWUIComponents& ui, juce::Component& parent, std::funct
     ui.closePianoRollBtn.setVisible(false);
     ui.mixerUI.setVisible(false);
     if (ui.masterChannelUI) ui.masterChannelUI->setVisible(false);
+    ui.bottomDockResizer.setVisible(false);
     ui.masterStrip.setVisible(true);
 
     ui.closePianoRollBtn.setButtonText("Cerrar Piano Roll");

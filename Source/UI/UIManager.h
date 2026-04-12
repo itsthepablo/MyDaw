@@ -16,6 +16,7 @@
 #include "Docks/LeftSidebar/LeftSidebar.h"
 #include "Docks/LeftSidebar/SidebarResizer.h"
 #include "Docks/BottomDock/BottomDock.h"
+#include "Docks/BottomDock/BottomDockResizer.h"
 #include "Panels/VUMeter/VUMeterComponent.h"
 #include "Bars/TopMenuBar/TopMenuBar.h"
 #include "../UI/Buttons/ToolbarButtons.h"
@@ -45,6 +46,7 @@ struct DAWUIComponents {
     FileBrowserPanel fileBrowserPanelUI;
     LeftSidebar leftSidebar{ pickerPanelUI, fileBrowserPanelUI };
     SidebarResizer sidebarResizer;
+    BottomDockResizer bottomDockResizer;
     RightDock rightDock;
     
     MasterTrackStrip masterStrip;

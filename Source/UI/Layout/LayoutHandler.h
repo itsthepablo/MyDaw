@@ -5,6 +5,7 @@
 #include "../../PianoRoll/PianoRollComponent.h"
 #include "../../Mixer/MixerComponent.h"
 #include "../Docks/BottomDock/BottomDock.h"
+#include "../Docks/BottomDock/BottomDockResizer.h"
 #include "../Docks/LeftSidebar/LeftSidebar.h"
 #include "../Docks/LeftSidebar/SidebarResizer.h"
 #include "../Bars/TopMenuBar/TopMenuBar.h"
@@ -36,6 +37,7 @@ struct LayoutDependencies {
     PlaylistComponent& playlistUI;
     
     BottomDock& bottomDock;
+    BottomDockResizer& bottomDockResizer;
     LeftSidebar& leftSidebar;
     SidebarResizer& sidebarResizer;
     MasterTrackStrip& masterStrip;

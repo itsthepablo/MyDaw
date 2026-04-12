@@ -87,10 +87,14 @@ void MixerComponent::resized() {
     viewport.setBounds(b);
 
     int channelHeight = viewport.getHeight();
-    float scale = (float)channelHeight / 600.0f;
     
-    int baseWidth = isMiniMixer ? 130 : 100;
-    int channelWidth = juce::roundToInt(baseWidth * scale);
+    int channelWidth = 0;
+    if (isMiniMixer) {
+        channelWidth = 130; // Ancho fijo para el Mini Mixer
+    } else {
+        float scale = (float)channelHeight / 600.0f;
+        channelWidth = juce::roundToInt(100.0f * scale); // Escala proporcional solo para el Mixer normal
+    }
 
     int totalWidth = channels.size() * (channelWidth + 1);
     if (totalWidth > viewport.getWidth()) {
