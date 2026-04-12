@@ -178,6 +178,8 @@ public:
             // Pistas normales: Todo el arsenal de controles
             addAndMakeVisible(muteBtn);
             addAndMakeVisible(soloBtn);
+            addAndMakeVisible(midSoloBtn);
+            addAndMakeVisible(sideSoloBtn);
             addAndMakeVisible(volKnob);
             addAndMakeVisible(panKnob);
             addAndMakeVisible(levelMeter);
@@ -204,6 +206,24 @@ public:
             fxButton.onClick = [this] { if (onInstrumentClick) onInstrumentClick(); };
         }
 
+        midSoloBtn.setButtonText("MID");
+        midSoloBtn.setTooltip("Solo MID (Centro)");
+        midSoloBtn.setClickingTogglesState(true);
+        midSoloBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colours::blue.withAlpha(0.6f));
+        midSoloBtn.setColour(juce::TextButton::textColourOnId, juce::Colours::white);
+        midSoloBtn.onClick = [this] { 
+            MixerParameterBridge::setMidSolo(&track, midSoloBtn.getToggleState()); 
+        };
+
+        sideSoloBtn.setButtonText("SID");
+        sideSoloBtn.setTooltip("Solo SIDE (Laterales)");
+        sideSoloBtn.setClickingTogglesState(true);
+        sideSoloBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colours::purple.withAlpha(0.6f));
+        sideSoloBtn.setColour(juce::TextButton::textColourOnId, juce::Colours::white);
+        sideSoloBtn.onClick = [this] { 
+            MixerParameterBridge::setSideSolo(&track, sideSoloBtn.getToggleState());
+        };
+
         updateFolderBtnVisuals();
         startTimerHz(30);
     }
@@ -217,6 +237,13 @@ public:
         if (track.getType() == TrackType::Loudness || track.getType() == TrackType::Balance || track.getType() == TrackType::MidSide) return; 
         // Sincronizar color del track con el medidor en cada tick (el usuario puede cambiar el color en runtime)
         trackMeterLF.setTrackColour(track.getColor());
+        
+        // Sincronizar estados de monitorización
+        muteBtn.setToggleState(MixerParameterBridge::isMuted(&track), juce::dontSendNotification);
+        soloBtn.setToggleState(MixerParameterBridge::isSoloed(&track), juce::dontSendNotification);
+        midSoloBtn.setToggleState(MixerParameterBridge::isMidSolo(&track), juce::dontSendNotification);
+        sideSoloBtn.setToggleState(MixerParameterBridge::isSideSolo(&track), juce::dontSendNotification);
+
         if (MixerParameterBridge::isMuted(&track)) { levelMeter.setLevel(0.0f, 0.0f); return; }
         float vol = MixerParameterBridge::getVolume(&track);
         float pan = MixerParameterBridge::getBalance(&track);
@@ -323,8 +350,10 @@ public:
             auto kRow = leftCol.removeFromTop(28);
             muteBtn.setBounds(kRow.removeFromLeft(20).reduced(1));
             soloBtn.setBounds(kRow.removeFromLeft(20).reduced(1));
-            panKnob.setBounds(kRow.removeFromLeft(35));
-            volKnob.setBounds(kRow.removeFromLeft(35));
+            midSoloBtn.setBounds(kRow.removeFromLeft(20).reduced(1));
+            sideSoloBtn.setBounds(kRow.removeFromLeft(20).reduced(1));
+            panKnob.setBounds(kRow.removeFromLeft(22));
+            volKnob.setBounds(kRow.removeFromLeft(22));
             
             auto botRow = leftCol.removeFromTop(18);
             effectsBtn.setBounds(botRow.reduced(2, 0));
@@ -434,7 +463,7 @@ private:
         });
     }
 
-    juce::Label nameLabel; juce::TextButton muteBtn, soloBtn; FloatingValueSlider volKnob, panKnob;
+    juce::Label nameLabel; juce::TextButton muteBtn, soloBtn, midSoloBtn, sideSoloBtn; FloatingValueSlider volKnob, panKnob;
     juce::TextButton fxButton, prButton, inlineBtn, effectsBtn, folderBtn, compactBtn;
     juce::ComboBox targetLufsCombo, balanceScaleCombo, midSideScaleCombo, midSideModeCombo;
     std::unique_ptr<LoudnessMeter> loudnessMeter;

@@ -21,6 +21,35 @@ public:
             float* lData = track->audioBuffer.getWritePointer(0);
             float* rData = track->audioBuffer.getWritePointer(1);
 
+            // 1. DUAL MID-SIDE PROCESSING (Internal Balance)
+            // Always active to preserve settings even when the MS UI is hidden.
+            float maxM = 0.0f;
+            float maxS = 0.0f;
+
+            for (int i = 0; i < numSamples; ++i) {
+                const float inL = lData[i];
+                const float inR = rData[i];
+
+                // Encode M/S
+                float mid = (inL + inR) * 0.5f;
+                float side = (inL - inR) * 0.5f;
+
+                // Apply independent M/S Gains
+                mid *= track->mixerData.midVolumeSmoother.getNextValue();
+                side *= track->mixerData.sideVolumeSmoother.getNextValue();
+
+                // Capture M/S Peaks
+                maxM = std::max(maxM, std::abs(mid));
+                maxS = std::max(maxS, std::abs(side));
+
+                // Decode back to L/R
+                lData[i] = mid + side;
+                rData[i] = mid - side;
+            }
+            track->mixerData.currentMidPeak.store(maxM, std::memory_order_relaxed);
+            track->mixerData.currentSidePeak.store(maxS, std::memory_order_relaxed);
+
+            // 2. MASTER VOLUME & PANNING (Standard)
             if (track->mixerData.panningModeDual.load(std::memory_order_relaxed)) 
             {
                 // DUAL PANNING - Linear Balance (0dB Unity) + Smoothed
@@ -66,6 +95,25 @@ public:
 
         // --- VU-METER Update (Post-Fader / Post-Pan) ---
         if (track->audioBuffer.getNumChannels() > 0) {
+            // Monitorización Mid / Side en tiempo real (Solo para señales Estéreo)
+            if (track->audioBuffer.getNumChannels() >= 2) {
+                float* lData = track->audioBuffer.getWritePointer(0);
+                float* rData = track->audioBuffer.getWritePointer(1);
+
+                if (track->mixerData.isMidSolo.load(std::memory_order_relaxed)) {
+                    for (int i = 0; i < numSamples; ++i) {
+                        float mid = (lData[i] + rData[i]) * 0.5f;
+                        lData[i] = rData[i] = mid;
+                    }
+                } else if (track->mixerData.isSideSolo.load(std::memory_order_relaxed)) {
+                    for (int i = 0; i < numSamples; ++i) {
+                        float mid = (lData[i] + rData[i]) * 0.5f;
+                        lData[i] -= mid; // Preserva Side en el canal L
+                        rData[i] -= mid; // Preserva -Side en el canal R
+                    }
+                }
+            }
+
             track->mixerData.currentPeakLevelL.store(track->audioBuffer.getMagnitude(0, 0, numSamples), std::memory_order_relaxed);
             track->mixerData.currentPeakLevelR.store(track->audioBuffer.getNumChannels() > 1
                 ? track->audioBuffer.getMagnitude(1, 0, numSamples)

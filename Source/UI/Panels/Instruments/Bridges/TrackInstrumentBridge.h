@@ -20,12 +20,14 @@ public:
         AudioEngine& audioEngine, // <-- AHORA PASAMOS LA REFERENCIA AL MOTOR ENTERO
         std::function<void()> triggerResize)
     {
-        trackContainer.onOpenInstrument = [&isBottomDockVisible, &bottomDock, &instrumentPanel, triggerResize](Track& t) {
+        auto prevOnOpenInstrument = trackContainer.onOpenInstrument;
+        trackContainer.onOpenInstrument = [&isBottomDockVisible, &bottomDock, &instrumentPanel, triggerResize, prevOnOpenInstrument](Track& t) {
+            if (prevOnOpenInstrument) prevOnOpenInstrument(t);
             isBottomDockVisible = true;
             bottomDock.showTab(BottomDock::InstrumentTab);
             instrumentPanel.setTrack(&t);
             triggerResize();
-            };
+        };
 
         instrumentPanel.onAddInstrument = [&audioMutex, &audioEngine, &trackContainer, &effectsPanel, &instrumentPanel, &bottomDock](Track& t) {
             auto* newPlugin = new VSTHost();

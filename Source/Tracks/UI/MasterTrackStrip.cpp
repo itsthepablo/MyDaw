@@ -60,7 +60,7 @@ MasterTrackStrip::MasterTrackStrip()
     addAndMakeVisible(effectsBtn);
     effectsBtn.setButtonText("Effects");
     effectsBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(60, 65, 70));
-    effectsBtn.onClick = [this] { if (onTrackSelected) onTrackSelected(masterTrack); };
+    effectsBtn.onClick = [this] { if (onEffectsRequested) onEffectsRequested(masterTrack); };
 
     // --- Medidor de pico (Horizontal en el master track header) ---
     addAndMakeVisible(levelMeter);
@@ -110,7 +110,7 @@ void MasterTrackStrip::paint(juce::Graphics& g)
     g.setColour(masterColor.withAlpha(0.12f));
     g.fillRoundedRectangle(contentArea.toFloat(), 4.0f);
 
-    if (isSelected) {
+    if (masterTrack && masterTrack->isSelected) {
         g.setColour(masterColor.withAlpha(0.2f));
         g.fillRoundedRectangle(contentArea.toFloat(), 4.0f);
         g.setColour(masterColor.withAlpha(0.5f));
@@ -150,6 +150,5 @@ void MasterTrackStrip::resized()
 void MasterTrackStrip::mouseDown(const juce::MouseEvent& e)
 {
     if (onTrackSelected) onTrackSelected(masterTrack);
-    isSelected = true;
     repaint();
 }

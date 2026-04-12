@@ -53,6 +53,12 @@ void MixerChannelUI::SendRack::resized() {
 MixerChannelUI::MixerChannelUI(Track* t, bool miniMode) 
     : track(t), meter(t), isMiniMode(miniMode), fxRack(t, this), sendRack(t, this) 
 {
+    meterLF.setTrackColour(track->getColor());
+    meter.setLookAndFeel(&meterLF);
+    midMeter.setLookAndFeel(&meterLF);
+    sideMeter.setLookAndFeel(&meterLF);
+    startTimerHz(30);
+    
     setLookAndFeel(&mixerLAF);
 
     if (!isMiniMode) {
@@ -98,20 +104,101 @@ MixerChannelUI::MixerChannelUI(Track* t, bool miniMode)
         addChildComponent(panR);
     }
 
+    // --- HELPERS PARA VISUALIZACIÓN (MODO dB) ---
+    auto dbToText = [](double v) { 
+        if (v <= -63.5) return juce::String("-inf dB");
+        return (v > 0.0 ? "+" : "") + juce::String(v, 1) + " dB";
+    };
+    auto textToDb = [](const juce::String& t) { 
+        if (t.containsIgnoreCase("-inf")) return -64.0;
+        return t.getDoubleValue(); 
+    };
+
     addAndMakeVisible(meter);
+    
+    // Master Fader (Escala Pro 80/20)
     fader.setSliderStyle(juce::Slider::LinearVertical);
     fader.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 15);
-    fader.setRange(0.0, 1.5);
-    fader.onValueChange = [this] { track->setVolume((float)fader.getValue()); };
+    fader.setRange(-64.0, 16.0); // 0dB al 80% exacto (64/80 = 0.8)
+    fader.textFromValueFunction = dbToText;
+    fader.valueFromTextFunction = textToDb;
+    fader.onValueChange = [this] { 
+        float gain = (fader.getValue() <= -63.5) ? 0.0f : juce::Decibels::decibelsToGain((float)fader.getValue());
+        track->setVolume(gain); 
+    };
     addAndMakeVisible(fader);
 
     setupButton(muteBtn, "M", juce::Colours::red);
     muteBtn.onClick = [this] { MixerParameterBridge::setMuted(track, muteBtn.getToggleState()); };
     setupButton(soloBtn, "S", juce::Colours::yellow);
     soloBtn.onClick = [this] { MixerParameterBridge::setSoloed(track, soloBtn.getToggleState()); };
+    
+    setupButton(midSoloBtn, "MID", juce::Colours::blue.withAlpha(0.6f));
+    midSoloBtn.onClick = [this] { 
+        MixerParameterBridge::setMidSolo(track, midSoloBtn.getToggleState()); 
+        updateUI(); // Sincronizar exclusividad
+    };
+    
+    setupButton(sideSoloBtn, "SID", juce::Colours::purple.withAlpha(0.6f));
+    sideSoloBtn.onClick = [this] { 
+        MixerParameterBridge::setSideSolo(track, sideSoloBtn.getToggleState()); 
+        updateUI(); // Sincronizar exclusividad
+    };
+
     setupButton(phaseBtn, "PHS", juce::Colours::cyan);
     phaseBtn.onClick = [this] { MixerParameterBridge::setPhaseInverted(track, phaseBtn.getToggleState()); };
     setupButton(recBtn, "R", juce::Colours::red.brighter());
+
+    // --- MID-SIDE COMPONENTS ---
+    msToggle.setButtonText("M/S");
+    msToggle.setClickingTogglesState(true);
+    msToggle.setColour(juce::TextButton::buttonOnColourId, juce::Colours::orange.withAlpha(0.8f));
+    msToggle.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
+    msToggle.onClick = [this] { 
+        MixerParameterBridge::setMidSideMode(track, msToggle.getToggleState());
+        updateUI(); // Esto disparará resized()
+    };
+    addAndMakeVisible(msToggle);
+
+    midFader.setSliderStyle(juce::Slider::LinearVertical);
+    midFader.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 15);
+    midFader.setRange(-64.0, 16.0);
+    midFader.textFromValueFunction = dbToText;
+    midFader.valueFromTextFunction = textToDb;
+    midFader.onValueChange = [this] { 
+        float gain = (midFader.getValue() <= -63.5) ? 0.0f : juce::Decibels::decibelsToGain((float)midFader.getValue());
+        MixerParameterBridge::setMidVolume(track, gain); 
+    };
+    addChildComponent(midFader);
+
+    sideFader.setSliderStyle(juce::Slider::LinearVertical);
+    sideFader.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 15);
+    sideFader.setRange(-64.0, 16.0);
+    sideFader.textFromValueFunction = dbToText;
+    sideFader.valueFromTextFunction = textToDb;
+    sideFader.onValueChange = [this] { 
+        float gain = (sideFader.getValue() <= -63.5) ? 0.0f : juce::Decibels::decibelsToGain((float)sideFader.getValue());
+        MixerParameterBridge::setSideVolume(track, gain); 
+    };
+    addChildComponent(sideFader);
+
+    midMeter.setTrack(track);
+    midMeter.setSource(LevelMeter::Mid);
+    addChildComponent(midMeter);
+
+    sideMeter.setTrack(track);
+    sideMeter.setSource(LevelMeter::Side);
+    addChildComponent(sideMeter);
+
+    midLabel.setText("MID", juce::dontSendNotification);
+    midLabel.setJustificationType(juce::Justification::centred);
+    midLabel.setFont(juce::Font(10.0f));
+    addChildComponent(midLabel);
+
+    sideLabel.setText("SIDE", juce::dontSendNotification);
+    sideLabel.setJustificationType(juce::Justification::centred);
+    sideLabel.setFont(juce::Font(10.0f));
+    addChildComponent(sideLabel);
 
     trackName.setJustificationType(juce::Justification::centred);
     trackName.setFont(juce::Font(13.0f, juce::Font::bold));
@@ -128,6 +215,10 @@ MixerChannelUI::MixerChannelUI(Track* t, bool miniMode)
 }
 
 MixerChannelUI::~MixerChannelUI() {
+    stopTimer();
+    meter.setLookAndFeel(nullptr);
+    midMeter.setLookAndFeel(nullptr);
+    sideMeter.setLookAndFeel(nullptr);
     setLookAndFeel(nullptr);
 }
 
@@ -149,8 +240,31 @@ void MixerChannelUI::updateUI() {
 
     muteBtn.setToggleState(MixerParameterBridge::isMuted(track), juce::dontSendNotification);
     soloBtn.setToggleState(MixerParameterBridge::isSoloed(track), juce::dontSendNotification);
+    midSoloBtn.setToggleState(MixerParameterBridge::isMidSolo(track), juce::dontSendNotification);
+    sideSoloBtn.setToggleState(MixerParameterBridge::isSideSolo(track), juce::dontSendNotification);
     phaseBtn.setToggleState(MixerParameterBridge::isPhaseInverted(track), juce::dontSendNotification);
     
+    // MS Mode Sync
+    bool msMode = MixerParameterBridge::isMidSideMode(track);
+    if (msToggle.getToggleState() != msMode) {
+        msToggle.setToggleState(msMode, juce::dontSendNotification);
+    }
+    
+    auto getDbVal = [](float gain) { return (gain <= 0.0001f) ? -64.0 : (double)juce::Decibels::gainToDecibels(gain, -100.0f); };
+    
+    fader.setValue(getDbVal(track->getVolume()), juce::dontSendNotification);
+    midFader.setValue(getDbVal(MixerParameterBridge::getMidVolume(track)), juce::dontSendNotification);
+    sideFader.setValue(getDbVal(MixerParameterBridge::getSideVolume(track)), juce::dontSendNotification);
+
+    fader.setVisible(!msMode);
+    meter.setVisible(!msMode);
+    midFader.setVisible(msMode);
+    sideFader.setVisible(msMode);
+    midMeter.setVisible(msMode);
+    sideMeter.setVisible(msMode);
+    midLabel.setVisible(msMode);
+    sideLabel.setVisible(msMode);
+
     if (trackName.getText() != track->getName()) 
         trackName.setText(track->getName(), juce::dontSendNotification);
         
@@ -158,6 +272,7 @@ void MixerChannelUI::updateUI() {
         fxRack.syncSlots();
         sendRack.syncSlots();
     }
+    resized(); // Forzar re-layout si ha cambiado el modo
     repaint();
 }
 
@@ -203,16 +318,40 @@ void MixerChannelUI::resized() {
     }
 
     auto btnArea = b.removeFromTop(25);
-    auto btnW = btnArea.getWidth() / 4;
+    auto btnW = btnArea.getWidth() / 7;
     muteBtn.setBounds(btnArea.removeFromLeft(btnW).reduced(1));
     soloBtn.setBounds(btnArea.removeFromLeft(btnW).reduced(1));
+    msToggle.setBounds(btnArea.removeFromLeft(btnW).reduced(1));
+    midSoloBtn.setBounds(btnArea.removeFromLeft(btnW).reduced(1));
+    sideSoloBtn.setBounds(btnArea.removeFromLeft(btnW).reduced(1));
     phaseBtn.setBounds(btnArea.removeFromLeft(btnW).reduced(1));
     recBtn.setBounds(btnArea.removeFromLeft(btnW).reduced(1));
 
     trackName.setBounds(b.removeFromBottom(20));
-    meter.setBounds(b.removeFromRight(isMiniMode ? 20 : 22));
-    b.removeFromRight(3);
-    fader.setBounds(b);
+
+    if (!MixerParameterBridge::isMidSideMode(track)) 
+    {
+        meter.setBounds(b.removeFromRight(isMiniMode ? 20 : 22));
+        b.removeFromRight(3);
+        fader.setBounds(b);
+    }
+    else 
+    {
+        auto msArea = b;
+        auto midArea = msArea.removeFromLeft(msArea.getWidth() / 2);
+        
+        // Mid Side
+        midLabel.setBounds(midArea.removeFromTop(12));
+        midMeter.setBounds(midArea.removeFromRight(isMiniMode ? 14 : 16));
+        midArea.removeFromRight(2);
+        midFader.setBounds(midArea);
+
+        // Side Area
+        sideLabel.setBounds(msArea.removeFromTop(12));
+        sideMeter.setBounds(msArea.removeFromRight(isMiniMode ? 14 : 16));
+        msArea.removeFromRight(2);
+        sideFader.setBounds(msArea);
+    }
 }
 
 void MixerChannelUI::mouseDown(const juce::MouseEvent& e) {
@@ -250,4 +389,13 @@ void MixerChannelUI::updatePanVisibility() {
     panL.setVisible(dual);
     panR.setVisible(dual);
     resized();
+}
+
+void MixerChannelUI::timerCallback() {
+    if (track != nullptr) {
+        meterLF.setTrackColour(track->getColor());
+        meter.repaint();
+        midMeter.repaint();
+        sideMeter.repaint();
+    }
 }

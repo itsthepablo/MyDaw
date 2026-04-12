@@ -34,6 +34,7 @@ public:
     std::function<void(Track*)> onActiveTrackChanged;
     std::function<void(float)> onScrollWheel;
     std::function<void(TrackType, bool)> onToggleAnalysisTrack;
+    std::function<void()> onDeselectMasterRequested;
     
     int vOffset = 0;
     float trackHeight = 100.0f;
@@ -86,7 +87,6 @@ public:
     void deselectAllTracks() {
         for (auto* t : tracks) t->isSelected = false;
         for (auto* p : trackPanels) p->repaint();
-        if (onActiveTrackChanged) onActiveTrackChanged(nullptr);
     }
 
     void selectTrack(Track* selectedTrack, const juce::ModifierKeys& mods) {
@@ -96,6 +96,7 @@ public:
         if (mods.isCommandDown() || mods.isCtrlDown()) {
             selectedTrack->isSelected = !selectedTrack->isSelected;
             lastSelectedTrackIndex = clickedIndex;
+            if (selectedTrack->isSelected && onDeselectMasterRequested) onDeselectMasterRequested();
         }
         else if (mods.isShiftDown()) {
             if (lastSelectedTrackIndex >= 0 && lastSelectedTrackIndex < tracks.size()) {
@@ -107,11 +108,13 @@ public:
                 selectedTrack->isSelected = true;
                 lastSelectedTrackIndex = clickedIndex;
             }
+            if (onDeselectMasterRequested) onDeselectMasterRequested();
         }
         else {
             for (auto* t : tracks) t->isSelected = false;
             selectedTrack->isSelected = true;
             lastSelectedTrackIndex = clickedIndex;
+            if (onDeselectMasterRequested) onDeselectMasterRequested();
         }
 
         for (auto* p : trackPanels) p->repaint();

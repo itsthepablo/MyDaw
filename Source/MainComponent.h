@@ -45,6 +45,7 @@ private:
     void openPianoRoll();
     void closePianoRoll();
     void saveProject();
+    void selectTrackExclusive(Track* t, bool isMaster);
 
     juce::ApplicationCommandManager commandManager;
     std::unique_ptr<DAWCommandHandler> commandHandler;

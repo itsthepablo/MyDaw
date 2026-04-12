@@ -30,12 +30,16 @@ public:
             if (masterChannelUI) masterChannelUI->updateUI();
         };
 
-        container.onOpenEffects = [&ui, onEffectsOpened](Track& t) {
+        auto prevOnOpenEffects = container.onOpenEffects;
+        container.onOpenEffects = [&ui, onEffectsOpened, prevOnOpenEffects](Track& t) {
+            if (prevOnOpenEffects) prevOnOpenEffects(t);
             ui.setTrack(&t);
             if (onEffectsOpened) onEffectsOpened();
         };
 
-        container.onActiveTrackChanged = [&ui, playlist](Track* t) {
+        auto prevOnActiveTrack = container.onActiveTrackChanged;
+        container.onActiveTrackChanged = [&ui, playlist, prevOnActiveTrack](Track* t) {
+            if (prevOnActiveTrack) prevOnActiveTrack(t);
             ui.setTrack(t);
             if (playlist) playlist->setSelectedTrack(t);
         };

@@ -15,6 +15,7 @@ class MasterTrackStrip : public juce::Component
 public:
     // Callbacks hacia MainComponent
     std::function<void(Track*)> onTrackSelected;
+    std::function<void(Track*)> onEffectsRequested;
 
     MasterTrackStrip();
     ~MasterTrackStrip() override;
@@ -22,8 +23,8 @@ public:
     void setMasterTrack(Track* t);
     Track* getMasterTrack() const;
 
-    void setSelected(bool selected) { isSelected = selected; repaint(); }
-    bool getSelected() const { return isSelected; }
+    void setSelected(bool selected) { if (masterTrack) { masterTrack->isSelected = selected; repaint(); } }
+    bool getSelected() const { return masterTrack ? masterTrack->isSelected : false; }
 
     void paint(juce::Graphics& g) override;
     void resized() override;
@@ -31,7 +32,6 @@ public:
 
 private:
     Track* masterTrack = nullptr;
-    bool isSelected = false;
 
     juce::Label      masterLabel;
     juce::TextButton muteBtn, soloBtn, effectsBtn;

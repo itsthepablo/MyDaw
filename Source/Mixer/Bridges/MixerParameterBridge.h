@@ -68,6 +68,8 @@ public:
         if (t) {
             t->mixerData.currentPeakLevelL.store(0.0f, std::memory_order_relaxed);
             t->mixerData.currentPeakLevelR.store(0.0f, std::memory_order_relaxed);
+            t->mixerData.currentMidPeak.store(0.0f, std::memory_order_relaxed);
+            t->mixerData.currentSidePeak.store(0.0f, std::memory_order_relaxed);
         }
     }
 
@@ -78,6 +80,41 @@ public:
 
     static void setPanningModeDual(Track* t, bool dual) {
         if (t) t->mixerData.panningModeDual.store(dual, std::memory_order_relaxed);
+    }
+
+    // --- MID-SIDE MODE ---
+    static bool isMidSideMode(const Track* t) {
+        return t ? t->mixerData.isMidSideMode.load(std::memory_order_relaxed) : false;
+    }
+
+    static void setMidSideMode(Track* t, bool m) {
+        if (t) t->mixerData.isMidSideMode.store(m, std::memory_order_relaxed);
+    }
+
+    // --- MID-SIDE VOLUME ---
+    static float getMidVolume(const Track* t) {
+        return t ? t->mixerData.midVolume : 1.0f;
+    }
+
+    static void setMidVolume(Track* t, float v) {
+        if (t) t->mixerData.setMidVolume(v);
+    }
+
+    static float getSideVolume(const Track* t) {
+        return t ? t->mixerData.sideVolume : 1.0f;
+    }
+
+    static void setSideVolume(Track* t, float v) {
+        if (t) t->mixerData.setSideVolume(v);
+    }
+
+    // --- MID-SIDE PEAKS ---
+    static float getMidPeak(const Track* t) {
+        return t ? t->mixerData.currentMidPeak.load(std::memory_order_relaxed) : 0.0f;
+    }
+
+    static float getSidePeak(const Track* t) {
+        return t ? t->mixerData.currentSidePeak.load(std::memory_order_relaxed) : 0.0f;
     }
 
     // --- DUAL PAN ---
@@ -104,5 +141,28 @@ public:
     
     static void setMonoActive(Track* t, bool m) {
         if (t) t->setMonoActive(m);
+    }
+
+    // --- MID / SIDE MONITORING ---
+    static bool isMidSolo(const Track* t) {
+        return t ? t->mixerData.isMidSolo.load(std::memory_order_relaxed) : false;
+    }
+
+    static void setMidSolo(Track* t, bool s) {
+        if (t) {
+            t->mixerData.isMidSolo.store(s, std::memory_order_relaxed);
+            if (s) t->mixerData.isSideSolo.store(false, std::memory_order_relaxed);
+        }
+    }
+
+    static bool isSideSolo(const Track* t) {
+        return t ? t->mixerData.isSideSolo.load(std::memory_order_relaxed) : false;
+    }
+
+    static void setSideSolo(Track* t, bool s) {
+        if (t) {
+            t->mixerData.isSideSolo.store(s, std::memory_order_relaxed);
+            if (s) t->mixerData.isMidSolo.store(false, std::memory_order_relaxed);
+        }
     }
 };

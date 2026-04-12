@@ -16,6 +16,12 @@ class LevelMeter : public juce::Component,
 private:
     // --- MIEMBROS DE DATOS (Mover al inicio evita errores de resolución C++) ---
     Track* track = nullptr;
+    
+public:
+    enum MeterSource { Stereo, Mid, Side };
+
+private:
+    MeterSource source = Stereo;
     float dispL = 0.0f, dispR = 0.0f;
     float peakL = 0.0f, peakR = 0.0f;
     int holdL = 0, holdR = 0;
@@ -46,6 +52,8 @@ public:
         if (track != nullptr) startTimerHz(30);
         else stopTimer();
     }
+
+    void setSource(MeterSource s) { source = s; reset(); }
 
     void reset()
     {
@@ -200,8 +208,17 @@ public:
 private:
     void timerCallback() override {
         if (track != nullptr) {
-            float l = MixerParameterBridge::getPeakLevelL(track);
-            float r = MixerParameterBridge::getPeakLevelR(track);
+            float l = 0, r = 0;
+            if (source == Stereo) {
+                l = MixerParameterBridge::getPeakLevelL(track);
+                r = MixerParameterBridge::getPeakLevelR(track);
+            }
+            else if (source == Mid) {
+                l = r = MixerParameterBridge::getMidPeak(track);
+            }
+            else if (source == Side) {
+                l = r = MixerParameterBridge::getSidePeak(track);
+            }
             setLevel(l, r);
         }
     }

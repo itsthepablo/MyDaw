@@ -13,19 +13,31 @@ struct MixerChannelData {
         volumeSmoother.setCurrentAndTargetValue(volume);
         panSmoother.reset(44100.0, 0.05);
         panSmoother.setCurrentAndTargetValue(balance);
+
+        midVolumeSmoother.reset(44100.0, 0.05);
+        midVolumeSmoother.setCurrentAndTargetValue(midVolume);
+        sideVolumeSmoother.reset(44100.0, 0.05);
+        sideVolumeSmoother.setCurrentAndTargetValue(sideVolume);
     }
 
     // --- PARÁMETROS DE CONTROL ---
     float volume = 1.0f;
     float balance = 0.0f;
+    float midVolume = 1.0f;
+    float sideVolume = 1.0f;
 
     // Smoothers para evitar clicks/pops (Sigue la Física del Sonido - Regla #18)
     juce::LinearSmoothedValue<float> volumeSmoother;
     juce::LinearSmoothedValue<float> panSmoother;
+    juce::LinearSmoothedValue<float> midVolumeSmoother;
+    juce::LinearSmoothedValue<float> sideVolumeSmoother;
 
     // --- ESTADOS ATÓMICOS (Thread-Safe) ---
     std::atomic<bool> isMuted { false };
     std::atomic<bool> isSoloed { false };
+    std::atomic<bool> isMidSolo { false };
+    std::atomic<bool> isSideSolo { false };
+    std::atomic<bool> isMidSideMode { false };
     
     // --- GESTIÓN DE PANEO ---
     std::atomic<bool> panningModeDual { false };
@@ -35,6 +47,8 @@ struct MixerChannelData {
     // --- METERING (Lectura desde UI, Escritura desde AudioThread) ---
     std::atomic<float> currentPeakLevelL { 0.0f };
     std::atomic<float> currentPeakLevelR { 0.0f };
+    std::atomic<float> currentMidPeak { 0.0f };
+    std::atomic<float> currentSidePeak { 0.0f };
 
     /**
      * Prepara los smoothers para el procesamiento de audio.
@@ -45,6 +59,12 @@ struct MixerChannelData {
 
         panSmoother.reset(sampleRate, 0.05);
         panSmoother.setCurrentAndTargetValue(balance);
+
+        midVolumeSmoother.reset(sampleRate, 0.05);
+        midVolumeSmoother.setCurrentAndTargetValue(midVolume);
+
+        sideVolumeSmoother.reset(sampleRate, 0.05);
+        sideVolumeSmoother.setCurrentAndTargetValue(sideVolume);
     }
 
     void setVolume(float v) {
@@ -55,5 +75,15 @@ struct MixerChannelData {
     void setBalance(float b) {
         balance = b;
         panSmoother.setTargetValue(b);
+    }
+
+    void setMidVolume(float v) {
+        midVolume = v;
+        midVolumeSmoother.setTargetValue(v);
+    }
+
+    void setSideVolume(float v) {
+        sideVolume = v;
+        sideVolumeSmoother.setTargetValue(v);
     }
 };

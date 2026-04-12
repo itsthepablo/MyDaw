@@ -3,6 +3,7 @@
 #include "../../Data/Track.h"
 #include "../Bridges/MixerParameterBridge.h"
 #include "../../UI/Meters/LevelMeter.h"
+#include "../../Tracks/LookAndFeel/TrackLookAndFeel.h"
 #include "../LookAndFeel/MixerLookAndFeel.h"
 #include "MixerRacks.h"
 
@@ -10,7 +11,8 @@
 // 4. CANAL PRINCIPAL DEL MIXER (Racks y Faders)
 // Declaración — La implementación está en MixerChannelUI.cpp
 // ==============================================================================
-class MixerChannelUI : public juce::Component {
+class MixerChannelUI : public juce::Component,
+                       private juce::Timer {
 public:
     // --- Sub-componentes para Rack de Efectos ---
     class FXRack : public juce::Component {
@@ -50,16 +52,18 @@ private:
     void showAutomationMenu(int paramId, const juce::String& paramName);
     void setupButton(juce::TextButton& btn, juce::String text, juce::Colour onCol);
     void updatePanVisibility();
+    void timerCallback() override;
 
     bool isMiniMode; 
     Track* track; 
     MixerLookAndFeel mixerLAF;
     
-    juce::TextButton panToggle;
-    juce::Slider panKnob, panL, panR, fader; 
-    LevelMeter meter;
-    juce::TextButton muteBtn, soloBtn, phaseBtn, recBtn; 
-    juce::Label trackName;
+    juce::TextButton panToggle, msToggle;
+    juce::Slider panKnob, panL, panR, fader, midFader, sideFader; 
+    LevelMeter meter, midMeter, sideMeter;
+    TrackLevelMeterLF meterLF;
+    juce::TextButton muteBtn, soloBtn, midSoloBtn, sideSoloBtn, phaseBtn, recBtn; 
+    juce::Label trackName, midLabel, sideLabel;
     
     juce::Viewport fxViewport, sendViewport;
     FXRack fxRack;
