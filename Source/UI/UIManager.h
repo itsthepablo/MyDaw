@@ -19,6 +19,8 @@
 #include "Panels/VUMeter/VUMeterComponent.h"
 #include "Bars/TopMenuBar/TopMenuBar.h"
 #include "../UI/Buttons/ToolbarButtons.h"
+#include "Panels/SelectedTrack/SelectedTrackPanel.h"
+#include "Docks/RightDock/RightDock.h"
 
 struct DAWUIComponents {
     TopMenuBar topMenuBar;
@@ -43,6 +45,7 @@ struct DAWUIComponents {
     FileBrowserPanel fileBrowserPanelUI;
     LeftSidebar leftSidebar{ pickerPanelUI, fileBrowserPanelUI };
     SidebarResizer sidebarResizer;
+    RightDock rightDock;
     
     MasterTrackStrip masterStrip;
     std::unique_ptr<Track> masterTrackObj;

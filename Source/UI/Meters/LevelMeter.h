@@ -42,8 +42,19 @@ public:
     void setTrack(Track* t)
     {
         track = t;
+        reset(); // Limpieza inmediata de los niveles del track anterior
         if (track != nullptr) startTimerHz(30);
         else stopTimer();
+    }
+
+    void reset()
+    {
+        dispL = 0.0f; dispR = 0.0f;
+        peakL = 0.0f; peakR = 0.0f;
+        absoluteMaxPeakL = 0.0f; absoluteMaxPeakR = 0.0f;
+        holdL = 0; holdR = 0;
+        isClipping = false;
+        repaint();
     }
 
     // Interfaz manual

@@ -17,6 +17,7 @@ void UIManager::setupUI(DAWUIComponents& ui, juce::Component& parent, std::funct
     // masterChannelUI se añade abajo después de ser creado
     parent.addAndMakeVisible(ui.pianoRollUI);
     parent.addAndMakeVisible(ui.closePianoRollBtn);
+    parent.addAndMakeVisible(ui.rightDock);
 
     // --- MASTER TRACK ---
     ui.masterTrackObj = std::make_unique<Track>(0, "Master", TrackType::Audio);

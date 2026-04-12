@@ -10,6 +10,7 @@
 #include "../Bars/TopMenuBar/TopMenuBar.h"
 #include "../Panels/HintPanel.h"
 #include "../Meters/ResourceMeter.h"
+#include "../Docks/RightDock/RightDock.h"
 
 // Definimos ViewMode aquí o lo importamos si es accesible globalmente
 #ifndef VIEWMODE_DEFINED
@@ -38,6 +39,7 @@ struct LayoutDependencies {
     LeftSidebar& leftSidebar;
     SidebarResizer& sidebarResizer;
     MasterTrackStrip& masterStrip;
+    RightDock& rightDock;
 
     // Estados
     ViewMode currentView;

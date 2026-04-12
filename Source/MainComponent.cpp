@@ -129,6 +129,7 @@ void MainComponent::setupCallbacks() {
         ui.effectsPanelUI.setTrack(t);
         ui.instrumentPanelUI.setTrack(t);
         audioEngine.selectedTrackForAnalysis.store(t);
+        ui.rightDock.setTrack(t);
         };
 
     // --- CONEXIÓN MASTER TRACK ---
@@ -137,6 +138,7 @@ void MainComponent::setupCallbacks() {
         ui.bottomDock.showTab(BottomDock::EffectsTab);
         ui.effectsPanelUI.setTrack(mt);
         audioEngine.selectedTrackForAnalysis.store(mt);
+        ui.rightDock.setTrack(mt);
         isBottomDockVisible = true;
         resized();
     };
@@ -238,6 +240,24 @@ void MainComponent::setupCallbacks() {
         for (auto* t : ui.trackContainer.getTracks()) 
             trackList.add(t);
         return trackList;
+    };
+
+    // --- CONEXIÓN RIGHT DOCK (SELECTED TRACK PANEL) ---
+    ui.rightDock.selectedTrackPanel.onAddVST3 = [this](Track& t) { ui.mixerUI.onAddVST3(t); };
+    ui.rightDock.selectedTrackPanel.onAddNativeUtility = [this](Track& t) { ui.mixerUI.onAddNativeUtility(t); };
+    ui.rightDock.selectedTrackPanel.onAddSend = [this](Track& t) { ui.mixerUI.onAddSend(t); };
+    ui.rightDock.selectedTrackPanel.onOpenPlugin = [this](Track& t, int i) { ui.mixerUI.onOpenPlugin(t, i); };
+    ui.rightDock.selectedTrackPanel.onDeleteEffect = [this](Track& t, int i) { ui.mixerUI.onDeleteEffect(t, i); };
+    ui.rightDock.selectedTrackPanel.onDeleteSend = [this](Track& t, int i) { ui.mixerUI.onDeleteSend(t, i); };
+    ui.rightDock.selectedTrackPanel.onBypassChanged = [this](Track& t, int i, bool b) { ui.mixerUI.onBypassChanged(t, i, b); };
+    ui.rightDock.selectedTrackPanel.onCreateAutomation = [this](Track& t, int i, juce::String n) { ui.mixerUI.onCreateAutomation(t, i, n); };
+
+    ui.trackContainer.onActiveTrackChanged = [this](Track* t) {
+        ui.rightDock.setTrack(t);
+    };
+
+    ui.rightDock.onLayoutChanged = [this] {
+        resized();
     };
 }
 
@@ -382,7 +402,7 @@ void MainComponent::resized() {
     LayoutHandler::performLayout({
         getLocalBounds(), ui.topMenuBar, ui.hintPanel, ui.resourceMeter.get(),
         ui.pianoRollUI, ui.closePianoRollBtn, ui.mixerUI, *ui.masterChannelUI, ui.trackContainer, ui.playlistUI,
-        ui.bottomDock, ui.leftSidebar, ui.sidebarResizer, ui.masterStrip,
+        ui.bottomDock, ui.leftSidebar, ui.sidebarResizer, ui.masterStrip, ui.rightDock,
         currentView, isPianoRollVisible, isBottomDockVisible, bottomDockHeight, isLeftSidebarVisible, leftSidebarWidth
         });
 }

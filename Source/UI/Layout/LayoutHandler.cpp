@@ -32,6 +32,7 @@ void LayoutHandler::performLayout(LayoutDependencies d) {
         d.sidebarResizer.setVisible(false);
         d.mixerUI.setVisible(false);
         d.masterChannelUI.setVisible(false);
+        d.rightDock.setVisible(false);
     }
     else {
         d.pianoRollUI.setVisible(false);
@@ -53,6 +54,7 @@ void LayoutHandler::performLayout(LayoutDependencies d) {
             d.masterChannelUI.setBounds(area.removeFromLeft(masterWidth));
 
             d.mixerUI.setBounds(area);
+            d.rightDock.setVisible(false);
         }
         else {
             d.masterChannelUI.setVisible(false);
@@ -79,6 +81,11 @@ void LayoutHandler::performLayout(LayoutDependencies d) {
                 d.leftSidebar.setVisible(false);
                 d.sidebarResizer.setVisible(false);
             }
+
+            // --- RIGHT DOCK (CON INSPECTOR DE CANAL SELECCIONADO) ---
+            d.rightDock.setVisible(true);
+            int rightDockWidth = d.rightDock.getIdealWidthForHeight(area.getHeight());
+            d.rightDock.setBounds(area.removeFromRight(rightDockWidth));
 
             // --- DISEÑO INTEGRADO: Playlist completa, TrackContainer con espacio para Master ---
             auto trackArea = area.removeFromLeft(250);

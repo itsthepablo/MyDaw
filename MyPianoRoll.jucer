@@ -272,6 +272,10 @@
             <FILE id="rack03" name="ChannelRackPanel.cpp" compile="1" resource="0"
                   file="Source/UI/Panels/ChannelRack/ChannelRackPanel.cpp"/>
           </GROUP>
+          <GROUP id="{SEL-TRK-PNL-GRP}" name="SelectedTrack">
+            <FILE id="SelTrkH" name="SelectedTrackPanel.h" compile="0" resource="0"
+                  file="Source/UI/Panels/SelectedTrack/SelectedTrackPanel.h"/>
+          </GROUP>
           <FILE id="D6vTfs" name="HintPanel.h" compile="0" resource="0" file="Source/UI/Panels/HintPanel.h"/>
           <FILE id="hint01" name="HintPanel.cpp" compile="1" resource="0" file="Source/UI/Panels/HintPanel.cpp"/>
         </GROUP>
@@ -285,6 +289,9 @@
             <FILE id="M86NJQ" name="LeftSidebar.h" compile="0" resource="0" file="Source/UI/Docks/LeftSidebar/LeftSidebar.h"/>
             <FILE id="lP5IIW" name="SidebarResizer.h" compile="0" resource="0"
                   file="Source/UI/Docks/LeftSidebar/SidebarResizer.h"/>
+          </GROUP>
+          <GROUP id="{RGT-DCK-GRP}" name="RightDock">
+            <FILE id="RgtDckH" name="RightDock.h" compile="0" resource="0" file="Source/UI/Docks/RightDock/RightDock.h"/>
           </GROUP>
         </GROUP>
         <GROUP id="{M71F7D42-ABCD-1234-EF03-123456789014}" name="Meters">
