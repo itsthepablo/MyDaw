@@ -71,7 +71,7 @@ public:
         // ==============================================================
         const TrackSnapshot* snap = track->snapshot.load(std::memory_order_acquire);
 
-        if (isPlayingNow && snap) {
+        if ((isPlayingNow || isStoppingNow) && snap) {
             // --- Notas directas (Piano Roll) ---
             for (const auto& note : snap->notes) {
                 // Aplicamos margen de seguridad épsilon (-0.0001f) para que las notas en el inicio exacto del bloque siempre disparen
@@ -143,7 +143,7 @@ public:
             }
         }
 
-        if (isPlayingNow && snap) {
+        if ((isPlayingNow || isStoppingNow) && snap) {
             // --- Audio clips ---
             for (const auto& clipSnap : snap->audioClips) {
                 if (clipSnap.isMuted || !clipSnap.fileBufferPtr || !clipSnap.isLoaded) continue;
@@ -212,7 +212,7 @@ public:
                 midiForThisSynth.ensureSize(2048);
                 midiForThisSynth.addEvents(trackMidi, 0, numSamples, 0);
 
-                p->updatePlayHead(isPlayingNow, clock.currentSamplePos);
+                p->updatePlayHead(isPlayingNow || isStoppingNow, clock.currentSamplePos);
                 
                 // Truco de encapsulado de buffer temporal para evitar setSize
                 juce::AudioBuffer<float> proxyBuffer(track->tempSynthBuffer.getArrayOfWritePointers(), safeChannels, numSamples);
@@ -259,7 +259,7 @@ public:
             if (p != nullptr && p->isLoaded() && !p->getIsInstrument()) {
                 PluginRouting r = p->getRouting();
 
-                p->updatePlayHead(isPlayingNow, clock.currentSamplePos);
+                p->updatePlayHead(isPlayingNow || isStoppingNow, clock.currentSamplePos);
 
                 // --- SIDECHAIN SUPPORT ---
                 const juce::AudioBuffer<float>* sidechainBuf = nullptr;

@@ -433,7 +433,7 @@ bool PianoRollComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
         if (key.getKeyCode() == 'v' || key.getKeyCode() == 'V') { pasteNotes(); return true; }
         if (key.getKeyCode() == 'q' || key.getKeyCode() == 'Q') { quantizeNotes(); return true; }
     }
-    if (key.getKeyCode() == juce::KeyPress::spaceKey) { isPlaying = !isPlaying; repaint(); return true; }
+    // if (key.getKeyCode() == juce::KeyPress::spaceKey) { isPlaying = !isPlaying; repaint(); return true; }
     if (key.getKeyCode() == juce::KeyPress::deleteKey || key.getKeyCode() == juce::KeyPress::backspaceKey) {
         if (!selectedNotes.empty() && activeClip != nullptr) {
             hasStateChanged = true; std::vector<int> toD(selectedNotes.begin(), selectedNotes.end()); std::sort(toD.rbegin(), toD.rend());

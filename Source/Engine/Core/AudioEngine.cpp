@@ -14,6 +14,9 @@ void AudioEngine::prepareToPlay(int samples, double s) {
     clock.prepare(s, samples);
     metronome.prepare(s);
     threadPool.prepare(); 
+    
+    transportGain.reset(s, 0.015); // 15ms ramp (transiciones ultra-suaves)
+    transportGain.setCurrentAndTargetValue(0.0f);
 }
 
 void AudioEngine::releaseResources() {
@@ -66,48 +69,53 @@ void AudioEngine::setNonRealtime(bool isNonRealtime) {
 void AudioEngine::processBlock(const juce::AudioSourceChannelInfo& bufferToFill) noexcept
 {
     juce::ScopedNoDenormals noDenormals;
-
     bufferToFill.clearActiveBufferRegion();
 
     auto* topo = routingMatrix.getAudioThreadState();
     if (!topo) return;
 
-    bool isPlayingNow = transportState.isPlaying.load(std::memory_order_relaxed);
-    bool isPreviewing = transportState.isPreviewing.load(std::memory_order_relaxed);
-    int currentPreview = transportState.previewPitch.load(std::memory_order_relaxed);
+    // --- ESTADO DE TRANSPORTE ---
+    const bool isPlayingNow = transportState.isPlaying.load(std::memory_order_relaxed);
+    
+    // Gestión de ganancia suavizada (Anti-Clics)
+    transportGain.setTargetValue(isPlayingNow ? 1.0f : 0.0f);
+    const bool isFadingOut = !isPlayingNow && transportGain.isSmoothing();
+    const bool shouldProcess = isPlayingNow || isFadingOut;
 
-    PDCManager::dbgTracks.store((int)topo->activeTracks.size(), std::memory_order_relaxed);
-    PDCManager::dbgPlaying.store(isPlayingNow ? 1 : 0, std::memory_order_relaxed);
-
+    // --- RESET DE VSTs AL ARRANCAR ---
     if (isPlayingNow && !clock.wasPlayingLastBlock) {
         for (auto* track : topo->activeTracks) {
             track->dsp.pdcBuffer.clear();
             track->dsp.pdcWritePtr = 0;
             for (auto* p : track->plugins) {
-                if (p != nullptr && p->isLoaded())
-                    p->reset();
+                if (p != nullptr && p->isLoaded()) p->reset();
             }
         }
-        if (masterTrack != nullptr) {
+        if (masterTrack) {
             masterTrack->dsp.pdcBuffer.clear();
             masterTrack->dsp.pdcWritePtr = 0;
             for (auto* p : masterTrack->plugins) {
-                if (p != nullptr && p->isLoaded())
-                    p->reset();
+                if (p != nullptr && p->isLoaded()) p->reset();
             }
         }
     }
 
-    bool isStoppingNow = transportState.isStoppingNow.load(std::memory_order_relaxed);
-    
-    if (!isPlayingNow && clock.wasPlayingLastBlock) {
-        isStoppingNow = true;
+    // Actualizamos estado para el siguiente bloque
+    clock.wasPlayingLastBlock = isPlayingNow;
+
+    if (!shouldProcess) {
+        // Motor detenido totalmente y ganancia en cero.
+        transportGain.setCurrentAndTargetValue(0.0f);
+        bufferToFill.clearActiveBufferRegion();
+        return;
     }
 
-    if (isStoppingNow)
-        transportState.isStoppingNow.store(false, std::memory_order_relaxed);
+    // --- PROCESAMIENTO ACTIVO ---
+    bool isPreviewing = transportState.isPreviewing.load(std::memory_order_relaxed);
+    int currentPreview = transportState.previewPitch.load(std::memory_order_relaxed);
 
-    clock.wasPlayingLastBlock = isPlayingNow;
+    // Reloj (Avanza si está tocando o en fade-out)
+    clock.update(bufferToFill.numSamples, transportState, isFadingOut);
 
     juce::MidiBuffer previewMidi;
     if (isPreviewing) {
@@ -117,8 +125,7 @@ void AudioEngine::processBlock(const juce::AudioSourceChannelInfo& bufferToFill)
             previewMidi.addEvent(juce::MidiMessage::noteOn(1, currentPreview, 0.8f), 0);
             clock.lastPreviewPitch = currentPreview;
         }
-    }
-    else if (clock.lastPreviewPitch != -1) {
+    } else if (clock.lastPreviewPitch != -1) {
         previewMidi.addEvent(juce::MidiMessage::noteOff(1, clock.lastPreviewPitch), 0);
         clock.lastPreviewPitch = -1;
     }
@@ -129,79 +136,53 @@ void AudioEngine::processBlock(const juce::AudioSourceChannelInfo& bufferToFill)
         track->audioBuffer.clear();
         MixerParameterBridge::resetPeakLevels(track);
     }
-
     if (masterTrack != nullptr) {
         masterTrack->audioBuffer.clear();
         MixerParameterBridge::resetPeakLevels(masterTrack);
     }
 
-    clock.update(bufferToFill.numSamples, transportState);
     PDCManager::calculateLatencies(topo, transportState);
 
+    // Aquí usamos isFadingOut como el flag isStoppingNow para que los tracks sepan que deben terminar suavemente
     threadPool.processTracksParallel(
         topo, clock, bufferToFill.numSamples,
-        isPlayingNow, isStoppingNow, previewMidi,
+        isPlayingNow, isFadingOut, previewMidi,
         hardwareOutChannels);
 
     for (int i = 0; i < (int)topo->activeTracks.size(); ++i) {
         int parentIdx = (i < (int)topo->parentIndices.size()) ? topo->parentIndices[i] : -1;
         if (parentIdx == -1) {
-            if (masterTrack != nullptr) {
-                MasterMixer::routeToTrack(topo->activeTracks[i], masterTrack, bufferToFill.numSamples);
-            } else {
-                MasterMixer::routeToMaster(topo->activeTracks[i],
-                    bufferToFill.numSamples,
-                    hardwareOutChannels,
-                    bufferToFill);
-            }
+            if (masterTrack != nullptr) MasterMixer::routeToTrack(topo->activeTracks[i], masterTrack, bufferToFill.numSamples);
+            else MasterMixer::routeToMaster(topo->activeTracks[i], bufferToFill.numSamples, hardwareOutChannels, bufferToFill);
         }
     }
 
     if (masterTrack != nullptr) {
-        TrackProcessor::process(masterTrack, clock, bufferToFill.numSamples, isPlayingNow, isStoppingNow, previewMidi, topo);
+        TrackProcessor::process(masterTrack, clock, bufferToFill.numSamples, isPlayingNow, isFadingOut, previewMidi, topo);
         MixerDSP::applyGainAndPan(masterTrack, bufferToFill.numSamples, hardwareOutChannels);
-        
         MasterMixer::routeToMaster(masterTrack, bufferToFill.numSamples, hardwareOutChannels, bufferToFill);
-
-        juce::AudioBuffer<float> analysisProxy(bufferToFill.buffer->getArrayOfWritePointers(), 
-                                              bufferToFill.buffer->getNumChannels(), 
-                                              bufferToFill.startSample, 
-                                              bufferToFill.numSamples);
-
-        for (auto* t : topo->activeTracks) {
-            if (t->getType() == TrackType::Loudness) t->dsp.postLoudness.process(analysisProxy);
-            else if (t->getType() == TrackType::Balance) t->dsp.postBalance.process(analysisProxy);
-            else if (t->getType() == TrackType::MidSide) t->dsp.postMidSide.process(analysisProxy);
-        }
     }
 
     metronome.process(*bufferToFill.buffer, bufferToFill.numSamples, clock, transportState);
 
-    SafetyProcessors::applyNaNKiller(*bufferToFill.buffer,
-        bufferToFill.startSample, bufferToFill.numSamples);
+    SafetyProcessors::applyNaNKiller(*bufferToFill.buffer, bufferToFill.startSample, bufferToFill.numSamples);
 
     if (clock.justSeeked) {
-        bufferToFill.buffer->applyGainRamp(bufferToFill.startSample,
-            bufferToFill.numSamples, 0.0f, 1.0f);
+        bufferToFill.buffer->applyGainRamp(bufferToFill.startSample, bufferToFill.numSamples, 0.0f, 1.0f);
         clock.justSeeked = false;
     }
 
-    SafetyProcessors::applyHardClipper(*bufferToFill.buffer,
-        bufferToFill.startSample,
-        bufferToFill.numSamples, 1.0f);
+    // --- APLICACIÓN DE GANANCIA SUAVIZADA (Anti-Clic Final) ---
+    transportGain.applyGain(*bufferToFill.buffer, bufferToFill.numSamples);
 
-    // --- MONITOR TAP (Inspector Analyzer & VU Meter - SIEMPRE SOBRE EL MASTER/SALIDA FINAL) ---
+    SafetyProcessors::applyHardClipper(*bufferToFill.buffer, bufferToFill.startSample, bufferToFill.numSamples, 1.0f);
+
+    // --- MONITOR TAP ---
     auto* analyzerPtr = static_cast<SimpleAnalyzer*>(analyzerToFeed.load(std::memory_order_relaxed));
     auto* vuPtr = static_cast<VUBallistics*>(vuToFeed.load(std::memory_order_relaxed));
-
-    if (analyzerPtr || vuPtr)
-    {
-        // Usamos directamente el buffer final de salida (bufferToFill) que contiene la mezcla de todo
+    if (analyzerPtr || vuPtr) {
         const float* audioL = bufferToFill.buffer->getReadPointer(0, bufferToFill.startSample);
-        const float* audioR = (bufferToFill.buffer->getNumChannels() > 1) 
-                                ? bufferToFill.buffer->getReadPointer(1, bufferToFill.startSample)
-                                : audioL;
-
+        const float* audioR = (bufferToFill.buffer->getNumChannels() > 1) ? bufferToFill.buffer->getReadPointer(1, bufferToFill.startSample) : audioL;
         if (analyzerPtr) analyzerPtr->pushBuffer(audioL, bufferToFill.numSamples);
         if (vuPtr) vuPtr->processStereo(audioL, audioR, bufferToFill.numSamples);
     }

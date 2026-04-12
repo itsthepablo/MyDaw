@@ -28,7 +28,7 @@ struct AudioClock {
     }
 
     // Se alimenta el estado localizado desde el TransportState lock-free
-    void update(int numSamples, TransportState& ts) {
+    void update(int numSamples, TransportState& ts, bool forceAdvance = false) {
         bool isPlayingNow = ts.isPlaying.load(std::memory_order_relaxed);
         float loopEndPos = ts.loopEndPos.load(std::memory_order_relaxed);
         float currentBpm = ts.bpm.load(std::memory_order_relaxed);
@@ -45,8 +45,8 @@ struct AudioClock {
             justSeeked = true;
         }
 
-        // Si no estamos tocando, sincronizamos visualmente con la UI (Playhead)
-        if (!isPlayingNow) {
+        // Si no estamos tocando y no estamos forzando avance (fade out), sincronizamos visualmente
+        if (!isPlayingNow && !forceAdvance) {
             float staticPh = ts.playheadPos.load(std::memory_order_relaxed);
             if (staticPh != currentPh) {
                 currentPh = staticPh;

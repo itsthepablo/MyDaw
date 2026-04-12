@@ -23,8 +23,15 @@ public:
         bool isPlayingNow = ts.isPlaying.load(std::memory_order_relaxed);
         double bpm = ts.bpm.load(std::memory_order_relaxed);
 
-        if (!isEnabled || !isPlayingNow) {
+        // Ya no retornamos prematuramente; el estado isPlayingNow ahora solo controla
+        // si se disparan NUEVOS golpes, pero permite que los existentes terminen.
+        if (!isEnabled) {
             wasStopped = !isPlayingNow;
+            return;
+        }
+
+        if (!isPlayingNow && envelope <= 0.0) {
+            wasStopped = true;
             return;
         }
 

@@ -2,12 +2,12 @@
 
 MainComponent::MainComponent() {
     setupCommands();
-    commandManager.registerAllCommandsForTarget(this);
-    addKeyListener(commandManager.getKeyMappings());
+    commandController->getCommandManager().registerAllCommandsForTarget(this);
+    addKeyListener(commandController->getCommandManager().getKeyMappings());
 
     ui.resourceMeter = std::make_unique<ResourceMeter>(*this);
 
-    UIManager::setupUI(ui, *this, [this] { closePianoRoll(); });
+    UIManager::setupUI(ui, *this, [this] { viewManager.closePianoRoll(); });
     viewManager.setup();
     ui.onResized = [this] { resized(); };
 
@@ -33,15 +33,12 @@ MainComponent::MainComponent() {
 MainComponent::~MainComponent() { shutdownAudio(); }
 
 void MainComponent::setupCommands() {
-    commandHandler = std::make_unique<DAWCommandHandler>(CommandActions{
-        [this] { ui.topMenuBar.playBtn.triggerClick(); },
-        [this] { toggleViewMode(); }
-        });
+    commandController = std::make_unique<CommandController>(ui, viewManager, audioEngine);
 }
 
 void MainComponent::setupCallbacks() {
     ui.topMenuBar.viewToggleBtn.onClick = [this] { viewManager.toggleViewMode(); };
-    ui.topMenuBar.onSaveRequested = [this] { saveProject(); };
+    ui.topMenuBar.onSaveRequested = [this] { projectController.saveProject(); };
     ui.topMenuBar.onExportRequested = [this] { renderController.startExport(this); };
     ui.topMenuBar.onThemeManagerRequested = [this] {
         if (themeWindow == nullptr)
@@ -94,17 +91,17 @@ void MainComponent::setupCallbacks() {
 
     // --- CONEXIÓN MASTER TRACK ---
     ui.masterStrip.onTrackSelected = [this](Track* mt) {
-        selectTrackExclusive(mt, true);
+        selectionManager.selectTrack(mt, true);
     };
 
     ui.masterStrip.onEffectsRequested = [this](Track* mt) {
-        selectTrackExclusive(mt, true);
+        selectionManager.selectTrack(mt, true);
         viewManager.showBottomDock(BottomDock::EffectsTab);
     };
 
 
     ui.trackContainer.onOpenEffects = [this](Track& track) {
-        selectTrackExclusive(&track, false);
+        selectionManager.selectTrack(&track, false);
         viewManager.showBottomDock(BottomDock::EffectsTab);
     };
 
@@ -124,11 +121,11 @@ void MainComponent::setupCallbacks() {
         };
 
     ui.playlistUI.onMidiClipDeleted = [this](MidiPattern* c) {
-        if (ui.pianoRollUI.getActiveClip() == c) closePianoRoll();
+        if (ui.pianoRollUI.getActiveClip() == c) viewManager.closePianoRoll();
         };
 
     ui.trackContainer.onDeleteTrack = [this](int index) {
-        trackManager.handleDeleteTrack(index, [this] { closePianoRoll(); });
+        trackManager.handleDeleteTrack(index, [this] { viewManager.closePianoRoll(); });
     };
 
     // --- CONEXIÓN SIDECHAIN (DATA SOURCE) ---
@@ -150,7 +147,7 @@ void MainComponent::setupCallbacks() {
     ui.rightDock.selectedTrackPanel.onCreateAutomation = [this](Track& t, int i, juce::String n) { ui.mixerUI.onCreateAutomation(t, i, n); };
 
     ui.trackContainer.onActiveTrackChanged = [this](Track* t) {
-        selectTrackExclusive(t, false);
+        selectionManager.selectTrack(t, false);
     };
 
     ui.trackContainer.onDeselectMasterRequested = [this] {
@@ -229,44 +226,13 @@ void MainComponent::paint(juce::Graphics& g) {
     }
 }
 
-void MainComponent::toggleViewMode() { viewManager.toggleViewMode(); }
-void MainComponent::openPianoRoll() { viewManager.openPianoRoll(); }
-void MainComponent::closePianoRoll() { viewManager.closePianoRoll(); }
 
-void MainComponent::loadProject(const juce::File& file) {
-    ProjectManager::loadProject(file, ui.trackContainer, audioEngine, &audioMutex, ui.playlistUI, ui.effectsPanelUI, ui.pickerPanelUI, [this] { resized(); });
-}
 
-void MainComponent::saveProject() {
-    ProjectManager::saveProject(ui.trackContainer, audioEngine, fileChooser);
-}
+
 
 
 void MainComponent::resized() {
     viewManager.resized();
 }
 
-juce::ApplicationCommandTarget* MainComponent::getNextCommandTarget() { return commandHandler.get(); }
-void MainComponent::getAllCommands(juce::Array<juce::CommandID>& c) { commandHandler->getAllCommands(c); }
-void MainComponent::getCommandInfo(juce::CommandID id, juce::ApplicationCommandInfo& r) { commandHandler->getCommandInfo(id, r); }
-bool MainComponent::perform(const juce::ApplicationCommandTarget::InvocationInfo& i) { return commandHandler->perform(i); }
 
-void MainComponent::selectTrackExclusive(Track* t, bool isMaster)
-{
-    if (isMaster) {
-        ui.trackContainer.deselectAllTracks();
-        if (ui.masterTrackObj) ui.masterTrackObj->isSelected = true;
-    } else {
-        if (ui.masterTrackObj) ui.masterTrackObj->isSelected = false;
-    }
-
-    // --- ACTUALIZACIÓN GLOBAL DE PANELES ---
-    audioEngine.selectedTrackForAnalysis.store(t);
-    ui.rightDock.setTrack(t);
-    ui.effectsPanelUI.setTrack(t);
-    ui.instrumentPanelUI.setTrack(t);
-
-    ui.masterStrip.repaint();
-    ui.trackContainer.repaint();
-    ui.mixerUI.repaint();
-}

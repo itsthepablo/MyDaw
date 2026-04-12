@@ -24,6 +24,8 @@ public:
     double currentSampleRate = 44100.0;
     Track* masterTrack = nullptr;
 
+    juce::LinearSmoothedValue<float> transportGain;
+
     void prepareToPlay(int samples, double s);
     void releaseResources();
     void resetForRender();

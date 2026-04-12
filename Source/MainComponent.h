@@ -10,12 +10,13 @@
 
 // 2. INCLUDES RESTANTES DESPUÉS DE LA UI
 #include "UI/Layout/ViewManager.h"
-#include "Project/ProjectManager.h"
+#include "Project/ProjectController.h"
 #include "Engine/Core/AudioEngine.h"
 #include "Bridge/BridgeManager.h"
-#include "UI/Commands/DAWCommandHandler.h"
+#include "UI/Commands/CommandController.h"
 #include "Theme/ThemeManagerWindow.h" // NUEVO: Ventana de temas
 #include "Tracks/TrackManager.h"
+#include "Tracks/SelectionManager.h"
 
 class MainComponent : public juce::AudioAppComponent,
     public juce::ApplicationCommandTarget,
@@ -31,30 +32,32 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override;
 
-    juce::ApplicationCommandTarget* getNextCommandTarget() override;
-    void getAllCommands(juce::Array<juce::CommandID>& c) override;
-    void getCommandInfo(juce::CommandID commandID, juce::ApplicationCommandInfo& result) override;
-    bool perform(const juce::ApplicationCommandTarget::InvocationInfo& info) override;
+    void toggleViewMode() { viewManager.toggleViewMode(); }
 
-    void toggleViewMode();
-    void loadProject(const juce::File& file);
+    void loadProject(const juce::File& file) { projectController.loadProject(file, [this] { resized(); }); }
+
+    // --- DELEGACIÓN DE COMANDOS ---
+    juce::ApplicationCommandTarget* getNextCommandTarget() override { return commandController.get(); }
+    void getAllCommands(juce::Array<juce::CommandID>& c) override { commandController->getAllCommands(c); }
+    void getCommandInfo(juce::CommandID id, juce::ApplicationCommandInfo& r) override { commandController->getCommandInfo(id, r); }
+    bool perform(const juce::ApplicationCommandTarget::InvocationInfo& i) override { return commandController->perform(i); }
+
 
 private:
     void setupCallbacks();
     void setupBridges();
     void setupCommands();
 
-    void openPianoRoll();
-    void closePianoRoll();
-    void saveProject();
-    void selectTrackExclusive(Track* t, bool isMaster);
 
-    juce::ApplicationCommandManager commandManager;
-    std::unique_ptr<DAWCommandHandler> commandHandler;
+    std::unique_ptr<CommandController> commandController;
 
     DAWUIComponents ui;
     ViewManager viewManager{ ui, *this };
     TrackManager trackManager{ ui, audioEngine, audioMutex };
+    SelectionManager selectionManager{ ui, audioEngine };
+public:
+    ProjectController projectController{ ui, audioEngine, audioMutex };
+private:
 
     juce::CriticalSection audioMutex;
     AudioEngine audioEngine;
@@ -63,7 +66,6 @@ private:
     RenderController renderController{ ui, audioEngine, *this, audioMutex, isOfflineRendering };
     std::atomic<bool> isOfflineRendering{ false };
 
-    std::unique_ptr<juce::FileChooser> fileChooser;
     std::unique_ptr<ThemeManagerWindow> themeWindow; // NUEVO: Instancia persistente
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
