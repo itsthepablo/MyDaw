@@ -1,3 +1,6 @@
+#pragma once
+#include <JuceHeader.h>
+
 class VUBallistics
 {
 public:

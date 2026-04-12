@@ -132,16 +132,34 @@ public:
             auto& magnitudes = targetDSP->getMagnitudes();
             juce::Path fftPath;
             bool first = true;
+
+            // Rango de visualización en dB: -100 dB a +12 dB (offset de 16 ya incluido en DSP)
+            const float displayMinDB = -100.0f + 16.0f; 
+            const float displayMaxDB = 10.0f + 16.0f;
+
             for (size_t i = 0; i < magnitudes.size(); ++i) {
                 float x = displayArea.getX() + (float)i / magnitudes.size() * displayArea.getWidth();
-                float mag = juce::jlimit(0.0f, 1.0f, magnitudes[i] * 10.0f);
-                float y = displayArea.getBottom() - (mag * displayArea.getHeight() * 0.8f);
+                
+                // Normalizar la magnitud en dB al área vertical con CLAMP de seguridad
+                float db = magnitudes[i];
+                float normY = juce::jmap(juce::jlimit(displayMinDB, displayMaxDB, db), displayMinDB, displayMaxDB, 0.0f, 1.0f);
+                float y = displayArea.getBottom() - (normY * displayArea.getHeight() * 0.9f);
                 
                 if (first) { fftPath.startNewSubPath(x, y); first = false; }
                 else fftPath.lineTo(x, y);
             }
-            g.setColour(juce::Colour(80, 200, 120).withAlpha(0.4f));
-            g.strokePath(fftPath, juce::PathStrokeType(1.0f));
+            
+            // --- DIBUJAR RELLENO (Degradado Vertical de Color a Transparente) ---
+            juce::Path fillPath = fftPath;
+            fillPath.lineTo((float)displayArea.getRight(), (float)displayArea.getBottom());
+            fillPath.lineTo((float)displayArea.getX(), (float)displayArea.getBottom());
+            fillPath.closeSubPath();
+
+            juce::Colour emerald = juce::Colour(80, 200, 120);
+            
+            // Color sólido con opacidad alta para máxima claridad
+            g.setColour(emerald.withAlpha(0.7f));
+            g.fillPath(fillPath);
             
             // --- CURVA CIAN (IIR) ---
             drawResponseCurve(g, displayArea);
@@ -207,7 +225,10 @@ public:
         b2HS.setBounds(b2Area.removeFromTop(b2H).withSizeKeepingCentre(16, 16));
     }
 
-    void timerCallback() override { repaint(); }
+    void timerCallback() override { 
+        if (targetDSP) targetDSP->processAnalyzer();
+        repaint(); 
+    }
 
 private:
     void drawResponseCurve(juce::Graphics& g, juce::Rectangle<int> bounds)
