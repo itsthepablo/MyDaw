@@ -299,7 +299,9 @@
         </GROUP>
         <GROUP id="{M71F7D42-ABCD-1234-EF03-123456789014}" name="Meters">
           <FILE id="B6VI8M" name="LevelMeter.h" compile="0" resource="0" file="Source/UI/Meters/LevelMeter.h"/>
+          <FILE id="LMCpp1" name="LevelMeter.cpp" compile="1" resource="0" file="Source/UI/Meters/LevelMeter.cpp"/>
           <FILE id="yioUXf" name="ResourceMeter.h" compile="0" resource="0" file="Source/UI/Meters/ResourceMeter.h"/>
+          <FILE id="RMCpp1" name="ResourceMeter.cpp" compile="1" resource="0" file="Source/UI/Meters/ResourceMeter.cpp"/>
         </GROUP>
         <GROUP id="{W71F7D42-ABCD-1234-EF04-123456789015}" name="Windows">
           <FILE id="eosDxo" name="SplashWindow.h" compile="0" resource="0" file="Source/UI/Windows/SplashWindow.h"/>
