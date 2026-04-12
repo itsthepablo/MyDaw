@@ -1,5 +1,6 @@
 #include "PianoRollComponent.h"
 #include <cmath>
+#include "../Bridge/PythonBridge.h"
 
 PianoRollComponent::PianoRollComponent()
 {
@@ -28,6 +29,12 @@ PianoRollComponent::PianoRollComponent()
 
     addAndMakeVisible(linkAutoBtn); linkAutoBtn.setButtonText("LINK AUTO"); linkAutoBtn.setClickingTogglesState(true);
     linkAutoBtn.setToggleState(false, juce::dontSendNotification);
+
+    addAndMakeVisible(pyHumanizeBtn); pyHumanizeBtn.setButtonText("HUMANIZE (PY)");
+    pyHumanizeBtn.onClick = [this] { processPythonHumanize(); };
+
+    addAndMakeVisible(chordGeneratorBtn); chordGeneratorBtn.setButtonText("TEXT TO CHORD");
+    chordGeneratorBtn.onClick = [this] { processTextToChord(); };
 
     addAndMakeVisible(rootNoteCombo); rootNoteCombo.addItemList({ "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" }, 1); rootNoteCombo.setSelectedItemIndex(0); rootNoteCombo.onChange = [this] { updateScale(); };
 
@@ -63,6 +70,37 @@ float PianoRollComponent::getLoopEndPos() const {
 bool PianoRollComponent::isInterestedInFileDrag(const juce::StringArray& files) {
     for (auto file : files) { if (file.endsWithIgnoreCase(".mid") || file.endsWithIgnoreCase(".midi")) return true; }
     return false;
+}
+
+void PianoRollComponent::processPythonHumanize()
+{
+    if (activeClip == nullptr) return;
+
+    auto& notes = activeClip->getNotes();
+    if (notes.empty()) return;
+
+    // Ejecutar el puente
+    if (PythonBridge::executeScript("humanize.py", notes))
+    {
+        commitHistory();
+        automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, (float)getSnapPixels(), playheadAbsPos);
+        repaint();
+    }
+}
+
+void PianoRollComponent::processTextToChord()
+{
+    if (activeClip == nullptr) return;
+
+    auto& notes = activeClip->getNotes();
+    
+    // El script de acordes puede trabajar con o sin notas previas (las añade)
+    if (PythonBridge::executeScript("text_to_chord.py", notes))
+    {
+        commitHistory();
+        automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, (float)getSnapPixels(), playheadAbsPos);
+        repaint();
+    }
 }
 
 void PianoRollComponent::filesDropped(const juce::StringArray& files, int x, int y) {
@@ -190,9 +228,19 @@ void PianoRollComponent::paint(juce::Graphics& g) {
 
         bool inScale = isNoteInScale(nts[i].pitch);
         juce::Colour noteColor;
-        if (selectedNotes.count(i) > 0) { noteColor = juce::Colours::yellow; }
-        else if (!inScale) { noteColor = juce::Colour(220, 80, 80); }
-        else { noteColor = juce::Colour(130, 90, 190); }
+        if (selectedNotes.count(i) > 0) { 
+            noteColor = juce::Colours::yellow; 
+        }
+        else if (!inScale) { 
+            noteColor = juce::Colour(220, 80, 80); 
+        }
+        else { 
+            noteColor = juce::Colour(130, 90, 190); 
+        }
+
+        // Aplicar brillo basado en velocity (0.4 a 1.0 para que no sea negro total)
+        float brightness = 0.4f + (nts[i].velocity / 127.0f) * 0.6f;
+        noteColor = noteColor.withBrightness(brightness);
 
         g.setColour(noteColor); g.fillRect(nR);
         g.setColour(juce::Colours::black.withAlpha(0.5f)); g.drawRect(nR, 1.0f);
@@ -264,11 +312,15 @@ void PianoRollComponent::paint(juce::Graphics& g) {
 }
 
 void PianoRollComponent::resized() {
-    snapSelector.setBounds(10, 10, 100, 30);
-    toolBtn.setBounds(120, 10, 100, 30);
-    linkAutoBtn.setBounds(230, 10, 100, 30);
-    hZoomLabel.setBounds(345, 15, 50, 20); hZoomSlider.setBounds(395, 15, 80, 20);
-    vZoomLabel.setBounds(485, 15, 50, 20); vZoomSlider.setBounds(535, 15, 80, 20);
+    snapSelector.setBounds(10, 10, 80, 30);
+    toolBtn.setBounds(95, 10, 80, 30);
+    linkAutoBtn.setBounds(180, 10, 80, 30);
+    pyHumanizeBtn.setBounds(265, 10, 110, 30);
+    chordGeneratorBtn.setBounds(380, 10, 130, 30);
+    
+    hZoomLabel.setBounds(520, 15, 50, 20); hZoomSlider.setBounds(570, 15, 80, 20);
+    vZoomLabel.setBounds(525, 15, 50, 20); vZoomSlider.setBounds(575, 15, 80, 20);
+    
     rootNoteCombo.setBounds(getWidth() - 320, 10, 50, 30); scaleCombo.setBounds(getWidth() - 260, 10, 240, 30);
     int hbY = getHeight() - autoH - scrollBarSize; automationEditor.setBounds(0, getHeight() - autoH, getWidth(), autoH); hBar.setBounds(keyW, hbY, getWidth() - keyW - scrollBarSize, scrollBarSize); vBar.setBounds(getWidth() - scrollBarSize, toolH + timelineH, scrollBarSize, hbY - (toolH + timelineH));
     updateScrollBars(); automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, (float)getSnapPixels(), playheadAbsPos);

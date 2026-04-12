@@ -167,8 +167,10 @@
               file="Source/Project/ProjectManager.h"/>
         <FILE id="nuc93N" name="FileAssociationHandler.h" compile="0" resource="0"
               file="Source/Project/FileAssociationHandler.h"/>
-        <FILE id="PrjCtC" name="ProjectController.cpp" compile="1" resource="0" file="Source/Project/ProjectController.cpp"/>
-        <FILE id="PrjCtH" name="ProjectController.h" compile="0" resource="0" file="Source/Project/ProjectController.h"/>
+        <FILE id="PrjCtC" name="ProjectController.cpp" compile="1" resource="0"
+              file="Source/Project/ProjectController.cpp"/>
+        <FILE id="PrjCtH" name="ProjectController.h" compile="0" resource="0"
+              file="Source/Project/ProjectController.h"/>
       </GROUP>
       <GROUP id="{AFD9DDCE-5185-EFD2-051F-092FE115DBAB}" name="Images">
         <FILE id="HNJ2Wb" name="daw_icon.png" compile="0" resource="1" file="Source/Images/daw_icon.png"/>
@@ -222,7 +224,8 @@
             <FILE id="W6CH76" name="SvgToggleButton.h" compile="0" resource="0"
                   file="Source/UI/Bars/TopMenuBar/SvgToggleButton.h"/>
             <FILE id="nKVcEQ" name="TopMenuBar.h" compile="0" resource="0" file="Source/UI/Bars/TopMenuBar/TopMenuBar.h"/>
-            <FILE id="TMB_Cpp1" name="TopMenuBar.cpp" compile="1" resource="0" file="Source/UI/Bars/TopMenuBar/TopMenuBar.cpp"/>
+            <FILE id="TMB_Cpp1" name="TopMenuBar.cpp" compile="1" resource="0"
+                  file="Source/UI/Bars/TopMenuBar/TopMenuBar.cpp"/>
             <FILE id="fauvAY" name="TopMenuButton.h" compile="0" resource="0" file="Source/UI/Bars/TopMenuBar/TopMenuButton.h"/>
             <FILE id="VMoPm2" name="WindowControlButton.h" compile="0" resource="0"
                   file="Source/UI/Bars/TopMenuBar/WindowControlButton.h"/>
@@ -302,7 +305,8 @@
           <FILE id="B6VI8M" name="LevelMeter.h" compile="0" resource="0" file="Source/UI/Meters/LevelMeter.h"/>
           <FILE id="LMCpp1" name="LevelMeter.cpp" compile="1" resource="0" file="Source/UI/Meters/LevelMeter.cpp"/>
           <FILE id="yioUXf" name="ResourceMeter.h" compile="0" resource="0" file="Source/UI/Meters/ResourceMeter.h"/>
-          <FILE id="RMCpp1" name="ResourceMeter.cpp" compile="1" resource="0" file="Source/UI/Meters/ResourceMeter.cpp"/>
+          <FILE id="RMCpp1" name="ResourceMeter.cpp" compile="1" resource="0"
+                file="Source/UI/Meters/ResourceMeter.cpp"/>
         </GROUP>
         <GROUP id="{W71F7D42-ABCD-1234-EF04-123456789015}" name="Windows">
           <FILE id="eosDxo" name="SplashWindow.h" compile="0" resource="0" file="Source/UI/Windows/SplashWindow.h"/>
@@ -313,8 +317,10 @@
         </GROUP>
         <GROUP id="{E7B85CD9-616C-D134-AD51-768267AEA5F4}" name="Commands">
           <FILE id="L8vNYa" name="CommandIDs.h" compile="0" resource="0" file="Source/UI/Commands/CommandIDs.h"/>
-          <FILE id="CmdCtC" name="CommandController.cpp" compile="1" resource="0" file="Source/UI/Commands/CommandController.cpp"/>
-          <FILE id="CmdCtH" name="CommandController.h" compile="0" resource="0" file="Source/UI/Commands/CommandController.h"/>
+          <FILE id="CmdCtC" name="CommandController.cpp" compile="1" resource="0"
+                file="Source/UI/Commands/CommandController.cpp"/>
+          <FILE id="CmdCtH" name="CommandController.h" compile="0" resource="0"
+                file="Source/UI/Commands/CommandController.h"/>
         </GROUP>
         <GROUP id="{493E77C4-3200-C8E2-90EC-33CDCA20C386}" name="Layout">
           <FILE id="TZjXHr" name="LayoutHandler.cpp" compile="1" resource="0"
@@ -384,6 +390,9 @@
               file="Source/Bridge/TrackMixerPlaylistBridge.h"/>
         <FILE id="Xu9v5w" name="TrackPianoRollBridge.h" compile="1" resource="0"
               file="Source/Bridge/TrackPianoRollBridge.h"/>
+        <FILE id="PyBrgC" name="PythonBridge.cpp" compile="1" resource="0"
+              file="Source/Bridge/PythonBridge.cpp"/>
+        <FILE id="PyBrgH" name="PythonBridge.h" compile="0" resource="0" file="Source/Bridge/PythonBridge.h"/>
         <FILE id="s7f94C" name="TransportBridge.h" compile="0" resource="0"
               file="Source/Bridge/TransportBridge.h"/>
       </GROUP>
@@ -446,6 +455,7 @@
           <FILE id="eNp0RM" name="EraserTool.h" compile="0" resource="0" file="Source/Playlist/Tools/EraserTool.h"/>
           <FILE id="oo2gcJ" name="MuteTool.h" compile="0" resource="0" file="Source/Playlist/Tools/MuteTool.h"/>
           <FILE id="BIHoRJ" name="PlaylistTool.h" compile="0" resource="0" file="Source/Playlist/Tools/PlaylistTool.h"/>
+          <FILE id="bFy0Pb" name="PointerTool.cpp" compile="1" resource="0" file="Source/Playlist/Tools/PointerTool.cpp"/>
           <FILE id="Rb4h8T" name="PointerTool.h" compile="0" resource="0" file="Source/Playlist/Tools/PointerTool.h"/>
           <FILE id="a71jBQ" name="ScissorTool.h" compile="0" resource="0" file="Source/Playlist/Tools/ScissorTool.h"/>
         </GROUP>
@@ -480,10 +490,13 @@
               file="Source/Playlist/PlaylistDropHandler.h"/>
       </GROUP>
       <GROUP id="{F98E9492-EAA4-A856-6CC6-2352DAB93A59}" name="Tracks">
-        <FILE id="TrMng1" name="TrackManager.cpp" compile="1" resource="0" file="Source/Tracks/TrackManager.cpp"/>
+        <FILE id="TrMng1" name="TrackManager.cpp" compile="1" resource="0"
+              file="Source/Tracks/TrackManager.cpp"/>
         <FILE id="TrMng2" name="TrackManager.h" compile="0" resource="0" file="Source/Tracks/TrackManager.h"/>
-        <FILE id="SelMng1" name="SelectionManager.cpp" compile="1" resource="0" file="Source/Tracks/SelectionManager.cpp"/>
-        <FILE id="SelMng2" name="SelectionManager.h" compile="0" resource="0" file="Source/Tracks/SelectionManager.h"/>
+        <FILE id="SelMng1" name="SelectionManager.cpp" compile="1" resource="0"
+              file="Source/Tracks/SelectionManager.cpp"/>
+        <FILE id="SelMng2" name="SelectionManager.h" compile="0" resource="0"
+              file="Source/Tracks/SelectionManager.h"/>
         <GROUP id="{A1B2C3D4-E5F6-4A5B-8C7D-9E0F1A2B3C4D}" name="Data">
           <FILE id="tD9p2X" name="TrackData.h" compile="0" resource="0" file="Source/Tracks/Data/TrackData.h"/>
           <FILE id="sN3p1Q" name="TrackSnapshots.h" compile="0" resource="0"

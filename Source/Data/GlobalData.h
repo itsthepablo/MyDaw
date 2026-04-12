@@ -10,9 +10,10 @@ struct Note {
     int x;
     int width;
     double frequency;
+    int velocity = 100; // 0-127
 
     bool operator== (const Note& other) const {
-        return pitch == other.pitch && x == other.x && width == other.width;
+        return pitch == other.pitch && x == other.x && width == other.width && velocity == other.velocity;
     }
 };
 

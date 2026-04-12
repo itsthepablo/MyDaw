@@ -135,6 +135,8 @@ private:
     juce::Label hZoomLabel; juce::Label vZoomLabel;
     juce::ComboBox snapSelector;
     juce::TextButton toolBtn;
+    juce::TextButton pyHumanizeBtn;
+    juce::TextButton chordGeneratorBtn;
     juce::TextButton linkAutoBtn;
     juce::ScrollBar hBar{ false }; juce::ScrollBar vBar{ true };
     juce::ComboBox rootNoteCombo; juce::ComboBox scaleCombo;
@@ -147,6 +149,8 @@ private:
     int getNoteAt(int x, int y); bool isWhiteKey(int midiNote);
 
     void updateScale(); bool isNoteInScale(int midiPitch) const;
+    void processPythonHumanize();
+    void processTextToChord();
     int currentRootNoteOffset = 0; std::vector<int> currentScaleIntervals; std::vector<int> currentScaleNotesInOctave;
     juce::String getNoteName(int midiPitch) const;
 
