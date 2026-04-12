@@ -222,6 +222,7 @@
             <FILE id="W6CH76" name="SvgToggleButton.h" compile="0" resource="0"
                   file="Source/UI/Bars/TopMenuBar/SvgToggleButton.h"/>
             <FILE id="nKVcEQ" name="TopMenuBar.h" compile="0" resource="0" file="Source/UI/Bars/TopMenuBar/TopMenuBar.h"/>
+            <FILE id="TMB_Cpp1" name="TopMenuBar.cpp" compile="1" resource="0" file="Source/UI/Bars/TopMenuBar/TopMenuBar.cpp"/>
             <FILE id="fauvAY" name="TopMenuButton.h" compile="0" resource="0" file="Source/UI/Bars/TopMenuBar/TopMenuButton.h"/>
             <FILE id="VMoPm2" name="WindowControlButton.h" compile="0" resource="0"
                   file="Source/UI/Bars/TopMenuBar/WindowControlButton.h"/>
@@ -352,6 +353,8 @@
                 file="Source/Engine/Nodes/MetronomeProcessor.h"/>
           <FILE id="pAxzFs" name="TrackProcessor.h" compile="0" resource="0"
                 file="Source/Engine/Nodes/TrackProcessor.h"/>
+          <FILE id="TP_Cpp1" name="TrackProcessor.cpp" compile="1" resource="0"
+                file="Source/Engine/Nodes/TrackProcessor.cpp"/>
         </GROUP>
         <GROUP id="{A8655592-496E-E61C-29AE-468877FA16C5}" name="Routing">
           <FILE id="XV7lcF" name="MasterMixer.h" compile="0" resource="0" file="Source/Engine/Routing/MasterMixer.h"/>
@@ -493,8 +496,12 @@
                 file="Source/Tracks/UI/MasterTrackStrip.h"/>
           <FILE id="UklVn6" name="TrackContainer.h" compile="0" resource="0"
                 file="Source/Tracks/UI/TrackContainer.h"/>
+          <FILE id="TC_Cpp1" name="TrackContainer.cpp" compile="1" resource="0"
+                file="Source/Tracks/UI/TrackContainer.cpp"/>
           <FILE id="DW4KPG" name="TrackControlPanel.h" compile="0" resource="0"
                 file="Source/Tracks/UI/TrackControlPanel.h"/>
+          <FILE id="TCP_Cpp1" name="TrackControlPanel.cpp" compile="1" resource="0"
+                file="Source/Tracks/UI/TrackControlPanel.cpp"/>
         </GROUP>
         <GROUP id="{C3D4E5F6-A7B8-4C9D-0E1F-2A3B4C5D6E7F}" name="DSP">
           <FILE id="bH7mK1" name="TrackDSP.cpp" compile="1" resource="0" file="Source/Tracks/DSP/TrackDSP.cpp"/>
