@@ -226,6 +226,16 @@ void MixerChannelUI::updateUI() {
     fader.setValue(track->getVolume(), juce::dontSendNotification);
     panKnob.setValue(track->getBalance(), juce::dontSendNotification);
 
+    // --- ASIGNAR MOD TARGETS (Solo una vez) ---
+    if (!fader.modTarget.isValid()) {
+        fader.modTarget.type = ModTarget::Volume;
+        panKnob.modTarget.type = ModTarget::Pan;
+        if (!isMiniMode) {
+            panL.modTarget.type = ModTarget::Pan; // O dual pan si se prefiere
+            panR.modTarget.type = ModTarget::Pan;
+        }
+    }
+
     if (!isMiniMode) {
         bool dual = MixerParameterBridge::isPanningModeDual(track);
         bool uiDual = panToggle.getToggleState();
@@ -393,6 +403,11 @@ void MixerChannelUI::updatePanVisibility() {
 
 void MixerChannelUI::timerCallback() {
     if (track != nullptr) {
+        // --- ACTUALIZAR ANILLOS DE MODULACIÓN ---
+        double ph = juce::Time::getMillisecondCounterHiRes() * 0.001; // Aproximación visual
+        fader.setModulationValue(track->getModulationForTarget(fader.modTarget, ph));
+        panKnob.setModulationValue(track->getModulationForTarget(panKnob.modTarget, ph));
+
         meterLF.setTrackColour(track->getColor());
         meter.repaint();
         midMeter.repaint();

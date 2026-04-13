@@ -284,6 +284,12 @@
             <FILE id="SelTrkH" name="SelectedTrackPanel.h" compile="0" resource="0"
                   file="Source/UI/Panels/SelectedTrack/SelectedTrackPanel.h"/>
           </GROUP>
+          <GROUP id="{MOD1-PNL-GRP}" name="Modulators">
+            <FILE id="ModRP01" name="ModulatorRackPanel.h" compile="0" resource="0"
+                  file="Source/UI/Panels/Modulators/ModulatorRackPanel.h"/>
+            <FILE id="ModML01" name="ModMappingList.h" compile="0" resource="0"
+                  file="Source/UI/Panels/Modulators/ModMappingList.h"/>
+          </GROUP>
           <FILE id="D6vTfs" name="HintPanel.h" compile="0" resource="0" file="Source/UI/Panels/HintPanel.h"/>
           <FILE id="hint01" name="HintPanel.cpp" compile="1" resource="0" file="Source/UI/Panels/HintPanel.cpp"/>
         </GROUP>
@@ -338,6 +344,12 @@
           <FILE id="yopgjo" name="FloatingValueSlider.h" compile="0" resource="0"
                 file="Source/UI/Knobs/FloatingValueSlider.h"/>
         </GROUP>
+        <GROUP id="{MOD-UI-GRP}" name="Modulators">
+          <FILE id="ModKnobH1" name="ModulatorKnob.h" compile="0" resource="0"
+                file="Source/UI/Modulators/ModulatorKnob.h"/>
+          <FILE id="ModDUI01" name="ModulatorDeviceUI.h" compile="0" resource="0"
+                file="Source/UI/Modulators/ModulatorDeviceUI.h"/>
+        </GROUP>
         <GROUP id="{FD3485E8-2ED3-CBA4-AC86-E28D7D16B2D7}" name="Buttons">
           <FILE id="DNLFnt" name="ToolbarButtons.h" compile="0" resource="0"
                 file="Source/UI/Buttons/ToolbarButtons.h"/>
@@ -367,6 +379,10 @@
           <FILE id="XV7lcF" name="MasterMixer.h" compile="0" resource="0" file="Source/Engine/Routing/MasterMixer.h"/>
           <FILE id="T8F8kn" name="PDCManager.h" compile="0" resource="0" file="Source/Engine/Routing/PDCManager.h"/>
           <FILE id="C7PO0H" name="RoutingMatrix.h" compile="0" resource="0" file="Source/Engine/Routing/RoutingMatrix.h"/>
+        </GROUP>
+        <GROUP id="{MOD-ENG-GRP}" name="Modulation">
+          <FILE id="GrMo01" name="GridModulator.h" compile="0" resource="0" file="Source/Engine/Modulation/GridModulator.h"/>
+          <FILE id="MoTg01" name="ModulationTargets.h" compile="0" resource="0" file="Source/Engine/Modulation/ModulationTargets.h"/>
         </GROUP>
         <GROUP id="{BFCF1667-0ADC-F1AA-CB69-BEDAA7F30CDE}" name="Threading">
           <FILE id="skfGlU" name="AudioThreadPool.h" compile="0" resource="0"

@@ -18,6 +18,11 @@ struct MixerChannelData {
         midVolumeSmoother.setCurrentAndTargetValue(midVolume);
         sideVolumeSmoother.reset(44100.0, 0.05);
         sideVolumeSmoother.setCurrentAndTargetValue(sideVolume);
+
+        modVolumeSmoother.reset(44100.0, 0.02); // Suavizado más rápido para LFOs
+        modVolumeSmoother.setCurrentAndTargetValue(0.0f);
+        modPanSmoother.reset(44100.0, 0.02);
+        modPanSmoother.setCurrentAndTargetValue(0.0f);
     }
 
     // --- PARÁMETROS DE CONTROL ---
@@ -31,6 +36,8 @@ struct MixerChannelData {
     juce::LinearSmoothedValue<float> panSmoother;
     juce::LinearSmoothedValue<float> midVolumeSmoother;
     juce::LinearSmoothedValue<float> sideVolumeSmoother;
+    juce::LinearSmoothedValue<float> modVolumeSmoother;
+    juce::LinearSmoothedValue<float> modPanSmoother;
 
     // --- ESTADOS ATÓMICOS (Thread-Safe) ---
     std::atomic<bool> isMuted { false };
@@ -65,6 +72,9 @@ struct MixerChannelData {
 
         sideVolumeSmoother.reset(sampleRate, 0.05);
         sideVolumeSmoother.setCurrentAndTargetValue(sideVolume);
+
+        modVolumeSmoother.reset(sampleRate, 0.02);
+        modPanSmoother.reset(sampleRate, 0.02);
     }
 
     void setVolume(float v) {

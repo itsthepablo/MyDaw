@@ -67,6 +67,36 @@ void Track::setColor(juce::Colour c, bool isManualAssignment)
     sendChangeMessage();
 }
 
+float Track::getModulationForTarget(const ModTarget& target, double beatPhase)
+{
+    if (target.type == ModTarget::None) return 0.0f;
+
+    float total = 0.0f;
+    for (auto* m : modulators)
+    {
+        // Bloqueo rápido para leer la lista de forma segura en el Audio Thread
+        juce::ScopedLock sl(m->targetsLock);
+        for (const auto& t : m->targets)
+        {
+            if (t == target)
+            {
+                total += m->getValueAt(beatPhase);
+                break; // Un modulador solo aplica una vez por target
+            }
+        }
+    }
+    return total;
+}
+
+float Track::getModulationOffset(int parameterId, double beatPhase)
+{
+    ModTarget t;
+    if (parameterId == 0) t.type = ModTarget::Volume;
+    else if (parameterId == 1) t.type = ModTarget::Pan;
+    
+    return getModulationForTarget(t, beatPhase);
+}
+
 // ============================================================
 // LÓGICA DE CLIPS Y DATOS
 // ============================================================

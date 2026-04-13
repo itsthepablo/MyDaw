@@ -5,18 +5,19 @@
 #include "../../Panels/Effects/EffectsPanel.h"
 #include "../../Panels/Instruments/InstrumentPanel.h"
 #include "../../Panels/Inspector/InspectorPanel.h"
+#include "../../Panels/Modulators/ModulatorRackPanel.h"
 #include "../../Panels/VUMeter/VUMeterComponent.h"
 #include "../../../Mixer/MixerComponent.h"
 
 class BottomDock : public juce::Component {
 public:
-    enum Tab { RackTab, EffectsTab, InstrumentTab, MixerTab, InspectorTab };
+    enum Tab { RackTab, EffectsTab, InstrumentTab, MixerTab, InspectorTab, ModulatorsTab };
 
     std::function<void()> onClose;
     std::function<void(Tab)> onTabChanged;
 
-    BottomDock(ChannelRackPanel& rack, EffectsPanel& fx, InstrumentPanel& inst, MixerComponent& mixer, InspectorPanel& inspector, VUMeterComponent& vu)
-        : rackPanel(rack), effectsPanel(fx), instrumentPanel(inst), miniMixer(mixer), inspectorPanel(inspector), vuMeter(vu)
+    BottomDock(ChannelRackPanel& rack, EffectsPanel& fx, InstrumentPanel& inst, MixerComponent& mixer, InspectorPanel& inspector, VUMeterComponent& vu, ModulatorRackPanel& mod)
+        : rackPanel(rack), effectsPanel(fx), instrumentPanel(inst), miniMixer(mixer), inspectorPanel(inspector), vuMeter(vu), modulatorsPanel(mod)
     {
         updateStyles();
         addAndMakeVisible(rackPanel);
@@ -25,6 +26,7 @@ public:
         addAndMakeVisible(miniMixer);
         addAndMakeVisible(inspectorPanel);
         addAndMakeVisible(vuMeter);
+        addAndMakeVisible(modulatorsPanel);
 
         addAndMakeVisible(rackTabBtn);
         rackTabBtn.setButtonText("CHANNEL RACK");
@@ -66,6 +68,14 @@ public:
         mixerTabBtn.setRadioGroupId(300);
         mixerTabBtn.onClick = [this] { showTab(MixerTab); };
 
+        addAndMakeVisible(modulatorsTabBtn);
+        modulatorsTabBtn.setButtonText("MODULATORS");
+        modulatorsTabBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(25, 27, 30));
+        modulatorsTabBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(45, 48, 52));
+        modulatorsTabBtn.setClickingTogglesState(true);
+        modulatorsTabBtn.setRadioGroupId(300);
+        modulatorsTabBtn.onClick = [this] { showTab(ModulatorsTab); };
+
         addAndMakeVisible(closeBtn);
         closeBtn.setButtonText("X");
         closeBtn.setTooltip("Cerrar Panel Inferior");
@@ -84,6 +94,7 @@ public:
             effectsTabBtn.setColour(juce::TextButton::buttonColourId, bg);
             instrumentTabBtn.setColour(juce::TextButton::buttonColourId, bg);
             mixerTabBtn.setColour(juce::TextButton::buttonColourId, bg);
+            modulatorsTabBtn.setColour(juce::TextButton::buttonColourId, bg);
             closeBtn.setColour(juce::TextButton::buttonColourId, bg);
         }
     }
@@ -101,11 +112,13 @@ public:
         miniMixer.setVisible(tab == MixerTab);
         inspectorPanel.setVisible(tab == InspectorTab);
         vuMeter.setVisible(tab == InspectorTab);
+        modulatorsPanel.setVisible(tab == ModulatorsTab);
 
         if (tab == RackTab) rackTabBtn.setToggleState(true, juce::dontSendNotification);
         else if (tab == InspectorTab) inspectorTabBtn.setToggleState(true, juce::dontSendNotification);
         else if (tab == EffectsTab) effectsTabBtn.setToggleState(true, juce::dontSendNotification);
         else if (tab == MixerTab) mixerTabBtn.setToggleState(true, juce::dontSendNotification);
+        else if (tab == ModulatorsTab) modulatorsTabBtn.setToggleState(true, juce::dontSendNotification);
         else instrumentTabBtn.setToggleState(true, juce::dontSendNotification);
 
         if (onTabChanged) onTabChanged(tab);
@@ -126,6 +139,7 @@ public:
         effectsTabBtn.setBounds(tabArea.removeFromLeft(140));
         instrumentTabBtn.setBounds(tabArea.removeFromLeft(120));
         mixerTabBtn.setBounds(tabArea.removeFromLeft(100));
+        modulatorsTabBtn.setBounds(tabArea.removeFromLeft(120));
 
         if (currentTab == RackTab) rackPanel.setBounds(area);
         else if (currentTab == InspectorTab) 
@@ -135,6 +149,7 @@ public:
         }
         else if (currentTab == EffectsTab) effectsPanel.setBounds(area);
         else if (currentTab == MixerTab) miniMixer.setBounds(area);
+        else if (currentTab == ModulatorsTab) modulatorsPanel.setBounds(area);
         else instrumentPanel.setBounds(area);
     }
 
@@ -154,7 +169,8 @@ private:
     MixerComponent& miniMixer;
     InspectorPanel& inspectorPanel;
     VUMeterComponent& vuMeter;
-    juce::TextButton rackTabBtn, inspectorTabBtn, effectsTabBtn, instrumentTabBtn, mixerTabBtn, closeBtn;
+    ModulatorRackPanel& modulatorsPanel;
+    juce::TextButton rackTabBtn, inspectorTabBtn, effectsTabBtn, instrumentTabBtn, mixerTabBtn, modulatorsTabBtn, closeBtn;
     Tab currentTab = EffectsTab;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(BottomDock)

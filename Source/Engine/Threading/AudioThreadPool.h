@@ -160,7 +160,7 @@ private:
         RoutingDSP::processSends(track->audioBuffer, track->routingData.sends, ctx.idToIndex, topo->activeTracks, true, ctx.msWorkBuffer, ctx.numSamples);
 
         // 5. Volumen y pan (resultado queda en track->audioBuffer para Fase 2)
-        MixerDSP::applyGainAndPan(track, ctx.numSamples, ctx.hwOutChannels);
+        MixerDSP::applyGainAndPan(track, ctx.numSamples, ctx.hwOutChannels, ctx.clock->currentPh, ctx.clock->nextPh);
 
         // 6. ENVÍOS POST-FADER (Después de Volumen/Pan)
         RoutingDSP::processSends(track->audioBuffer, track->routingData.sends, ctx.idToIndex, topo->activeTracks, false, ctx.msWorkBuffer, ctx.numSamples);

@@ -1,6 +1,8 @@
 #pragma once
 #include <JuceHeader.h>
 #include "FloatingValueBox.h"
+#include "../../Engine/Modulation/ModulationTargets.h"
+#include "../../Engine/Modulation/GridModulator.h"
 
 // ==============================================================================
 // KNOB QUE MUESTRA SU VALOR EN UNA CAJA FLOTANTE ESTÁTICA
@@ -44,14 +46,20 @@ public:
     }
 
     void mouseDown(const juce::MouseEvent& e) override {
+        // --- LÓGICA DE LEARN (CORREGIDA) ---
+        // Solo capturamos si hay un clic manual del usuario mientras el modo Learn está activo.
+        if (GridModulator::pendingModulator != nullptr && modTarget.isValid()) {
+            GridModulator::pendingModulator->addTarget(modTarget);
+            return; // No interrumpimos el Learn, el usuario lo apaga con el botón dedicado
+        }
+
         isDragging = true;
-        valueBox.setBorderColor(juce::Colours::orange); // Borde brillante al agarrar
+        valueBox.setBorderColor(juce::Colours::orange); 
         positionValueBox();
         juce::Slider::mouseDown(e);
     }
 
     void mouseDrag(const juce::MouseEvent& e) override {
-        // Tampoco sigue al ratón aquí. Solo cambia el valor visual (sliderValueChanged).
         juce::Slider::mouseDrag(e);
     }
 
@@ -65,6 +73,13 @@ public:
     void sliderValueChanged(juce::Slider*) override {
         updateValueBoxText();
     }
+
+    void setModulationValue(float val) {
+        getProperties().set("modValue", val);
+        repaint();
+    }
+
+    ModTarget modTarget; // Identificador del parámetro para el sistema de modulación
 
 private:
     void updateValueBoxText() {

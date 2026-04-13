@@ -37,6 +37,17 @@ public:
             float centerAngle = rotaryStartAngle + (rotaryEndAngle - rotaryStartAngle) * 0.5f;
             float currentAngle = rotaryStartAngle + sliderPosProportion * (rotaryEndAngle - rotaryStartAngle);
             
+            // --- DIBUJAR ANILLO DE MODULACIÓN (NUEVO) ---
+            auto modVal = slider.getProperties().getWithDefault("modValue", 0.0f);
+            if (std::abs((float)modVal) > 0.001f) {
+                float modAngle = currentAngle + (float)modVal * (rotaryEndAngle - rotaryStartAngle) * 0.5f;
+                juce::Path modArc;
+                modArc.addCentredArc(toX, toY, arcRadius + 2.0f, arcRadius + 2.0f, 0.0f, currentAngle, modAngle, true);
+                
+                g.setColour(juce::Colour(100, 200, 255).withAlpha(0.8f));
+                g.strokePath(modArc, juce::PathStrokeType(lineW + 1.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+            }
+
             juce::Path valueArc;
             // Si el rango empieza en negativo (paneo), dibujamos desde el centro
             if (slider.getMinimum() < 0.0) {

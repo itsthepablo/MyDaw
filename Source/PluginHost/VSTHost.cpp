@@ -142,7 +142,11 @@ void VSTHost::loadPluginFromPath(const juce::String& path, double sampleRate, st
                 vstPlugin->setBusesLayout(layout);
                 vstPlugin->enableAllBuses();
                 
-                refreshSidechainSupport(); // Cachear una vez estable
+                // --- REGISTRAR LISTENERS PARA MAPPING ---
+                for (auto* p : vstPlugin->getParameters())
+                    p->addListener(this);
+
+                refreshSidechainSupport(); 
                 
                 isInitializing = false; // FIN DE CUARENTENA
                 callback(true);

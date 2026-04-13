@@ -81,6 +81,7 @@ struct AudioClock {
         blockEndSamplePos = currentSamplePos + numSamples;
 
         // Actualizamos la variable atómica para que la UI la lea
+        ts.lastPlayheadUpdateMs.store(juce::Time::getMillisecondCounterHiRes(), std::memory_order_relaxed);
         ts.currentAudioPlayhead.store(currentPh, std::memory_order_relaxed);
     }
 };

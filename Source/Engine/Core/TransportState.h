@@ -16,4 +16,5 @@ struct TransportState {
     // Comunicación de vuelta desde Audio -> UI (Lock-Free)
     std::atomic<float> currentAudioPlayhead { 0.0f };
     std::atomic<int> currentGlobalLatency { 0 };
+    std::atomic<double> lastPlayheadUpdateMs { 0.0 };
 };

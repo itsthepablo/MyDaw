@@ -15,6 +15,7 @@
 #include "../Modules/BalanceTrack/Data/BalanceTrackData.h"
 #include "../Modules/MidSideTrack/Data/MidSideTrackData.h"
 #include "../Modules/Routing/Data/RoutingData.h"
+#include "../Engine/Modulation/GridModulator.h"
 
 #include <vector>
 #include <atomic>
@@ -94,7 +95,16 @@ public:
     bool isCollapsed = false;
     bool isShowingInChildren = true;
 
-    // --- ESTADO DE UI ---
+    // --- MODULACIÓN ---
+    juce::OwnedArray<GridModulator> modulators;
+    
+    /**
+     * Devuelve la suma de todos los offsets de modulación que apuntan a un target específico.
+     */
+    float getModulationForTarget(const ModTarget& target, double beatPhase);
+    
+    // Alias para compatibilidad con MixerDSP (Temporalmente)
+    float getModulationOffset(int parameterId, double beatPhase);
     bool isSelected = false;
     bool isInlineEditingActive = false;
 

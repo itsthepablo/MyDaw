@@ -159,7 +159,7 @@ void AudioEngine::processBlock(const juce::AudioSourceChannelInfo& bufferToFill)
 
     if (masterTrack != nullptr) {
         TrackProcessor::process(masterTrack, clock, bufferToFill.numSamples, isPlayingNow, isFadingOut, previewMidi, topo);
-        MixerDSP::applyGainAndPan(masterTrack, bufferToFill.numSamples, hardwareOutChannels);
+        MixerDSP::applyGainAndPan(masterTrack, bufferToFill.numSamples, hardwareOutChannels, clock.currentPh, clock.nextPh);
         MasterMixer::routeToMaster(masterTrack, bufferToFill.numSamples, hardwareOutChannels, bufferToFill);
     }
 

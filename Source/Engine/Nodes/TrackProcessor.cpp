@@ -226,6 +226,30 @@ void TrackProcessor::process(Track* track,
     }
 
     GainStationDSP::processPreFX(track->gainStationData, track, mainProxyBuffer);
+    
+    // --- ACTUALIZAR TARGETS DE MODULACIÓN (AUDIO THREAD) ---
+    ModTarget tVol; tVol.type = ModTarget::Volume;
+    ModTarget tPan; tPan.type = ModTarget::Pan;
+    track->mixerData.modVolumeSmoother.setTargetValue(track->getModulationForTarget(tVol, clock.currentPh));
+    track->mixerData.modPanSmoother.setTargetValue(track->getModulationForTarget(tPan, clock.currentPh));
+
+    // --- APLICAR MODULACIÓN A PLUGINS (THROTTLED & AGGREGATED) ---
+    for (auto* m : track->modulators) {
+        juce::ScopedLock sl(m->targetsLock);
+        for (const auto& target : m->targets) {
+            if (target.type == ModTarget::PluginParam && target.pluginIdx >= 0 && target.pluginIdx < track->plugins.size()) {
+                if (auto* p = track->plugins[target.pluginIdx]) {
+                    float val = m->getValueAt(clock.currentPh);
+                    p->setParameterModulation(target.parameterIdx, val);
+                }
+            }
+        }
+    }
+
+    // Finalizar agregación y aplicar valores reales a los plugins
+    for (auto* p : track->plugins) {
+        if (p != nullptr) p->applyModulations();
+    }
 
     for (auto* p : track->plugins) {
         if (p != nullptr && p->isLoaded() && !p->getIsInstrument()) {

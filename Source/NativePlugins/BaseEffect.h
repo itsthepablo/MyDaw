@@ -24,6 +24,8 @@ public:
     
     virtual void setNonRealtime(bool isNonRealtime); 
     virtual void updatePlayHead(bool isPlaying, int64_t samplePos);
+    virtual void setParameterModulation(int index, float delta) {}
+    virtual void applyModulations() {}
 
     virtual void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages, const juce::AudioBuffer<float>* sidechainBuffer);
     

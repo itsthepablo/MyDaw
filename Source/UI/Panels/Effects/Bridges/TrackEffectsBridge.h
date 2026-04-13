@@ -54,6 +54,7 @@ public:
                         int currentBlockSize = blockSize > 0 ? blockSize : 512;
                         host->prepareToPlay(sampleRate, currentBlockSize);
                         t.plugins.add(host);
+                        host->myPluginIdx = t.plugins.indexOf(host); // Asignación precisa del índice
                         t.dsp.allocatePdcBuffer(); 
                         host->setIsInstrument(t.getType() == TrackType::MIDI && t.plugins.size() == 1);
                         host->onSidechainChanged = [&engine, &container]() { engine.routingMatrix.commitNewTopology(container.getTracks()); };

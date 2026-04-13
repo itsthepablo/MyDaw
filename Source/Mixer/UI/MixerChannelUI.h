@@ -7,6 +7,8 @@
 #include "../LookAndFeel/MixerLookAndFeel.h"
 #include "MixerRacks.h"
 
+#include "../../UI/Knobs/FloatingValueSlider.h"
+
 // ==============================================================================
 // 4. CANAL PRINCIPAL DEL MIXER (Racks y Faders)
 // Declaración — La implementación está en MixerChannelUI.cpp
@@ -59,7 +61,7 @@ private:
     MixerLookAndFeel mixerLAF;
     
     juce::TextButton panToggle, msToggle;
-    juce::Slider panKnob, panL, panR, fader, midFader, sideFader; 
+    FloatingValueSlider panKnob, panL, panR, fader, midFader, sideFader; 
     LevelMeter meter, midMeter, sideMeter;
     TrackLevelMeterLF meterLF;
     juce::TextButton muteBtn, soloBtn, midSoloBtn, sideSoloBtn, phaseBtn, recBtn; 

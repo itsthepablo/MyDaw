@@ -148,6 +148,7 @@ void MainComponent::setupCallbacks() {
 
     ui.trackContainer.onActiveTrackChanged = [this](Track* t) {
         selectionManager.selectTrack(t, false);
+        ui.modulatorRackPanelUI.setTrack(t);
     };
 
     ui.trackContainer.onDeselectMasterRequested = [this] {
@@ -203,6 +204,11 @@ void MainComponent::getNextAudioBlock(const juce::AudioSourceChannelInfo& buffer
     // el audio thread no acceda a Track* que el UI thread acaba de destruir.
     // El ScopedTryLock evita bloquear: si no puede adquirirlo, produce silencio
     // en vez de crashear. El UI thread solo lo toma durante addTrack/removeTrack.
+    // Capturar latencia del hardware para sincronía UI/Audio
+    if (auto* device = deviceManager.getCurrentAudioDevice()) {
+        audioEngine.transportState.currentGlobalLatency.store(device->getOutputLatencyInSamples(), std::memory_order_relaxed);
+    }
+
     {
         const juce::ScopedTryLock stl(audioMutex);
         if (stl.isLocked()) {
