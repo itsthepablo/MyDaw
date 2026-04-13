@@ -4,6 +4,9 @@ TrackControlPanel::TrackControlPanel(Track& t) : track(t)
 {
     addAndMakeVisible(nameLabel);
     nameLabel.setText(track.getName(), juce::dontSendNotification);
+    nameLabel.setColour(juce::Label::backgroundColourId, juce::Colours::transparentBlack);
+    
+    track.addChangeListener(this);
     bool isAnalysisTrack = (track.getType() == TrackType::Loudness || 
                            track.getType() == TrackType::Balance || 
                            track.getType() == TrackType::MidSide);
@@ -204,6 +207,7 @@ TrackControlPanel::TrackControlPanel(Track& t) : track(t)
 
 TrackControlPanel::~TrackControlPanel() 
 { 
+    track.removeChangeListener(this);
     levelMeter.setLookAndFeel(nullptr);
     stopTimer(); 
 }
@@ -279,10 +283,12 @@ void TrackControlPanel::paint(juce::Graphics& g)
     }
 
     if (track.isSelected) {
-        g.setColour(juce::Colours::white.withAlpha(0.12f));
+        g.setColour(juce::Colours::white.withAlpha(0.2f));
         g.fillRoundedRectangle(contentArea.toFloat().reduced(0, 2), 4.0f);
-        g.setColour(juce::Colours::white.withAlpha(0.4f));
-        g.drawRoundedRectangle(contentArea.toFloat().reduced(0, 2), 4.0f, 1.5f);
+        
+        // Borde de selección más visible
+        g.setColour(juce::Colours::white);
+        g.drawRoundedRectangle(contentArea.toFloat().reduced(0, 2), 4.0f, 2.0f);
     }
 
     if (dragHoverMode != 0) {
@@ -399,8 +405,17 @@ void TrackControlPanel::mouseDown(const juce::MouseEvent& e)
 
 void TrackControlPanel::changeListenerCallback(juce::ChangeBroadcaster* s) 
 {
-    if (auto* cs = dynamic_cast<juce::ColourSelector*>(s)) {
-        track.setColor(cs->getCurrentColour()); repaint(); if (onTrackColorChanged) onTrackColorChanged();
+    if (s == &track)
+    {
+        nameLabel.setText(track.getName(), juce::dontSendNotification);
+        trackMeterLF.setTrackColour(track.getColor());
+        repaint();
+    }
+    else if (auto* cs = dynamic_cast<juce::ColourSelector*>(s)) 
+    {
+        track.setColor(cs->getCurrentColour(), true); // Asignación manual
+        repaint(); 
+        if (onTrackColorChanged) onTrackColorChanged();
     }
 }
 

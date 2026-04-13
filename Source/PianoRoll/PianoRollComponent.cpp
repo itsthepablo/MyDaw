@@ -92,15 +92,38 @@ void PianoRollComponent::processTextToChord()
 {
     if (activeClip == nullptr) return;
 
-    auto& notes = activeClip->getNotes();
-    
-    // El script de acordes puede trabajar con o sin notas previas (las añade)
-    if (PythonBridge::executeScript("text_to_chord.py", notes))
+    // Crear la ventana emergente asíncrona dedicada (JUCE 8 compatible)
+    auto* aw = new juce::AlertWindow("TEXT TO CHORD", 
+                                   "Introduce la progresión de acordes deseada:", 
+                                   juce::MessageBoxIconType::NoIcon);
+
+    aw->addTextEditor("chordProg", "Cmaj7 Am7 Fmaj7 G7", "Ej: Dm7 G7 Cmaj7");
+    aw->addButton("Generar ahora", 1, juce::KeyPress(juce::KeyPress::returnKey));
+    aw->addButton("Cancelar", 0, juce::KeyPress(juce::KeyPress::escapeKey));
+
+    // Lanzar de forma asíncrona para no bloquear el DAW
+    aw->enterModalState(true, juce::ModalCallbackFunction::create([this, aw](int result)
     {
-        commitHistory();
-        automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, (float)getSnapPixels(), playheadAbsPos);
-        repaint();
-    }
+        if (result == 1) // El usuario pulsó "Generar ahora"
+        {
+            juce::String progression = aw->getTextEditorContents("chordProg");
+            
+            if (activeClip != nullptr)
+            {
+                auto& notes = activeClip->getNotes();
+                if (PythonBridge::executeScript("text_to_chord.py", notes, progression))
+                {
+                    commitHistory();
+                    automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, (float)getSnapPixels(), playheadAbsPos);
+                    repaint();
+                }
+            }
+        }
+        
+        // Limpieza de la ventana
+        delete aw;
+
+    }), true);
 }
 
 void PianoRollComponent::filesDropped(const juce::StringArray& files, int x, int y) {

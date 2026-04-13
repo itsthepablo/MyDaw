@@ -2,6 +2,7 @@
 #include <JuceHeader.h>
 #include "../../Data/GlobalData.h"
 #include "LookAndFeel/MidiPatternStyles.h"
+#include "../../Data/SmartColorUtils.h"
 #include "../../Data/AutomationData.h"
 #include <vector>
 
@@ -20,7 +21,7 @@ public:
 
     // --- MIEMBROS DE DATOS (Encapsulados) ---
     juce::String getName() const { return name; }
-    void setName(const juce::String& n) { name = n; }
+    void setName(const juce::String& n);
 
     float getStartX() const { return startX; }
     void setStartX(float x) { startX = x; }
@@ -41,7 +42,10 @@ public:
     void setStyle(MidiStyleType s) { style = s; }
 
     juce::Colour getColor() const { return color; }
-    void setColor(juce::Colour c) { color = c; }
+    void setColor(juce::Colour c, bool isManualAssignment = false) { 
+        color = c; 
+        if (isManualAssignment) isColorManual = true; 
+    }
 
     // --- GESTIÓN DE NOTAS ---
     std::vector<Note>& getNotes() { return notes; }
@@ -64,6 +68,7 @@ private:
     bool isSelected = false;
     MidiStyleType style = MidiStyleType::Modern;
     juce::Colour color;
+    bool isColorManual = false;
     
     std::vector<Note> notes;
 

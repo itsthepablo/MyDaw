@@ -2,6 +2,7 @@
 
 MidiPattern::MidiPattern()
 {
+    color = juce::Colour(150, 155, 160);
 }
 
 MidiPattern::MidiPattern(const MidiPattern& other)
@@ -34,6 +35,27 @@ void MidiPattern::migrateToRelative()
     for (auto& note : notes) {
         if (note.x >= (int)startX && note.x < (int)(startX + width + 1.0f)) {
             note.x -= (int)startX;
+        }
+    }
+}
+
+void MidiPattern::setName(const juce::String& n)
+{
+    if (name == n) return;
+    name = n;
+
+    if (n.isEmpty()) isColorManual = false;
+
+    if (!isColorManual)
+    {
+        juce::Colour smartColor = SmartColorUtils::getColorForName(n);
+        if (!smartColor.isTransparent())
+        {
+            setColor(smartColor, false);
+        }
+        else
+        {
+            setColor(juce::Colour(150, 155, 160), false);
         }
     }
 }

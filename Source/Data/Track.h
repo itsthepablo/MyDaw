@@ -1,6 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include "GlobalData.h" 
+#include "SmartColorUtils.h"
 #include "../NativePlugins/BaseEffect.h"
 #include "../Clips/Audio/AudioClip.h"
 #include "../Clips/Midi/MidiPattern.h"
@@ -27,7 +28,7 @@ struct AutomationClipData;
  * El "God Object" de cada pista. Coordina los datos (Data), el procesado (DSP) 
  * y actúa como modelo para la interfaz (UI).
  */
-class Track {
+class Track : public juce::ChangeBroadcaster {
 public:
     // --- MÓDULOS DE DATOS ---
     GainStationData   gainStationData;
@@ -49,10 +50,10 @@ public:
     // --- GETTERS / SETTERS BÁSICOS ---
     int getId() const { return trackId; }
     juce::String getName() const { return name; }
-    void setName(juce::String n) { name = n; }
+    void setName(juce::String n);
     TrackType getType() const { return type; }
     juce::Colour getColor() const { return color; }
-    void setColor(juce::Colour c) { color = c; }
+    void setColor(juce::Colour c, bool isManualAssignment = false);
 
     float getVolume() const { return mixerData.volume; }
     void setVolume(float v) { mixerData.setVolume(v); }
@@ -117,6 +118,7 @@ private:
     juce::String name;
     TrackType type;
     juce::Colour color;
+    bool isColorManual = false;
 
     juce::StringArray pluginNames;
 

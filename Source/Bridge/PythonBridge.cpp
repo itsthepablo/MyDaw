@@ -2,7 +2,7 @@
 
 static juce::File savedScriptsDir;
 
-bool PythonBridge::executeScript(const juce::String& scriptName, std::vector<Note>& notes)
+bool PythonBridge::executeScript(const juce::String& scriptName, std::vector<Note>& notes, const juce::String& extraParams)
 {
     // Ruta específica solicitada por el usuario (JUCE 8 compatible)
     juce::File scriptsDir ("D:\\Mis Cosas\\Documents\\MyDAW_Skins\\PythonScripts");
@@ -28,7 +28,7 @@ bool PythonBridge::executeScript(const juce::String& scriptName, std::vector<Not
     }
 
     // 2. Exportar notas a JSON
-    juce::var data = notesToVar(notes);
+    juce::var data = notesToVar(notes, extraParams);
     juce::String jsonStr = juce::JSON::toString(data);
     tempFile.replaceWithText(jsonStr);
 
@@ -74,7 +74,7 @@ bool PythonBridge::executeScript(const juce::String& scriptName, std::vector<Not
     return false;
 }
 
-juce::var PythonBridge::notesToVar(const std::vector<Note>& notes)
+juce::var PythonBridge::notesToVar(const std::vector<Note>& notes, const juce::String& extraParams)
 {
     juce::Array<juce::var> jsonNotes;
     for (const auto& note : notes)
@@ -90,6 +90,7 @@ juce::var PythonBridge::notesToVar(const std::vector<Note>& notes)
 
     auto* root = new juce::DynamicObject();
     root->setProperty("notes", jsonNotes);
+    root->setProperty("params", extraParams); // Nuevo campo para parámetros
     return root;
 }
 

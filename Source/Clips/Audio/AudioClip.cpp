@@ -6,6 +6,9 @@ bool AudioClip::showWaveformDebugInfo = false;
 
 AudioClip::AudioClip() 
 {
+    // Color Gris Claro estándar de DAW por defecto
+    color = juce::Colour(150, 155, 160);
+
     // Reservar 4 niveles de LOD (Mip-Maps)
     peaksL.resize(4);
     peaksR.resize(4);
@@ -28,6 +31,7 @@ AudioClip& AudioClip::operator=(const AudioClip& other)
         originalWidth = other.originalWidth;
         isMuted = other.isMuted;
         isSelected = other.isSelected;
+        color = other.color;
         style = other.style;
         isLoadedFlag.store(other.isLoadedFlag.load());
         sourceFilePath = other.sourceFilePath;
@@ -52,7 +56,7 @@ bool AudioClip::loadFromFile(const juce::File& file, double targetSampleRate)
     
     if (reader != nullptr)
     {
-        name = file.getFileNameWithoutExtension();
+        setName(file.getFileNameWithoutExtension());
         sourceFilePath = file.getFullPathName();
         sourceSampleRate = reader->sampleRate;
         
@@ -70,6 +74,27 @@ bool AudioClip::loadFromFile(const juce::File& file, double targetSampleRate)
     }
     
     return false;
+}
+
+void AudioClip::setName(const juce::String& n)
+{
+    if (name == n) return;
+    name = n;
+
+    if (n.isEmpty()) isColorManual = false;
+
+    if (!isColorManual)
+    {
+        juce::Colour smartColor = SmartColorUtils::getColorForName(n);
+        if (!smartColor.isTransparent())
+        {
+            setColor(smartColor, false);
+        }
+        else
+        {
+            setColor(juce::Colour(150, 155, 160), false);
+        }
+    }
 }
 
 void AudioClip::generateCache()

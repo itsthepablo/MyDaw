@@ -1,6 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include "../../Tracks/Data/TrackData.h"
+#include "../../Data/SmartColorUtils.h"
 #include "AudioClipStyles.h"
 #include <vector>
 #include <atomic>
@@ -31,7 +32,13 @@ public:
 
     // --- GETTERS / SETTERS ---
     juce::String getName() const { return name; }
-    void setName(const juce::String& n) { name = n; }
+    void setName(const juce::String& n);
+
+    juce::Colour getColor() const { return color; }
+    void setColor(juce::Colour c, bool isManualAssignment = false) { 
+        color = c; 
+        if (isManualAssignment) isColorManual = true; 
+    }
 
     float getStartX() const { return startX; }
     void setStartX(float x) { startX = x; }
@@ -90,6 +97,8 @@ private:
     float originalWidth = 0.0f;
     bool isMuted = false;
     bool isSelected = false;
+    juce::Colour color;
+    bool isColorManual = false;
     WaveformStyle style = WaveformStyle::NoBackground;
     std::atomic<bool> isLoadedFlag{ false };
     static bool showWaveformDebugInfo;

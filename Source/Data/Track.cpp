@@ -8,8 +8,9 @@
 
 Track::Track(int id, juce::String n, TrackType t) : trackId(id), name(n), type(t) 
 {
-    color = juce::Colour(juce::Random::getSystemRandom().nextFloat(), 0.6f, 0.8f, 1.0f);
-    if (t == TrackType::Folder) color = juce::Colour(60, 65, 75);
+    // Color Gris Claro estándar de DAW por defecto
+    color = (t == TrackType::Folder) ? juce::Colour(60, 65, 75) : juce::Colour(150, 155, 160);
+    
     thumbnailFormatManager.registerBasicFormats();
 }
 
@@ -27,6 +28,43 @@ void Track::prepare(double sampleRate, int samplesPerBlock)
 {
     mixerData.prepare(sampleRate, samplesPerBlock);
     dsp.prepare(sampleRate, samplesPerBlock);
+}
+
+void Track::setName(juce::String n)
+{
+    if (name == n) return;
+    name = n;
+    
+    // Inteligencia de Color - Solo si el usuario no ha puesto un color manual
+    // o si el nombre está vacío (reset)
+    if (n.isEmpty()) isColorManual = false;
+
+    if (!isColorManual)
+    {
+        juce::Colour smartColor = SmartColorUtils::getColorForName(n);
+        
+        if (!smartColor.isTransparent())
+        {
+            setColor(smartColor, false);
+        }
+        else
+        {
+            // Revertir al gris estándar si no hay coincidencia inteligente
+            setColor(juce::Colour(150, 155, 160), false);
+        }
+    }
+
+    sendChangeMessage();
+}
+
+void Track::setColor(juce::Colour c, bool isManualAssignment)
+{
+    if (color == c) return;
+    
+    color = c;
+    if (isManualAssignment) isColorManual = true;
+    
+    sendChangeMessage();
 }
 
 // ============================================================

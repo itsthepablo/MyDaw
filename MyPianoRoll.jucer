@@ -157,6 +157,7 @@
         <FILE id="AUTO01" name="AutomationData.cpp" compile="1" resource="0"
               file="Source/Data/AutomationData.cpp"/>
         <FILE id="L5O99I" name="GlobalData.h" compile="0" resource="0" file="Source/Data/GlobalData.h"/>
+        <FILE id="SMCUT01" name="SmartColorUtils.h" compile="0" resource="0" file="Source/Data/SmartColorUtils.h"/>
         <FILE id="H2n5m1" name="Track.cpp" compile="1" resource="0" file="Source/Data/Track.cpp"/>
         <FILE id="QSBRZT" name="Track.h" compile="0" resource="0" file="Source/Data/Track.h"/>
       </GROUP>
