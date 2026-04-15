@@ -51,32 +51,13 @@ void NativeModulationManager::applyModulations(Track* track, double beatPhase) {
                     foundPost = true;
                     break;
 
-                case ModTarget::EQ_B1_Freq:
-                case ModTarget::EQ_B2_Freq: {
-                    absVal = 20.0f * std::pow(20000.0f / 20.0f, unipolar);
-                    bool b1 = (target.type == ModTarget::EQ_B1_Freq);
-                    if (b1) { eq.modB1Freq.setTargetValue(absVal); eq.visSync.b1Freq.store(absVal); fEQ[0] = true; }
-                    else    { eq.modB2Freq.setTargetValue(absVal); eq.visSync.b2Freq.store(absVal); fEQ[3] = true; }
-                    break;
-                }
+                case ModTarget::EQ_B1_Freq: eq.applyModB1Freq(unipolar); break;
+                case ModTarget::EQ_B1_Gain: eq.applyModB1Gain(unipolar); break;
+                case ModTarget::EQ_B1_Q:    eq.applyModB1Q(unipolar); break;
+                case ModTarget::EQ_B2_Freq: eq.applyModB2Freq(unipolar); break;
+                case ModTarget::EQ_B2_Gain: eq.applyModB2Gain(unipolar); break;
+                case ModTarget::EQ_B2_Q:    eq.applyModB2Q(unipolar); break;
 
-                case ModTarget::EQ_B1_Gain:
-                case ModTarget::EQ_B2_Gain: {
-                    absVal = juce::jmap(unipolar, 0.0f, 1.0f, -24.0f, 24.0f);
-                    bool b1 = (target.type == ModTarget::EQ_B1_Gain);
-                    if (b1) { eq.modB1Gain.setTargetValue(absVal); eq.visSync.b1Gain.store(absVal); fEQ[1] = true; }
-                    else    { eq.modB2Gain.setTargetValue(absVal); eq.visSync.b2Gain.store(absVal); fEQ[4] = true; }
-                    break;
-                }
-
-                case ModTarget::EQ_B1_Q:
-                case ModTarget::EQ_B2_Q: {
-                    absVal = juce::jmap(unipolar, 0.0f, 1.0f, 0.1f, 10.0f);
-                    bool b1 = (target.type == ModTarget::EQ_B1_Q);
-                    if (b1) { eq.modB1Q.setTargetValue(absVal); eq.visSync.b1Q.store(absVal); fEQ[2] = true; }
-                    else    { eq.modB2Q.setTargetValue(absVal); eq.visSync.b2Q.store(absVal); fEQ[5] = true; }
-                    break;
-                }
                 default: break;
             }
         }
@@ -88,18 +69,11 @@ void NativeModulationManager::applyModulations(Track* track, double beatPhase) {
     track->gainStationData.visSync.hasPre.store(foundPre);
     track->gainStationData.visSync.hasPost.store(foundPost);
 
-    eq.visSync.hasB1Freq.store(fEQ[0]); eq.visSync.hasB1Gain.store(fEQ[1]); eq.visSync.hasB1Q.store(fEQ[2]);
-    eq.visSync.hasB2Freq.store(fEQ[3]); eq.visSync.hasB2Gain.store(fEQ[4]); eq.visSync.hasB2Q.store(fEQ[5]);
+    // El EQ gestiona su propio reset de los parámetros no modulados
+    eq.resetModulations();
 
     if (!foundVol) track->mixerData.modVolumeSmoother.setTargetValue(0.0f);
     if (!foundPan) track->mixerData.modPanSmoother.setTargetValue(0.0f);
-
-    if (!fEQ[0]) eq.modB1Freq.setTargetValue(eq.b1Freq);
-    if (!fEQ[1]) eq.modB1Gain.setTargetValue(eq.b1Gain);
-    if (!fEQ[2]) eq.modB1Q.setTargetValue(eq.b1Q);
-    if (!fEQ[3]) eq.modB2Freq.setTargetValue(eq.b2Freq);
-    if (!fEQ[4]) eq.modB2Gain.setTargetValue(eq.b2Gain);
-    if (!fEQ[5]) eq.modB2Q.setTargetValue(eq.b2Q);
 }
 
 // Legacy methods for compatibility

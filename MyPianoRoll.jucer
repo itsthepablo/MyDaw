@@ -157,7 +157,8 @@
         <FILE id="AUTO01" name="AutomationData.cpp" compile="1" resource="0"
               file="Source/Data/AutomationData.cpp"/>
         <FILE id="L5O99I" name="GlobalData.h" compile="0" resource="0" file="Source/Data/GlobalData.h"/>
-        <FILE id="SMCUT01" name="SmartColorUtils.h" compile="0" resource="0" file="Source/Data/SmartColorUtils.h"/>
+        <FILE id="SMCUT01" name="SmartColorUtils.h" compile="0" resource="0"
+              file="Source/Data/SmartColorUtils.h"/>
         <FILE id="H2n5m1" name="Track.cpp" compile="1" resource="0" file="Source/Data/Track.cpp"/>
         <FILE id="QSBRZT" name="Track.h" compile="0" resource="0" file="Source/Data/Track.h"/>
       </GROUP>
@@ -198,6 +199,8 @@
                 file="Source/NativePlugins/FFTAnalyzerPlugin/JucePluginDefs.h"/>
           <FILE id="SmpAnz" name="SimpleAnalyzer.h" compile="0" resource="0"
                 file="Source/NativePlugins/FFTAnalyzerPlugin/SimpleAnalyzer.h"/>
+          <FILE id="SA_CPP_1" name="SimpleAnalyzer.cpp" compile="1" resource="0"
+                file="Source/NativePlugins/FFTAnalyzerPlugin/SimpleAnalyzer.cpp"/>
           <FILE id="KfftC" name="kiss_fft.c" compile="1" resource="0" file="Source/NativePlugins/FFTAnalyzerPlugin/kiss_fft.c"/>
           <FILE id="KfftH" name="kiss_fft.h" compile="0" resource="0" file="Source/NativePlugins/FFTAnalyzerPlugin/kiss_fft.h"/>
           <FILE id="KfftG" name="_kiss_fft_guts.h" compile="0" resource="0" file="Source/NativePlugins/FFTAnalyzerPlugin/_kiss_fft_guts.h"/>
@@ -378,19 +381,25 @@
         <GROUP id="{A8655592-496E-E61C-29AE-468877FA16C5}" name="Routing">
           <FILE id="XV7lcF" name="MasterMixer.h" compile="0" resource="0" file="Source/Engine/Routing/MasterMixer.h"/>
           <FILE id="T8F8kn" name="PDCManager.h" compile="0" resource="0" file="Source/Engine/Routing/PDCManager.h"/>
+          <FILE id="PDC_CPP_1" name="PDCManager.cpp" compile="1" resource="0" file="Source/Engine/Routing/PDCManager.cpp"/>
           <FILE id="C7PO0H" name="RoutingMatrix.h" compile="0" resource="0" file="Source/Engine/Routing/RoutingMatrix.h"/>
         </GROUP>
         <GROUP id="{MOD-ENG-GRP}" name="Modulation">
+          <FILE id="E40TA9" name="GridModulator.cpp" compile="1" resource="0"
+                file="Source/Engine/Modulation/GridModulator.cpp"/>
           <FILE id="GrMo01" name="GridModulator.h" compile="0" resource="0" file="Source/Engine/Modulation/GridModulator.h"/>
-          <FILE id="MoTg01" name="ModulationTargets.h" compile="0" resource="0" file="Source/Engine/Modulation/ModulationTargets.h"/>
-          <FILE id="NatModM1" name="NativeModulationManager.cpp" compile="1" resource="0"
-                file="Source/Engine/Modulation/NativeModulationManager.cpp"/>
+          <FILE id="MoTg01" name="ModulationTargets.h" compile="0" resource="0"
+                file="Source/Engine/Modulation/ModulationTargets.h"/>
+          <FILE id="NatModM1" name="NativeModulationManager.cpp" compile="1"
+                resource="0" file="Source/Engine/Modulation/NativeModulationManager.cpp"/>
           <FILE id="NatModM2" name="NativeModulationManager.h" compile="0" resource="0"
                 file="Source/Engine/Modulation/NativeModulationManager.h"/>
         </GROUP>
         <GROUP id="{BFCF1667-0ADC-F1AA-CB69-BEDAA7F30CDE}" name="Threading">
           <FILE id="skfGlU" name="AudioThreadPool.h" compile="0" resource="0"
                 file="Source/Engine/Threading/AudioThreadPool.h"/>
+          <FILE id="ATP_CPP_1" name="AudioThreadPool.cpp" compile="1" resource="0"
+                file="Source/Engine/Threading/AudioThreadPool.cpp"/>
         </GROUP>
         <FILE id="c2VdJY" name="SimpleBalance.h" compile="0" resource="0" file="Source/Engine/SimpleBalance.h"/>
         <FILE id="r41k5y" name="SimpleLoudness.cpp" compile="1" resource="0"
@@ -428,6 +437,7 @@
         </GROUP>
         <GROUP id="{766B6889-7BAD-C92D-7290-2F533B5E5E8E}" name="DSP">
           <FILE id="HhijLP" name="MixerDSP.h" compile="0" resource="0" file="Source/Mixer/DSP/MixerDSP.h"/>
+          <FILE id="MDSP_CPP_1" name="MixerDSP.cpp" compile="1" resource="0" file="Source/Mixer/DSP/MixerDSP.cpp"/>
         </GROUP>
         <GROUP id="{9FF6F501-CF73-A904-735C-68B41B9F3577}" name="LookAndFeel">
           <FILE id="IUio4G" name="MixerColours.h" compile="0" resource="0" file="Source/Mixer/LookAndFeel/MixerColours.h"/>

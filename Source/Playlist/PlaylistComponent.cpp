@@ -131,8 +131,8 @@ void PlaylistComponent::setMasterTrack(Track *mt) {
         MixerParameterBridge::setSoloed(masterTrackPtr, masterSoloBtn.getToggleState());
     };
 
-    // Vincular el EQ al Master por defecto
-    eqEditor.setDSP(&(mt->dsp.inlineEQ));
+    // EQ desactivado en Playlist por petición de reubicación
+    // eqEditor.setDSP(&(mt->dsp.inlineEQ));
   }
 }
 
@@ -357,18 +357,9 @@ void PlaylistComponent::resized() {
   masterPanSlider.setBounds(masterArea.removeFromLeft(40).withSizeKeepingCentre(40, 40));
   masterVolSlider.setBounds(masterArea.removeFromLeft(40).withSizeKeepingCentre(40, 40));
 
-  // --- EQ EDITOR (CENTRO) ---
-  // Ocupa el espacio central entre el label/mute y los sliders de vol
-  // Reservamos 280px a la izquierda para los controles y 150 a la derecha para faders/vBar
-  int eqX = 280;
-  int eqW = juce::jmin(450, getWidth() - eqX - 150);
-  if (eqW > 100) {
-      eqEditor.setVisible(true);
-      eqEditor.setBounds(eqX, getHeight() - masterTrackH + 5, eqW, masterTrackH - 10);
-  } else {
-      eqEditor.setVisible(false);
-  }
-
+  // --- EQ EDITOR DESACTIVADO (Por petición de reubicación) ---
+  eqEditor.setVisible(false);
+  
   updateScrollBars();
 }
 
@@ -550,9 +541,9 @@ void PlaylistComponent::itemDropped(
 
 void PlaylistComponent::setSelectedTrack(Track* t) {
     if (t != nullptr && t != currentVisualTrack) {
-        currentVisualTrack = t; // Marcar para evitar recursión infinita
-        eqEditor.setDSP(&(t->dsp.inlineEQ));
-        eqEditor.setTrackName(t->getName());
+        currentVisualTrack = t; 
+        // eqEditor.setDSP(&(t->dsp.inlineEQ));
+        // eqEditor.setTrackName(t->getName());
         if (onClipSelected) onClipSelected(t);
         repaint();
     }

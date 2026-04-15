@@ -106,6 +106,44 @@ public:
     void setBand2Q(float q) { b2Q = q; updateFilters(); }
     void setBand2Gain(float g) { b2Gain = g; updateFilters(); }
 
+    // --- INTERFAZ DE MODULACIÓN NATIVA (Caja Negra) ---
+    void applyModB1Freq(float unipolar) {
+        float f = 20.0f * std::pow(20000.0f / 20.0f, unipolar);
+        modB1Freq.setTargetValue(f); visSync.b1Freq.store(f); visSync.hasB1Freq.store(true);
+    }
+    void applyModB1Gain(float unipolar) {
+        float g = juce::jmap(unipolar, 0.0f, 1.0f, -24.0f, 24.0f);
+        modB1Gain.setTargetValue(g); visSync.b1Gain.store(g); visSync.hasB1Gain.store(true);
+    }
+    void applyModB1Q(float unipolar) {
+        float q = juce::jmap(unipolar, 0.0f, 1.0f, 0.1f, 10.0f);
+        modB1Q.setTargetValue(q); visSync.b1Q.store(q); visSync.hasB1Q.store(true);
+    }
+    void applyModB2Freq(float unipolar) {
+        float f = 20.0f * std::pow(20000.0f / 20.0f, unipolar);
+        modB2Freq.setTargetValue(f); visSync.b2Freq.store(f); visSync.hasB2Freq.store(true);
+    }
+    void applyModB2Gain(float unipolar) {
+        float g = juce::jmap(unipolar, 0.0f, 1.0f, -24.0f, 24.0f);
+        modB2Gain.setTargetValue(g); visSync.b2Gain.store(g); visSync.hasB2Gain.store(true);
+    }
+    void applyModB2Q(float unipolar) {
+        float q = juce::jmap(unipolar, 0.0f, 1.0f, 0.1f, 10.0f);
+        modB2Q.setTargetValue(q); visSync.b2Q.store(q); visSync.hasB2Q.store(true);
+    }
+
+    void resetModulations() {
+        if (!visSync.hasB1Freq.load()) modB1Freq.setTargetValue(b1Freq);
+        if (!visSync.hasB1Gain.load()) modB1Gain.setTargetValue(b1Gain);
+        if (!visSync.hasB1Q.load())    modB1Q.setTargetValue(b1Q);
+        if (!visSync.hasB2Freq.load()) modB2Freq.setTargetValue(b2Freq);
+        if (!visSync.hasB2Gain.load()) modB2Gain.setTargetValue(b2Gain);
+        if (!visSync.hasB2Q.load())    modB2Q.setTargetValue(b2Q);
+        
+        visSync.hasB1Freq.store(false); visSync.hasB1Gain.store(false); visSync.hasB1Q.store(false);
+        visSync.hasB2Freq.store(false); visSync.hasB2Gain.store(false); visSync.hasB2Q.store(false);
+    }
+
     // --- PARAMS (Getters) ---
     BandType getBand1Type() const { return b1Type; }
     float getBand1Freq() const { return b1Freq; }
