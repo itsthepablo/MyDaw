@@ -1,9 +1,10 @@
 #pragma once
 #include <JuceHeader.h>
 #include <atomic>
+#include "../../../Engine/Modulation/NativeVisualSync.h"
 
 /**
- * GainStationData — Encapsula el estado de procesamiento del GainStation.
+ * GainStationData: Estructura de datos para el módulo GainStation.
  * Sigue el patrón de "Caja Negra" aislada del Track.
  */
 struct GainStationData {
@@ -12,20 +13,36 @@ struct GainStationData {
     std::atomic<bool>  isPhaseInverted { false };
     std::atomic<bool>  isMonoActive { false };
 
-    // Snapshots para el hilo de audio (Copia atómica rápida)
+    // --- MODULACIÓN ---
+    juce::LinearSmoothedValue<float> modPreGainSmoother;
+    juce::LinearSmoothedValue<float> modPostGainSmoother;
+
+    // --- MODULACIÓN VISUAL (Aislada) ---
+    NativeVisualSync visSync;
+
     struct Snapshot {
         float preGain;
         float postGain;
-        bool  isPhaseInverted;
-        bool  isMonoActive;
+        bool isPhaseInverted;
+        bool isMonoActive;
     };
 
     Snapshot getSnapshot() const {
-        return { 
+        return {
             preGain.load(std::memory_order_relaxed),
             postGain.load(std::memory_order_relaxed),
             isPhaseInverted.load(std::memory_order_relaxed),
             isMonoActive.load(std::memory_order_relaxed)
         };
+    }
+
+    GainStationData() {
+        modPreGainSmoother.reset(44100.0, 0.02);
+        modPostGainSmoother.reset(44100.0, 0.02);
+    }
+
+    void prepare(double sampleRate) {
+        modPreGainSmoother.reset(sampleRate, 0.02);
+        modPostGainSmoother.reset(sampleRate, 0.02);
     }
 };

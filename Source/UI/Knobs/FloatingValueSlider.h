@@ -50,7 +50,7 @@ public:
         // Solo capturamos si hay un clic manual del usuario mientras el modo Learn está activo.
         if (GridModulator::pendingModulator != nullptr && modTarget.isValid()) {
             GridModulator::pendingModulator->addTarget(modTarget);
-            return; // No interrumpimos el Learn, el usuario lo apaga con el botón dedicado
+            // Ya NO devolvemos aquí; permitimos que el click siga al Slider para que no se "vuelva loco" o se bloquee.
         }
 
         isDragging = true;

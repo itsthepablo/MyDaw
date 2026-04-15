@@ -20,19 +20,24 @@ public:
         rate.store(4.0f); // 1 Bar por defecto
         depth.store(1.0f);
         shape.store(static_cast<int>(ModulatorShape::Sine));
-        
-        // Inicializar smoothing (Regla 18 de rules.md)
-        smoothedDepth.reset(44100.0, 0.02); // 20ms de rampa
-        smoothedDepth.setCurrentAndTargetValue(1.0f);
     }
     
     GridModulator(int id) : modId(id) {
         rate.store(4.0f);
         depth.store(1.0f);
         shape.store(static_cast<int>(ModulatorShape::Sine));
-        
-        smoothedDepth.reset(44100.0, 0.02);
-        smoothedDepth.setCurrentAndTargetValue(1.0f);
+    }
+
+    /**
+     * Devuelve la fase 0.0-1.0 basada en una posición absoluta en píxeles.
+     * Centraliza la lógica para que Audio y UI sean idénticos.
+     */
+    double getVisualPhase(double phasePixels) const {
+        float r = std::max(0.001f, rate.load(std::memory_order_relaxed));
+        double beats = phasePixels / PIXELS_PER_BEAT;
+        double p = std::fmod(beats / (double)r, 1.0);
+        if (p < 0) p += 1.0;
+        return p;
     }
 
     float getValueAt(double phase) {
@@ -44,10 +49,7 @@ public:
         if (p < 0) p += 1.0;
         
         ModulatorShape s = static_cast<ModulatorShape>(shape.load(std::memory_order_relaxed));
-        
-        // Actualizar smoothing de profundidad
-        smoothedDepth.setTargetValue(depth.load(std::memory_order_relaxed));
-        float d = smoothedDepth.getNextValue();
+        float d = depth.load(std::memory_order_relaxed);
         
         if (s == ModulatorShape::RandomStep) {
             // Usar Beats para el escalón aleatorio para que dure el tiempo correcto
@@ -100,8 +102,7 @@ public:
         return 0.0f;
     }
 
-    void prepareToPlay(double sampleRate) {
-        smoothedDepth.reset(sampleRate, 0.02);
+    void prepareToPlay(double /*sampleRate*/) {
     }
 
     // --- PARÁMETROS ATÓMICOS ---
@@ -109,9 +110,6 @@ public:
     std::atomic<float> depth;
     std::atomic<int>   shape;
     
-    // --- DSP DE GRADO COMERCIAL ---
-    juce::LinearSmoothedValue<float> smoothedDepth;
-
     juce::Array<ModTarget> targets;
     juce::CriticalSection targetsLock;
 

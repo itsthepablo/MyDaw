@@ -383,6 +383,10 @@
         <GROUP id="{MOD-ENG-GRP}" name="Modulation">
           <FILE id="GrMo01" name="GridModulator.h" compile="0" resource="0" file="Source/Engine/Modulation/GridModulator.h"/>
           <FILE id="MoTg01" name="ModulationTargets.h" compile="0" resource="0" file="Source/Engine/Modulation/ModulationTargets.h"/>
+          <FILE id="NatModM1" name="NativeModulationManager.cpp" compile="1" resource="0"
+                file="Source/Engine/Modulation/NativeModulationManager.cpp"/>
+          <FILE id="NatModM2" name="NativeModulationManager.h" compile="0" resource="0"
+                file="Source/Engine/Modulation/NativeModulationManager.h"/>
         </GROUP>
         <GROUP id="{BFCF1667-0ADC-F1AA-CB69-BEDAA7F30CDE}" name="Threading">
           <FILE id="skfGlU" name="AudioThreadPool.h" compile="0" resource="0"

@@ -57,7 +57,7 @@ MixerChannelUI::MixerChannelUI(Track* t, bool miniMode)
     meter.setLookAndFeel(&meterLF);
     midMeter.setLookAndFeel(&meterLF);
     sideMeter.setLookAndFeel(&meterLF);
-    startTimerHz(30);
+    startTimerHz(60);
     
     setLookAndFeel(&mixerLAF);
 
@@ -403,10 +403,22 @@ void MixerChannelUI::updatePanVisibility() {
 
 void MixerChannelUI::timerCallback() {
     if (track != nullptr) {
-        // --- ACTUALIZAR ANILLOS DE MODULACIÓN ---
-        double ph = juce::Time::getMillisecondCounterHiRes() * 0.001; // Aproximación visual
-        fader.setModulationValue(track->getModulationForTarget(fader.modTarget, ph));
-        panKnob.setModulationValue(track->getModulationForTarget(panKnob.modTarget, ph));
+        // --- ACTIVAR MOVIMIENTO FÍSICO SOLO SI HAY MODULACIÓN ACTIVA ---
+        auto getDbVal = [](float gain) { return (gain <= 0.0001f) ? -64.0 : (double)juce::Decibels::gainToDecibels(gain, -100.0f); };
+
+        if (!fader.isMouseButtonDown()) {
+            double target = track->mixerData.visSync.hasVol.load(std::memory_order_relaxed) 
+                ? getDbVal(track->mixerData.visSync.vol.load()) 
+                : getDbVal(track->mixerData.volume);
+            fader.setValue(NativeVisualSync::smooth((float)fader.getValue(), (float)target, 0.25f), juce::dontSendNotification);
+        }
+
+        if (!panKnob.isMouseButtonDown()) {
+            float target = track->mixerData.visSync.hasPan.load(std::memory_order_relaxed)
+                ? track->mixerData.visSync.hasPan.load() ? track->mixerData.visSync.pan.load() : track->mixerData.balance
+                : track->mixerData.balance;
+            panKnob.setValue(NativeVisualSync::smooth((float)panKnob.getValue(), target, 0.25f), juce::dontSendNotification);
+        }
 
         meterLF.setTrackColour(track->getColor());
         meter.repaint();

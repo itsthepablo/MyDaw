@@ -44,13 +44,23 @@ public:
 
         setupKnob(lowFreq, lowFreqLabel, "FREQ", 20.0f, 20000.0f, 150.0f);
         lowFreq.setSkewFactorFromMidPoint(1000.0f);
+        lowFreq.modTarget.type = ModTarget::EQ_B1_Freq;
+
         setupKnob(lowQ, lowQLabel, "Q", 0.1f, 10.0f, 0.707f);
+        lowQ.modTarget.type = ModTarget::EQ_B1_Q;
+
         setupKnob(lowGain, lowGainLabel, "GAIN", -24.0f, 24.0f, 0.0f);
+        lowGain.modTarget.type = ModTarget::EQ_B1_Gain;
 
         setupKnob(highFreq, highFreqLabel, "FREQ", 20.0f, 20000.0f, 5000.0f);
         highFreq.setSkewFactorFromMidPoint(1000.0f);
+        highFreq.modTarget.type = ModTarget::EQ_B2_Freq;
+
         setupKnob(highQ, highQLabel, "Q", 0.1f, 10.0f, 0.707f);
+        highQ.modTarget.type = ModTarget::EQ_B2_Q;
+
         setupKnob(highGain, highGainLabel, "GAIN", -24.0f, 24.0f, 0.0f);
+        highGain.modTarget.type = ModTarget::EQ_B2_Gain;
 
         // --- BOTONES DE TIPO ---
         auto setupTypeBtn = [this](juce::ShapeButton& b, int id, bool isBand1) {
@@ -226,7 +236,26 @@ public:
     }
 
     void timerCallback() override { 
-        if (targetDSP) targetDSP->processAnalyzer();
+        if (targetDSP) {
+            targetDSP->processAnalyzer();
+
+            // --- SINCRONIZACIÓN VISUAL DE AUTOMATIZACIÓN (DESACOPLADA) ---
+            // Solo movemos los knobs si hay modulación activa para cada parámetro específico
+            auto& sync = targetDSP->visSync;
+
+            auto updateVisual = [](juce::Slider& s, float target) {
+                if (!s.isMouseButtonDown())
+                    s.setValue(NativeVisualSync::smooth((float)s.getValue(), target, 0.4f), juce::dontSendNotification);
+            };
+
+            updateVisual(lowFreq, sync.hasB1Freq.load() ? sync.b1Freq.load() : targetDSP->b1Freq);
+            updateVisual(lowGain, sync.hasB1Gain.load() ? sync.b1Gain.load() : targetDSP->b1Gain);
+            updateVisual(lowQ,    sync.hasB1Q.load()    ? sync.b1Q.load()    : targetDSP->b1Q);
+
+            updateVisual(highFreq, sync.hasB2Freq.load() ? sync.b2Freq.load() : targetDSP->b2Freq);
+            updateVisual(highGain, sync.hasB2Gain.load() ? sync.b2Gain.load() : targetDSP->b2Gain);
+            updateVisual(highQ,    sync.hasB2Q.load()    ? sync.b2Q.load()    : targetDSP->b2Q);
+        }
         repaint(); 
     }
 
@@ -318,7 +347,7 @@ private:
         repaint();
     }
 
-    juce::Slider lowFreq, lowQ, lowGain, highFreq, highQ, highGain;
+    FloatingValueSlider lowFreq, lowQ, lowGain, highFreq, highQ, highGain;
     juce::Label lowFreqLabel, lowQLabel, lowGainLabel, highFreqLabel, highQLabel, highGainLabel;
     juce::ShapeButton b1HP, b1Bell, b1LS, b2LP, b2Bell, b2HS;
     juce::TextButton bypassBtn;

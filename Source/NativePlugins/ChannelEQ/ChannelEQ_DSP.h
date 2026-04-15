@@ -4,11 +4,12 @@
 #include <vector>
 #include <atomic>
 #include <memory>
+#include "../../Engine/Modulation/NativeVisualSync.h"
 #include "../FFTAnalyzerPlugin/SimpleAnalyzer.h"
 
 /**
  * Motor de ecualización de alto rendimiento (2 bandas estilo Serum) para cada canal.
- * Utiliza el motor SimpleAnalyzer original para una visualización 100% idéntica.
+ * Expandido para soportar modulación universal nativa.
  */
 class ChannelEQ_DSP {
 public:
@@ -19,11 +20,19 @@ public:
     ChannelEQ_DSP() 
     {
         analyzer.setup(12, 44100.0);
-        analyzer.setMasterMode(false); // Forzar modo DEFAULT
+        analyzer.setMasterMode(false); 
         analyzer.setCalibration(16.0f);
         
         sampleRate = 44100.0;
         isPrepared.store(false);
+
+        // Inicializar smoothers de modulación
+        modB1Freq.reset(44100.0, 0.02);
+        modB1Gain.reset(44100.0, 0.02);
+        modB1Q.reset(44100.0, 0.02);
+        modB2Freq.reset(44100.0, 0.02);
+        modB2Gain.reset(44100.0, 0.02);
+        modB2Q.reset(44100.0, 0.02);
         
         filterChain.get<0>().state = juce::dsp::IIR::Coefficients<float>::makePeakFilter(44100.0, 1000.0, 0.707f, 1.0f);
         filterChain.get<1>().state = juce::dsp::IIR::Coefficients<float>::makePeakFilter(44100.0, 1000.0, 0.707f, 1.0f);
@@ -37,6 +46,14 @@ public:
         
         juce::dsp::ProcessSpec spec { sr, (juce::uint32)samplesPerBlock, (juce::uint32)numChannels };
         filterChain.prepare(spec);
+
+        modB1Freq.reset(sr, 0.02);
+        modB1Gain.reset(sr, 0.02);
+        modB1Q.reset(sr, 0.02);
+        modB2Freq.reset(sr, 0.02);
+        modB2Gain.reset(sr, 0.02);
+        modB2Q.reset(sr, 0.02);
+
         updateFilters();
         
         analyzer.setup(12, sr);
@@ -48,6 +65,11 @@ public:
         if (!isPrepared.load() || block.getNumChannels() == 0) return;
         if (userBypass.load(std::memory_order_relaxed)) return;
         
+        int numSamples = (int)block.getNumSamples();
+
+        // --- ACTUALIZAR FILTROS AL INICIO DEL BLOQUE ---
+        updateFilters();
+
         // 1. Smart Bypass
         bool b1IsNeutral = (b1Gain == 0.0f) && (b1Type != HighPass && b1Type != LowPass);
         bool b2IsNeutral = (b2Gain == 0.0f) && (b2Type != HighPass && b2Type != LowPass);
@@ -59,11 +81,18 @@ public:
         juce::dsp::ProcessContextReplacing<float> context(block);
         filterChain.process(context);
         
-        // 3. FFT Analysis: Solo empujar muestras al buffer circular
-        analyzer.pushBuffer(block.getChannelPointer(0), (int)block.getNumSamples());
+        // 3. FFT Analysis
+        analyzer.pushBuffer(block.getChannelPointer(0), numSamples);
+
+        // --- AVANZAR SMOOTHERS (CRÍTICO PARA AUTOMATIZACIÓN) ---
+        modB1Freq.skip(numSamples);
+        modB1Gain.skip(numSamples);
+        modB1Q.skip(numSamples);
+        modB2Freq.skip(numSamples);
+        modB2Gain.skip(numSamples);
+        modB2Q.skip(numSamples);
     }
 
-    /** Realiza el pesado cálculo del FFT. Llamar desde el Timer de la GUI. */
     void processAnalyzer() { analyzer.process(); }
 
     // --- PARAMS ---
@@ -77,6 +106,7 @@ public:
     void setBand2Q(float q) { b2Q = q; updateFilters(); }
     void setBand2Gain(float g) { b2Gain = g; updateFilters(); }
 
+    // --- PARAMS (Getters) ---
     BandType getBand1Type() const { return b1Type; }
     float getBand1Freq() const { return b1Freq; }
     float getBand1Q() const { return b1Q; }
@@ -96,30 +126,57 @@ public:
         return (float)mag1 * (float)mag2;
     }
 
+    // --- PARÁMETROS BASE (Públicos para acceso del Manager) ---
+    BandType b1Type = LowShelf;
+    float b1Freq = 150.0f, b1Gain = 0.0f, b1Q = 0.707f;
+
+    BandType b2Type = HighShelf;
+    float b2Freq = 5000.0f, b2Gain = 0.0f, b2Q = 0.707f;
+
+    // --- SMOOTHING TARGETS ---
+    juce::LinearSmoothedValue<float> modB1Freq;
+    juce::LinearSmoothedValue<float> modB1Gain;
+    juce::LinearSmoothedValue<float> modB1Q;
+    juce::LinearSmoothedValue<float> modB2Freq;
+    juce::LinearSmoothedValue<float> modB2Gain;
+    juce::LinearSmoothedValue<float> modB2Q;
+
+    // --- MODULACIÓN VISUAL (Aislada) ---
+    NativeVisualSync visSync;
+
 private:
     void updateFilters()
     {
         if (sampleRate <= 0) return;
 
+        // Lectura directa de valores absolutos (como estaba antes)
+        float f1 = juce::jlimit(20.0f, 19000.0f, modB1Freq.getCurrentValue()); 
+        float g1 = juce::jlimit(-24.0f, 24.0f, modB1Gain.getCurrentValue());
+        float q1 = juce::jlimit(0.1f, 10.0f, modB1Q.getCurrentValue());
+
         auto& filter1 = filterChain.get<0>();
         if (filter1.state != nullptr) {
             switch (b1Type) {
-                case HighPass: *filter1.state = *juce::dsp::IIR::Coefficients<float>::makeHighPass(sampleRate, b1Freq, b1Q); break;
-                case LowShelf: *filter1.state = *juce::dsp::IIR::Coefficients<float>::makeLowShelf(sampleRate, b1Freq, b1Q, juce::Decibels::decibelsToGain(b1Gain)); break;
-                case Bell:     *filter1.state = *juce::dsp::IIR::Coefficients<float>::makePeakFilter(sampleRate, b1Freq, b1Q, juce::Decibels::decibelsToGain(b1Gain)); break;
-                default:       *filter1.state = *juce::dsp::IIR::Coefficients<float>::makePeakFilter(sampleRate, b1Freq, b1Q, 1.0f); break;
+                case HighPass: *filter1.state = *juce::dsp::IIR::Coefficients<float>::makeHighPass(sampleRate, f1, q1); break;
+                case LowShelf: *filter1.state = *juce::dsp::IIR::Coefficients<float>::makeLowShelf(sampleRate, f1, q1, juce::Decibels::decibelsToGain(g1)); break;
+                case Bell:     *filter1.state = *juce::dsp::IIR::Coefficients<float>::makePeakFilter(sampleRate, f1, q1, juce::Decibels::decibelsToGain(g1)); break;
+                default:       *filter1.state = *juce::dsp::IIR::Coefficients<float>::makePeakFilter(sampleRate, f1, q1, 1.0f); break;
             }
         }
+
+        float f2 = juce::jlimit(20.0f, 19000.0f, modB2Freq.getCurrentValue());
+        float g2 = juce::jlimit(-24.0f, 24.0f, modB2Gain.getCurrentValue());
+        float q2 = juce::jlimit(0.1f, 10.0f, modB2Q.getCurrentValue());
 
         auto& filter2 = filterChain.get<1>();
         if (filter2.state != nullptr) {
             switch (b2Type) {
-                case LowPass:   *filter2.state = *juce::dsp::IIR::Coefficients<float>::makeLowPass(sampleRate, b2Freq, b2Q); break;
-                case HighShelf: *filter2.state = *juce::dsp::IIR::Coefficients<float>::makeHighShelf(sampleRate, b2Freq, b2Q, juce::Decibels::decibelsToGain(b2Gain)); break;
-                case Bell:      *filter2.state = *juce::dsp::IIR::Coefficients<float>::makePeakFilter(sampleRate, b2Freq, b2Q, juce::Decibels::decibelsToGain(b2Gain)); break;
-                case HighPass:  *filter2.state = *juce::dsp::IIR::Coefficients<float>::makeHighPass(sampleRate, b2Freq, b2Q); break;
-                case LowShelf:  *filter2.state = *juce::dsp::IIR::Coefficients<float>::makeLowShelf(sampleRate, b2Freq, b2Q, juce::Decibels::decibelsToGain(b2Gain)); break;
-                default:        *filter2.state = *juce::dsp::IIR::Coefficients<float>::makePeakFilter(sampleRate, b2Freq, b2Q, 1.0f); break;
+                case LowPass:   *filter2.state = *juce::dsp::IIR::Coefficients<float>::makeLowPass(sampleRate, f2, q2); break;
+                case HighShelf: *filter2.state = *juce::dsp::IIR::Coefficients<float>::makeHighShelf(sampleRate, f2, q2, juce::Decibels::decibelsToGain(g2)); break;
+                case Bell:      *filter2.state = *juce::dsp::IIR::Coefficients<float>::makePeakFilter(sampleRate, f2, q2, juce::Decibels::decibelsToGain(g2)); break;
+                case HighPass:  *filter2.state = *juce::dsp::IIR::Coefficients<float>::makeHighPass(sampleRate, f2, q2); break;
+                case LowShelf:  *filter2.state = *juce::dsp::IIR::Coefficients<float>::makeLowShelf(sampleRate, f2, q2, juce::Decibels::decibelsToGain(g2)); break;
+                default:        *filter2.state = *juce::dsp::IIR::Coefficients<float>::makePeakFilter(sampleRate, f2, q2, 1.0f); break;
             }
         }
     }
@@ -131,12 +188,6 @@ private:
         juce::dsp::ProcessorDuplicator<juce::dsp::IIR::Filter<float>, juce::dsp::IIR::Coefficients<float>>,
         juce::dsp::ProcessorDuplicator<juce::dsp::IIR::Filter<float>, juce::dsp::IIR::Coefficients<float>>
     > filterChain;
-
-    BandType b1Type = LowShelf;
-    float b1Freq = 150.0f, b1Gain = 0.0f, b1Q = 0.707f;
-
-    BandType b2Type = HighShelf;
-    float b2Freq = 5000.0f, b2Gain = 0.0f, b2Q = 0.707f;
 
     SimpleAnalyzer analyzer;
 };

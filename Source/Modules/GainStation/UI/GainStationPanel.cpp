@@ -11,6 +11,7 @@ GainStationPanel::GainStationPanel() {
     preGainKnob.onValueChange = [this] {
         if (activeBridge) activeBridge->setPreGain((float)preGainKnob.getValue());
     };
+    preGainKnob.modTarget.type = ModTarget::PreGain;
 
     addAndMakeVisible(postGainKnob);
     postGainKnob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
@@ -20,6 +21,7 @@ GainStationPanel::GainStationPanel() {
     postGainKnob.onValueChange = [this] {
         if (activeBridge) activeBridge->setPostGain((float)postGainKnob.getValue());
     };
+    postGainKnob.modTarget.type = ModTarget::PostGain;
 
     addAndMakeVisible(phaseBtn);
     phaseBtn.setButtonText(juce::CharPointer_UTF8("\xc3\x98"));
@@ -57,7 +59,21 @@ void GainStationPanel::setBridge(GainStationBridge* b) {
         phaseBtn.setToggleState(activeBridge->isPhaseInverted(), juce::dontSendNotification);
         monoBtn.setToggleState(activeBridge->isMonoActive(), juce::dontSendNotification);
     }
+    startTimerHz(60);
     repaint();
+}
+
+void GainStationPanel::timerCallback() {
+    if (activeBridge) {
+        // --- SINCRONIZACIÓN VISUAL (CON SUAVIZADO Y PROTECCIÓN DE MOUSE) ---
+        auto updateVisual = [](juce::Slider& s, float target) {
+            if (!s.isMouseButtonDown())
+                s.setValue(NativeVisualSync::smooth((float)s.getValue(), target, 0.4f), juce::dontSendNotification);
+        };
+
+        updateVisual(preGainKnob, activeBridge->hasActiveModPre() ? activeBridge->getVisPreGain() : activeBridge->getPreGain());
+        updateVisual(postGainKnob, activeBridge->hasActiveModPost() ? activeBridge->getVisPostGain() : activeBridge->getPostGain());
+    }
 }
 
 void GainStationPanel::paint(juce::Graphics& g) {

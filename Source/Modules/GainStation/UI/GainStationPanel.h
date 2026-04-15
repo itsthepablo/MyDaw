@@ -8,7 +8,7 @@
  * GainStationPanel — Interfaz principal del módulo GainStation.
  * Ofrece controles de Pre-Gain, Post-Gain, Fase y Mono Sum.
  */
-class GainStationPanel : public juce::Component {
+class GainStationPanel : public juce::Component, public juce::Timer {
 public:
     GainStationPanel();
     ~GainStationPanel() override;
@@ -20,6 +20,7 @@ public:
 
 private:
     void performGainMatch();
+    void timerCallback() override;
 
     GainStationBridge* activeBridge = nullptr;
     GainStationMeter meter;

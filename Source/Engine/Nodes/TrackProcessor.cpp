@@ -3,6 +3,7 @@
 #include "../../Modules/LoudnessTrack/DSP/LoudnessTrackDSP.h"
 #include "../../Modules/BalanceTrack/DSP/BalanceTrackDSP.h"
 #include "../../Modules/MidSideTrack/DSP/MidSideTrackDSP.h"
+#include "../Modulation/NativeModulationManager.h"
 
 void TrackProcessor::process(Track* track,
     const AudioClock& clock,
@@ -227,11 +228,10 @@ void TrackProcessor::process(Track* track,
 
     GainStationDSP::processPreFX(track->gainStationData, track, mainProxyBuffer);
     
-    // --- ACTUALIZAR TARGETS DE MODULACIÓN (AUDIO THREAD) ---
-    ModTarget tVol; tVol.type = ModTarget::Volume;
-    ModTarget tPan; tPan.type = ModTarget::Pan;
-    track->mixerData.modVolumeSmoother.setTargetValue(track->getModulationForTarget(tVol, clock.currentPh));
-    track->mixerData.modPanSmoother.setTargetValue(track->getModulationForTarget(tPan, clock.currentPh));
+    // --- DESPACHADOR DE MODULACIÓN UNIVERSAL NATIVA (PROFESSIONAL) ---
+    // Este gestor centraliza la modulación de todos los parámetros nativos mapeados via LEARN.
+    NativeModulationManager modManager;
+    modManager.applyModulations(track, clock.currentPh);
 
     // --- APLICAR MODULACIÓN A PLUGINS (THROTTLED & AGGREGATED) ---
     for (auto* m : track->modulators) {

@@ -5,8 +5,8 @@
 #include "ModulatorKnob.h"
 
 /**
- * ModulatorDeviceUI: Interfaz de Grado Comercial.
- * Versión simplificada SIN knob de Phase por petición del usuario.
+ * ModulatorDeviceUI: Interfaz de Grado Profesional "Master Sync".
+ * Implementa visualización Serum-style con sincronía frame-perfect.
  */
 class ModulatorDeviceUI : public juce::Component, public juce::Timer {
 public:
@@ -66,39 +66,55 @@ public:
 
     void paint(juce::Graphics& g) override {
         auto area = getLocalBounds().toFloat();
+        
+        // --- Fondo y Borde Principal ---
         g.setColour(juce::Colour(25, 27, 30));
         g.fillRoundedRectangle(area, 6.0f);
         g.setColour(juce::Colour(60, 65, 70));
         g.drawRoundedRectangle(area.reduced(0.5f), 6.0f, 1.0f);
 
-        auto waveArea = getLocalBounds().reduced(150, 40).withTrimmedLeft(180).toFloat();
+        // --- Area de Visualización de Onda ---
+        auto waveArea = getLocalBounds().reduced(150, 25).withTrimmedLeft(180).toFloat();
         g.setColour(juce::Colour(15, 17, 20));
         g.fillRoundedRectangle(waveArea, 4.0f);
         g.setColour(juce::Colour(40, 42, 45));
         g.drawRoundedRectangle(waveArea, 4.0f, 1.0f);
 
-        juce::Path wavePath;
+        // --- Dibujo de la Onda Estática (Fondo) ---
+        juce::Path p;
         float w = waveArea.getWidth();
         float h = waveArea.getHeight();
         float midY = waveArea.getCentreY();
         float d = modulator.depth.load();
 
-        if (modulator.shape.load() != 4) {
+        if (modulator.shape.load() != 4) { // No random para el fondo estático por ahora
             for (float x = 0; x <= w; x += 1.0f) {
                 double ph = (double)x / w;
                 float val = modulator.getRawShapeValue(ph) * d;
-                float y = midY - (val * h * 0.45f);
-                if (x == 0) wavePath.startNewSubPath(waveArea.getX() + x, y);
-                else wavePath.lineTo(waveArea.getX() + x, y);
+                float y = midY - (val * h * 0.40f);
+                
+                if (x == 0) p.startNewSubPath(waveArea.getX() + x, y);
+                else p.lineTo(waveArea.getX() + x, y);
             }
-            g.setColour(juce::Colour(100, 180, 255).withAlpha(0.4f));
-            g.strokePath(wavePath, juce::PathStrokeType(1.5f));
+            // Dibujar línea de fondo sutil
+            g.setColour(juce::Colour(100, 180, 255).withAlpha(0.2f));
+            g.strokePath(p, juce::PathStrokeType(1.5f));
+            
+            // Dibujar relleno gradiente
+            juce::Path fillPath = p;
+            fillPath.lineTo(waveArea.getRight(), waveArea.getBottom());
+            fillPath.lineTo(waveArea.getX(), waveArea.getBottom());
+            fillPath.closeSubPath();
+            
+            juce::ColourGradient grad(juce::Colour(0, 150, 255).withAlpha(0.15f), 0, waveArea.getY(),
+                                     juce::Colour(0, 50, 100).withAlpha(0.0f), 0, waveArea.getBottom(), false);
+            g.setGradientFill(grad);
+            g.fillPath(fillPath);
         }
 
-        // --- PLAYHEAD SYNC (PHASE ELIMINADO) ---
-        float r = modulator.rate.load();
+        // --- INDICADOR DINÁMICO (SYNC PRO) ---
         double absolutePixels = 0.0;
-        double currentPh = 0.0;
+        double interpPh = 0.0;
 
         if (transportState && transportState->isPlaying.load()) {
             double headPx = (double)transportState->currentAudioPlayhead.load();
@@ -106,30 +122,32 @@ public:
             double nowMs = juce::Time::getMillisecondCounterHiRes();
             float currentBpm = transportState->bpm.load();
             
-            // Interpolación de Grado Comercial: Calcular cuánto ha avanzado el tiempo desde el último bloque
+            // Interpolación Pro: Predecir posición actual basada en tiempo transcurrido
             double elapsedS = (nowMs - lastMs) * 0.001;
             double pixelsPerSec = (currentBpm / 60.0) * GridModulator::PIXELS_PER_BEAT;
             absolutePixels = headPx + (elapsedS * pixelsPerSec);
-            
-            double beats = absolutePixels / GridModulator::PIXELS_PER_BEAT;
-            currentPh = std::fmod(beats / (double)r, 1.0);
+            interpPh = modulator.getVisualPhase(absolutePixels);
         } else {
             double timeInSeconds = juce::Time::getMillisecondCounterHiRes() * 0.001;
             float currentBpm = transportState ? transportState->bpm.load() : 120.0f;
-            double beats = timeInSeconds * (currentBpm / 60.0);
-            currentPh = std::fmod(beats / (double)r, 1.0);
-            absolutePixels = beats * GridModulator::PIXELS_PER_BEAT;
+            absolutePixels = timeInSeconds * (currentBpm / 60.0) * GridModulator::PIXELS_PER_BEAT;
+            interpPh = modulator.getVisualPhase(absolutePixels);
         }
 
-        if (currentPh < 0) currentPh += 1.0;
-        float dotX = waveArea.getX() + (float)currentPh * w;
-        float dotVal = modulator.getVisualValueAt(absolutePixels); 
-        float dotY = midY - (dotVal * h * 0.45f);
+        // --- Dibujar Punto de Playhead ---
+        float dotX = waveArea.getX() + (float)interpPh * w;
+        float dotVal = modulator.getVisualValueAt(absolutePixels);
+        float dotY = midY - (dotVal * h * 0.40f);
 
+        // Glow
+        g.setColour(juce::Colour(0, 200, 255).withAlpha(0.3f));
+        g.fillEllipse(dotX - 7, dotY - 7, 14, 14);
+        
+        // Punto núcleo
         g.setColour(juce::Colours::white);
         g.fillEllipse(dotX - 4, dotY - 4, 8, 8);
-        g.setColour(juce::Colour(100, 200, 255).withAlpha(0.6f));
-        g.drawEllipse(dotX - 6, dotY - 6, 12, 12, 2.0f);
+        g.setColour(juce::Colour(0, 200, 255));
+        g.drawEllipse(dotX - 4, dotY - 4, 8, 8, 1.5f);
     }
 
     void resized() override {
@@ -163,7 +181,7 @@ private:
             1.0f/3.0f, 0.25f, 0.1875f, 1.0f/6.0f, 0.125f, 1.0f/12.0f, 
             0.0625f, 1.0f/24.0f, 0.03125f 
         };
-        return rates[juce::jlimit(0, 23, idx)];
+        return rates[juce::jlimit(0, 23, (int)idx)];
     }
 
     float getIndexForRate(float r) {
@@ -187,14 +205,11 @@ private:
 
     void showTargetMenu() {
         juce::PopupMenu m;
-        m.addItem(1, "Add Internal: Volume");
-        m.addItem(2, "Add Internal: Pan");
+        m.addItem(1, "Plugin Parameter (LEARN)");
         m.addSeparator();
         m.addItem(99, "CLEAR ALL TARGETS");
         m.showMenuAsync(juce::PopupMenu::Options(), [this](int r) {
-            if (r == 1) { ModTarget t; t.type = ModTarget::Volume; modulator.addTarget(t); }
-            else if (r == 2) { ModTarget t; t.type = ModTarget::Pan; modulator.addTarget(t); }
-            else if (r == 99) { modulator.clearTargets(); }
+            if (r == 99) { modulator.clearTargets(); }
         });
     }
 

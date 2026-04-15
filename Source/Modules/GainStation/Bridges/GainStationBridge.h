@@ -19,6 +19,12 @@ public:
     float getPostGain() const { return dataRef.postGain.load(std::memory_order_relaxed); }
     void setPostGain(float v) { dataRef.postGain.store(v, std::memory_order_relaxed); }
 
+    // --- SINCRONIZACIÓN VISUAL (MODULACIÓN) ---
+    float getVisPreGain() const { return dataRef.visSync.pre.load(std::memory_order_relaxed); }
+    float getVisPostGain() const { return dataRef.visSync.post.load(std::memory_order_relaxed); }
+    bool hasActiveModPre() const { return dataRef.visSync.hasPre.load(std::memory_order_relaxed); }
+    bool hasActiveModPost() const { return dataRef.visSync.hasPost.load(std::memory_order_relaxed); }
+
     // --- ESTADOS DE PROCESAMIENTO ---
     bool isPhaseInverted() const { return dataRef.isPhaseInverted.load(std::memory_order_relaxed); }
     void setPhaseInverted(bool i) { dataRef.isPhaseInverted.store(i, std::memory_order_relaxed); }

@@ -79,15 +79,13 @@ private:
     }
 
     juce::String getTargetName(const ModTarget& t) {
-        if (t.type == ModTarget::Volume) return "Volume";
-        if (t.type == ModTarget::Pan) return "Pan";
         if (t.type == ModTarget::PluginParam) {
             if (currentTrack && t.pluginIdx >= 0 && t.pluginIdx < currentTrack->plugins.size()) {
                 auto* p = currentTrack->plugins[t.pluginIdx];
                 return p->getLoadedPluginName() + " Param #" + juce::String(t.parameterIdx);
             }
         }
-        return "Unknown";
+        return ModTarget::getName(t.type);
     }
 
     Track* currentTrack = nullptr;
