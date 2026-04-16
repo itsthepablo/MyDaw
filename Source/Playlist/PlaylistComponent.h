@@ -155,6 +155,8 @@ public:
     void setSelectedTrack(Track* t);
     void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override;
 
+    juce::MouseCursor getMouseCursor() override;
+
     bool keyPressed(const juce::KeyPress& key, juce::Component* originatingComponent) override;
     void timerCallback() override;
 
@@ -184,6 +186,7 @@ public:
 
 private:
     std::unique_ptr<PlaylistTool> activeTool;
+    int currentToolId = 1;
     Track* currentVisualTrack = nullptr; // Guardia de recursión infinita
 
     float playheadAbsPos = 0.0f;

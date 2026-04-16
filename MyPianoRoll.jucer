@@ -359,6 +359,7 @@
         </GROUP>
         <FILE id="BvdwDj" name="UIManager.cpp" compile="1" resource="0" file="Source/UI/UIManager.cpp"/>
         <FILE id="bmzdqo" name="UIManager.h" compile="0" resource="0" file="Source/UI/UIManager.h"/>
+        <FILE id="CC_H_1" name="CustomCursors.h" compile="0" resource="0" file="Source/UI/CustomCursors.h"/>
       </GROUP>
       <GROUP id="{DE716C5C-395E-36B2-27F4-94E8BA4A1B7D}" name="Engine">
         <GROUP id="{C5ABA81C-AA5B-F434-FDEC-1F29839225C6}" name="Core">

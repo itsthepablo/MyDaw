@@ -295,7 +295,7 @@ void MixerChannelUI::paint(juce::Graphics& g) {
 }
 
 void MixerChannelUI::resized() {
-    auto b = getLocalBounds().reduced(4);
+    auto b = getLocalBounds();
 
     if (!isMiniMode) {
         auto topArea = b.removeFromTop(100);

@@ -18,6 +18,7 @@
 #include <cmath>
 #include <unordered_map>
 #include "../Mixer/Bridges/MixerParameterBridge.h"
+#include "../UI/CustomCursors.h"
 
 
 
@@ -239,6 +240,7 @@ void PlaylistComponent::mouseDoubleClick(const juce::MouseEvent &e) {
 }
 
 void PlaylistComponent::setTool(int toolId) {
+  currentToolId = toolId;
   if (toolId == 1)
     activeTool = std::make_unique<PointerTool>();
   else if (toolId == 3)
@@ -247,6 +249,8 @@ void PlaylistComponent::setTool(int toolId) {
     activeTool = std::make_unique<EraserTool>();
   else if (toolId == 5)
     activeTool = std::make_unique<MuteTool>();
+    
+  repaint();
 }
 
 bool PlaylistComponent::keyPressed(const juce::KeyPress &key,
@@ -449,6 +453,16 @@ void PlaylistComponent::mouseDown(const juce::MouseEvent &e) {
   // 3. Delegar al Tool activo (Clips, Automation, etc.)
   if (activeTool)
     activeTool->mouseDown(e, *this);
+}
+
+juce::MouseCursor PlaylistComponent::getMouseCursor() {
+  switch (currentToolId) {
+    case 1: return CustomCursors::getCursor(CustomCursors::CursorType::Pencil);
+    case 3: return CustomCursors::getCursor(CustomCursors::CursorType::Cutter);
+    case 4: return CustomCursors::getCursor(CustomCursors::CursorType::Eraser);
+    case 5: return CustomCursors::getCursor(CustomCursors::CursorType::Mute);
+  }
+  return juce::MouseCursor::NormalCursor;
 }
 
 void PlaylistComponent::mouseDrag(const juce::MouseEvent &e) {

@@ -14,7 +14,7 @@ void LayoutHandler::performLayout(LayoutDependencies d) {
         d.resourceMeter->toFront(false); // Evita que la barra lo tape
     }
 
-    d.hintPanel.setBounds(area.removeFromBottom(28));
+    d.hintPanel.setBounds(area.removeFromBottom(34));
 
     // La TransportBar ha sido unificada en la TopMenuBar
 
@@ -49,8 +49,7 @@ void LayoutHandler::performLayout(LayoutDependencies d) {
 
             d.mixerUI.setVisible(true);
 
-            float scale = area.getHeight() / 600.0f;
-            int masterWidth = juce::roundToInt(120.0f * scale);
+            int masterWidth = 200; // Fijo para diseño 1:1
             d.masterChannelUI.setBounds(area.removeFromLeft(masterWidth));
 
             d.mixerUI.setBounds(area);

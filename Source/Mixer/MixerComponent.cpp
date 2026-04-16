@@ -92,8 +92,7 @@ void MixerComponent::resized() {
     if (isMiniMixer) {
         channelWidth = 130; // Ancho fijo para el Mini Mixer
     } else {
-        float scale = (float)channelHeight / 600.0f;
-        channelWidth = juce::roundToInt(100.0f * scale); // Escala proporcional solo para el Mixer normal
+        channelWidth = 150; // Fijo para diseño 1:1 en modo Mixer normal
     }
 
     int totalWidth = channels.size() * (channelWidth + 1);
