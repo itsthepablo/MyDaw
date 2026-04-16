@@ -3,6 +3,7 @@
 #include "../../Data/Track.h"
 #include "../Bridges/MixerParameterBridge.h"
 #include "../../UI/Meters/LevelMeter.h"
+#include "../../UI/Meters/Vectorscope.h"
 #include "../../Tracks/LookAndFeel/TrackLookAndFeel.h"
 #include "../LookAndFeel/MixerLookAndFeel.h"
 #include "MixerRacks.h"
@@ -63,6 +64,7 @@ private:
     juce::TextButton panToggle, msToggle;
     FloatingValueSlider panKnob, panL, panR, fader, midFader, sideFader; 
     LevelMeter meter, midMeter, sideMeter;
+    Vectorscope vectorscope;
     TrackLevelMeterLF meterLF;
     juce::TextButton muteBtn, soloBtn, midSoloBtn, sideSoloBtn, phaseBtn, recBtn; 
     juce::Label trackName, midLabel, sideLabel;

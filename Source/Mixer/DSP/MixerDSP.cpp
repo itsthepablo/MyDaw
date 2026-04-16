@@ -50,6 +50,14 @@ void MixerDSP::applyGainAndPan(Track* track, int numSamples, int hardwareOutChan
             
             lData[i] = processedL * gainL * v;
             rData[i] = processedR * gainR * v;
+
+            // --- CAPTURA CIRCULAR PARA VECTORSCOPIO (ESTILO TP INSPECTOR) ---
+            if (track->midSideBuffer.getNumChannels() >= 2) {
+                int wPos = track->mixerData.scopeWritePos.load(std::memory_order_relaxed);
+                track->midSideBuffer.setSample(0, wPos, lData[i]);
+                track->midSideBuffer.setSample(1, wPos, rData[i]);
+                track->mixerData.scopeWritePos.store((wPos + 1) % track->midSideBuffer.getNumSamples(), std::memory_order_relaxed);
+            }
         }
 
         track->mixerData.currentMidPeak.store(maxM, std::memory_order_relaxed);

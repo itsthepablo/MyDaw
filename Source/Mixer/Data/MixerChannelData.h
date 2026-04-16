@@ -9,7 +9,6 @@
 struct MixerChannelData {
     MixerChannelData() {
         // --- INICIALIZACIÓN CRÍTICA ---
-        // Los smoothers deben empezar en 1.0f para que el audio no se silencie al arrancar.
         volumeSmoother.reset(44100.0, 0.05);
         volumeSmoother.setCurrentAndTargetValue(1.0f);
         
@@ -60,6 +59,9 @@ struct MixerChannelData {
     std::atomic<float> currentPeakLevelR { 0.0f };
     std::atomic<float> currentMidPeak { 0.0f };
     std::atomic<float> currentSidePeak { 0.0f };
+    
+    // ATÓMICOS DE VISUALIZACIÓN
+    std::atomic<int> scopeWritePos { 0 };
 
     // --- MODULACIÓN VISUAL (AISLADA) ---
     NativeVisualSync visSync;

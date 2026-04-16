@@ -34,7 +34,7 @@ void TrackManager::prepareSingleTrack(Track* t, double sampleRate, int samplesPe
     t->audioBuffer.setSize(2, maxSamples, false, true, false);
     t->instrumentMixBuffer.setSize(2, maxSamples, false, true, false);
     t->tempSynthBuffer.setSize(2, maxSamples, false, true, false);
-    t->midSideBuffer.setSize(1, maxSamples, false, true, false);
+    t->midSideBuffer.setSize(2, maxSamples, false, true, false);
     t->audioBuffer.clear();
 
     // Sincronizar buffers de PDC si existen plugins

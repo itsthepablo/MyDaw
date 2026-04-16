@@ -25,11 +25,13 @@ public:
     void mouseEnter(const juce::MouseEvent& e) override {
         isHovering = true;
 
-        valueBox.addToDesktop(juce::ComponentPeer::windowIsTemporary |
-            juce::ComponentPeer::windowIgnoresMouseClicks);
-        valueBox.setSize(50, 20);
-        positionValueBox(); // Lo posicionamos estático
-        valueBox.setVisible(true);
+        if (showFloatingBox) {
+            valueBox.addToDesktop(juce::ComponentPeer::windowIsTemporary |
+                juce::ComponentPeer::windowIgnoresMouseClicks);
+            valueBox.setSize(50, 20);
+            positionValueBox(); // Lo posicionamos estático
+            valueBox.setVisible(true);
+        }
 
         juce::Slider::mouseEnter(e);
     }
@@ -54,8 +56,10 @@ public:
         }
 
         isDragging = true;
-        valueBox.setBorderColor(juce::Colours::orange); 
-        positionValueBox();
+        if (showFloatingBox) {
+            valueBox.setBorderColor(juce::Colours::orange);
+            positionValueBox();
+        }
         juce::Slider::mouseDown(e);
     }
 
@@ -81,8 +85,11 @@ public:
 
     ModTarget modTarget; // Identificador del parámetro para el sistema de modulación
 
+    bool showFloatingBox = true; // Controlar si se muestra la caja flotante
+
 private:
     void updateValueBoxText() {
+        if (!showFloatingBox) return;
         if (valueToTextFormattingCallback) {
             valueBox.setText(valueToTextFormattingCallback(getValue()));
         }
@@ -92,7 +99,9 @@ private:
     }
 
     void positionValueBox() {
+        if (!showFloatingBox) return;
         updateValueBoxText();
+        // ... rest of the function remains the same ...
 
         // Calculamos la posición del Slider en toda la pantalla
         auto screenPos = getScreenPosition();

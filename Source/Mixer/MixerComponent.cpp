@@ -104,6 +104,6 @@ void MixerComponent::resized() {
     contentComp.setSize(juce::jmax(viewport.getWidth(), totalWidth), channelHeight);
 
     for (int i = 0; i < channels.size(); ++i) {
-        channels[i]->setBounds(i * (channelWidth + 1), 0, channelWidth, channelHeight);
+        channels[i]->setBounds(i * (channelWidth + 3), 0, channelWidth, channelHeight);
     }
 }

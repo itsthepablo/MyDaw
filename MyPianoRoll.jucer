@@ -312,8 +312,13 @@
           </GROUP>
         </GROUP>
         <GROUP id="{M71F7D42-ABCD-1234-EF03-123456789014}" name="Meters">
+          <FILE id="s8aJAD" name="LissajousBackground.h" compile="0" resource="0"
+                file="Source/UI/Meters/LissajousBackground.h"/>
           <FILE id="B6VI8M" name="LevelMeter.h" compile="0" resource="0" file="Source/UI/Meters/LevelMeter.h"/>
           <FILE id="LMCpp1" name="LevelMeter.cpp" compile="1" resource="0" file="Source/UI/Meters/LevelMeter.cpp"/>
+          <FILE id="VSCopeH" name="Vectorscope.h" compile="0" resource="0" file="Source/UI/Meters/Vectorscope.h"/>
+          <FILE id="VSCopeC" name="Vectorscope.cpp" compile="1" resource="0"
+                file="Source/UI/Meters/Vectorscope.cpp"/>
           <FILE id="yioUXf" name="ResourceMeter.h" compile="0" resource="0" file="Source/UI/Meters/ResourceMeter.h"/>
           <FILE id="RMCpp1" name="ResourceMeter.cpp" compile="1" resource="0"
                 file="Source/UI/Meters/ResourceMeter.cpp"/>
@@ -382,7 +387,8 @@
         <GROUP id="{A8655592-496E-E61C-29AE-468877FA16C5}" name="Routing">
           <FILE id="XV7lcF" name="MasterMixer.h" compile="0" resource="0" file="Source/Engine/Routing/MasterMixer.h"/>
           <FILE id="T8F8kn" name="PDCManager.h" compile="0" resource="0" file="Source/Engine/Routing/PDCManager.h"/>
-          <FILE id="PDC_CPP_1" name="PDCManager.cpp" compile="1" resource="0" file="Source/Engine/Routing/PDCManager.cpp"/>
+          <FILE id="PDC_CPP_1" name="PDCManager.cpp" compile="1" resource="0"
+                file="Source/Engine/Routing/PDCManager.cpp"/>
           <FILE id="C7PO0H" name="RoutingMatrix.h" compile="0" resource="0" file="Source/Engine/Routing/RoutingMatrix.h"/>
         </GROUP>
         <GROUP id="{MOD-ENG-GRP}" name="Modulation">
@@ -438,7 +444,8 @@
         </GROUP>
         <GROUP id="{766B6889-7BAD-C92D-7290-2F533B5E5E8E}" name="DSP">
           <FILE id="HhijLP" name="MixerDSP.h" compile="0" resource="0" file="Source/Mixer/DSP/MixerDSP.h"/>
-          <FILE id="MDSP_CPP_1" name="MixerDSP.cpp" compile="1" resource="0" file="Source/Mixer/DSP/MixerDSP.cpp"/>
+          <FILE id="MDSP_CPP_1" name="MixerDSP.cpp" compile="1" resource="0"
+                file="Source/Mixer/DSP/MixerDSP.cpp"/>
         </GROUP>
         <GROUP id="{9FF6F501-CF73-A904-735C-68B41B9F3577}" name="LookAndFeel">
           <FILE id="IUio4G" name="MixerColours.h" compile="0" resource="0" file="Source/Mixer/LookAndFeel/MixerColours.h"/>

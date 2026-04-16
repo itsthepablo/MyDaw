@@ -76,6 +76,7 @@ MixerChannelUI::MixerChannelUI(Track* t, bool miniMode)
     panKnob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
     panKnob.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
     panKnob.setRange(-1.0, 1.0);
+    panKnob.setTooltip("Balance / Pan: Controla la posicion estereo de la señal.");
     panKnob.onValueChange = [this] { track->setBalance((float)panKnob.getValue()); };
     addAndMakeVisible(panKnob);
 
@@ -94,20 +95,22 @@ MixerChannelUI::MixerChannelUI(Track* t, bool miniMode)
         panL.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
         panL.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
         panL.setRange(-1.0, 1.0);
+        panL.setTooltip("Panning L: Control de paneo para el canal izquierdo.");
         panL.onValueChange = [this] { MixerParameterBridge::setPanL(track, (float)panL.getValue()); };
         addChildComponent(panL);
 
         panR.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
         panR.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
         panR.setRange(-1.0, 1.0);
+        panR.setTooltip("Panning R: Control de paneo para el canal derecho.");
         panR.onValueChange = [this] { MixerParameterBridge::setPanR(track, (float)panR.getValue()); };
         addChildComponent(panR);
     }
 
     // --- HELPERS PARA VISUALIZACIÓN (MODO dB) ---
     auto dbToText = [](double v) { 
-        if (v <= -63.5) return juce::String("-inf dB");
-        return (v > 0.0 ? "+" : "") + juce::String(v, 1) + " dB";
+        if (v <= -63.5) return juce::String("-inf");
+        return (v > 0.0 ? "+" : "") + juce::String(v, 1);
     };
     auto textToDb = [](const juce::String& t) { 
         if (t.containsIgnoreCase("-inf")) return -64.0;
@@ -118,10 +121,14 @@ MixerChannelUI::MixerChannelUI(Track* t, bool miniMode)
     
     // Master Fader (Escala Pro 80/20)
     fader.setSliderStyle(juce::Slider::LinearVertical);
-    fader.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 15);
+    fader.showFloatingBox = false;
+    fader.setTextBoxStyle(juce::Slider::TextBoxAbove, false, 50, 20);
+    fader.setColour(juce::Slider::textBoxBackgroundColourId, juce::Colours::transparentBlack);
+    fader.setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
     fader.setRange(-64.0, 16.0); // 0dB al 80% exacto (64/80 = 0.8)
     fader.textFromValueFunction = dbToText;
     fader.valueFromTextFunction = textToDb;
+    fader.setTooltip("Fader de Volumen: Controla el nivel de salida de la pista en decibelios.");
     fader.onValueChange = [this] { 
         float gain = (fader.getValue() <= -63.5) ? 0.0f : juce::Decibels::decibelsToGain((float)fader.getValue());
         track->setVolume(gain); 
@@ -129,58 +136,76 @@ MixerChannelUI::MixerChannelUI(Track* t, bool miniMode)
     addAndMakeVisible(fader);
 
     setupButton(muteBtn, "M", juce::Colours::red);
+    muteBtn.setTooltip("Mute (M): Silencia la pista por completo.");
     muteBtn.onClick = [this] { MixerParameterBridge::setMuted(track, muteBtn.getToggleState()); };
     setupButton(soloBtn, "S", juce::Colours::yellow);
+    soloBtn.setTooltip("Solo (S): Deja activada unicamente esta pista.");
     soloBtn.onClick = [this] { MixerParameterBridge::setSoloed(track, soloBtn.getToggleState()); };
     
     setupButton(midSoloBtn, "MID", juce::Colours::blue.withAlpha(0.6f));
+    midSoloBtn.setTooltip("Solo MID: Escucha unicamente el canal central (Suma L+R).");
     midSoloBtn.onClick = [this] { 
         MixerParameterBridge::setMidSolo(track, midSoloBtn.getToggleState()); 
         updateUI(); // Sincronizar exclusividad
     };
     
     setupButton(sideSoloBtn, "SID", juce::Colours::purple.withAlpha(0.6f));
+    sideSoloBtn.setTooltip("Solo SIDE: Escucha unicamente el canal lateral (Diferencia L-R).");
     sideSoloBtn.onClick = [this] { 
         MixerParameterBridge::setSideSolo(track, sideSoloBtn.getToggleState()); 
         updateUI(); // Sincronizar exclusividad
     };
 
     setupButton(phaseBtn, "PHS", juce::Colours::cyan);
+    phaseBtn.setTooltip("Fase (PHS): Invierte la polaridad de la señal para corregir cancelaciones.");
     phaseBtn.onClick = [this] { MixerParameterBridge::setPhaseInverted(track, phaseBtn.getToggleState()); };
     setupButton(recBtn, "R", juce::Colours::red.brighter());
+    recBtn.setTooltip("Grabar (R): Prepara la pista para la entrada de audio o MIDI.");
 
     // --- MID-SIDE COMPONENTS ---
     msToggle.setButtonText("M/S");
     msToggle.setClickingTogglesState(true);
     msToggle.setColour(juce::TextButton::buttonOnColourId, juce::Colours::orange.withAlpha(0.8f));
     msToggle.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
+    msToggle.setTooltip("Modo Mid/Side: Alterna entre mezcla estereo normal y procesamiento central/lateral.");
     msToggle.onClick = [this] { 
         MixerParameterBridge::setMidSideMode(track, msToggle.getToggleState());
         updateUI(); // Esto disparará resized()
     };
     addAndMakeVisible(msToggle);
 
-    midFader.setSliderStyle(juce::Slider::LinearVertical);
-    midFader.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 15);
+    midFader.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+    midFader.showFloatingBox = false;
+    midFader.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 40, 20);
+    midFader.setColour(juce::Slider::textBoxBackgroundColourId, juce::Colours::transparentBlack);
+    midFader.setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
     midFader.setRange(-64.0, 16.0);
     midFader.textFromValueFunction = dbToText;
     midFader.valueFromTextFunction = textToDb;
+    midFader.setTooltip("Knob MID: Control de volumen para el canal central.");
     midFader.onValueChange = [this] { 
         float gain = (midFader.getValue() <= -63.5) ? 0.0f : juce::Decibels::decibelsToGain((float)midFader.getValue());
         MixerParameterBridge::setMidVolume(track, gain); 
     };
     addChildComponent(midFader);
 
-    sideFader.setSliderStyle(juce::Slider::LinearVertical);
-    sideFader.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 15);
+    sideFader.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+    sideFader.showFloatingBox = false;
+    sideFader.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 40, 20);
+    sideFader.setColour(juce::Slider::textBoxBackgroundColourId, juce::Colours::transparentBlack);
+    sideFader.setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
     sideFader.setRange(-64.0, 16.0);
     sideFader.textFromValueFunction = dbToText;
     sideFader.valueFromTextFunction = textToDb;
+    sideFader.setTooltip("Knob SIDE: Control de volumen para el canal lateral.");
     sideFader.onValueChange = [this] { 
         float gain = (sideFader.getValue() <= -63.5) ? 0.0f : juce::Decibels::decibelsToGain((float)sideFader.getValue());
         MixerParameterBridge::setSideVolume(track, gain); 
     };
     addChildComponent(sideFader);
+
+    vectorscope.setTrack(track);
+    addChildComponent(vectorscope);
 
     midMeter.setTrack(track);
     midMeter.setSource(LevelMeter::Mid);
@@ -259,8 +284,13 @@ void MixerChannelUI::updateUI() {
     if (msToggle.getToggleState() != msMode) {
         msToggle.setToggleState(msMode, juce::dontSendNotification);
     }
-    
+
     auto getDbVal = [](float gain) { return (gain <= 0.0001f) ? -64.0 : (double)juce::Decibels::gainToDecibels(gain, -100.0f); };
+
+    if (msMode) {
+        midFader.setValue(getDbVal(MixerParameterBridge::getMidVolume(track)), juce::dontSendNotification);
+        sideFader.setValue(getDbVal(MixerParameterBridge::getSideVolume(track)), juce::dontSendNotification);
+    }
     
     fader.setValue(getDbVal(track->getVolume()), juce::dontSendNotification);
     midFader.setValue(getDbVal(MixerParameterBridge::getMidVolume(track)), juce::dontSendNotification);
@@ -295,73 +325,88 @@ void MixerChannelUI::paint(juce::Graphics& g) {
 }
 
 void MixerChannelUI::resized() {
-    auto b = getLocalBounds();
-
-    if (!isMiniMode) {
-        auto topArea = b.removeFromTop(100);
-        auto panToggleArea = topArea.removeFromTop(20);
-        panToggle.setBounds(panToggleArea.withSizeKeepingCentre(40, 18));
-
-        if (MixerParameterBridge::isPanningModeDual(track)) {
-            panL.setBounds(topArea.removeFromLeft(topArea.getWidth() / 2).reduced(5));
-            panR.setBounds(topArea.reduced(5));
-        }
-        else {
-            panKnob.setBounds(topArea.withSizeKeepingCentre(45, 45));
-        }
-
-        auto fxArea = b.removeFromTop(180);
-        fxViewport.setBounds(fxArea);
-        fxRack.setBounds(0, 0, fxViewport.getMaximumVisibleWidth(), fxRack.getHeight());
-
-        b.removeFromTop(5);
-        auto sendArea = b.removeFromTop(72);
-        sendViewport.setBounds(sendArea);
-        sendRack.setBounds(0, 0, sendViewport.getMaximumVisibleWidth(), sendRack.getHeight());
-        b.removeFromTop(5);
+    // LAYOUT PIXEL-PERFECT (150x950)
+    
+    // 1. Paneo y Modo Dual
+    panToggle.setBounds(10, 10, 40, 40);
+    if (MixerParameterBridge::isPanningModeDual(track)) {
+        panKnob.setVisible(false);
+        panL.setVisible(true);
+        panR.setVisible(true);
+        panL.setBounds(55, 10, 40, 40);
+        panR.setBounds(100, 10, 40, 40);
+    } else {
+        panKnob.setVisible(true);
+        panL.setVisible(false);
+        panR.setVisible(false);
+        panKnob.setBounds(55, 10, 40, 40);
     }
-    else {
-        auto topArea = b.removeFromTop(60);
-        panKnob.setBounds(topArea.withSizeKeepingCentre(45, 45));
+
+    // 2. Panel de Efectos y Envíos (130x260)
+    if (!isMiniMode) {
+        fxViewport.setVisible(true);
+        sendViewport.setVisible(true);
+        fxViewport.setBounds(10, 60, 130, 180);
+        fxRack.setBounds(0, 0, fxViewport.getMaximumVisibleWidth(), fxRack.getHeight());
+        
+        sendViewport.setBounds(10, 245, 130, 75);
+        sendRack.setBounds(0, 0, sendViewport.getMaximumVisibleWidth(), sendRack.getHeight());
+    } else {
         fxViewport.setVisible(false);
         sendViewport.setVisible(false);
     }
 
-    auto btnArea = b.removeFromTop(25);
-    auto btnW = btnArea.getWidth() / 7;
-    muteBtn.setBounds(btnArea.removeFromLeft(btnW).reduced(1));
-    soloBtn.setBounds(btnArea.removeFromLeft(btnW).reduced(1));
-    msToggle.setBounds(btnArea.removeFromLeft(btnW).reduced(1));
-    midSoloBtn.setBounds(btnArea.removeFromLeft(btnW).reduced(1));
-    sideSoloBtn.setBounds(btnArea.removeFromLeft(btnW).reduced(1));
-    phaseBtn.setBounds(btnArea.removeFromLeft(btnW).reduced(1));
-    recBtn.setBounds(btnArea.removeFromLeft(btnW).reduced(1));
+    // 3. Fila de Botones Operativos (X=100)
+    muteBtn.setBounds(100, 340, 40, 40);
+    soloBtn.setBounds(100, 390, 40, 40);
+    msToggle.setBounds(100, 440, 40, 40);
+    midSoloBtn.setBounds(100, 490, 40, 40);
+    sideSoloBtn.setBounds(100, 540, 40, 40);
+    phaseBtn.setBounds(100, 590, 40, 40);
+    recBtn.setBounds(100, 640, 40, 40);
 
-    trackName.setBounds(b.removeFromBottom(20));
+    // 4. Medidor y Fader
+    if (!MixerParameterBridge::isMidSideMode(track)) {
+        meter.setVisible(true);
+        fader.setVisible(true);
+        midMeter.setVisible(false);
+        sideMeter.setVisible(false);
+        midFader.setVisible(false);
+        sideFader.setVisible(false);
 
-    if (!MixerParameterBridge::isMidSideMode(track)) 
-    {
-        meter.setBounds(b.removeFromRight(isMiniMode ? 20 : 22));
-        b.removeFromRight(3);
-        fader.setBounds(b);
-    }
-    else 
-    {
-        auto msArea = b;
-        auto midArea = msArea.removeFromLeft(msArea.getWidth() / 2);
+        meter.setBounds(50, 340, 40, 560);
+        fader.setBounds(0, 350, 50, 550); // El centro (carril) se mantiene en 25 (0+25)
         
-        // Mid Side
-        midLabel.setBounds(midArea.removeFromTop(12));
-        midMeter.setBounds(midArea.removeFromRight(isMiniMode ? 14 : 16));
-        midArea.removeFromRight(2);
-        midFader.setBounds(midArea);
+        midLabel.setVisible(false);
+        sideLabel.setVisible(false);
+        vectorscope.setVisible(false);
+        // Forzamos el fader a tener su caja de texto en la posición pedida (X=10, Y=350)
+        // Nota: JUCE Slider dibuja el TextBox relativo a sus bounds, o podemos usar setTextBoxStyle
+    } else {
+        meter.setVisible(false);
+        fader.setVisible(false);
+        midMeter.setVisible(true);
+        sideMeter.setVisible(true);
+        midFader.setVisible(true);
+        sideFader.setVisible(true);
 
-        // Side Area
-        sideLabel.setBounds(msArea.removeFromTop(12));
-        sideMeter.setBounds(msArea.removeFromRight(isMiniMode ? 14 : 16));
-        msArea.removeFromRight(2);
-        sideFader.setBounds(msArea);
+        midMeter.setBounds(10, 340, 30, 290);
+        sideMeter.setBounds(60, 340, 30, 290);
+        
+        midLabel.setBounds(10, 630, 30, 20);
+        sideLabel.setBounds(60, 630, 30, 20);
+        midLabel.setVisible(true);
+        sideLabel.setVisible(true);
+
+        midFader.setBounds(10, 660, 30, 30); 
+        sideFader.setBounds(60, 660, 30, 30);
+
+        vectorscope.setBounds(10, 750, 130, 130);
+        vectorscope.setVisible(true);
     }
+
+    // 5. Etiqueta de Nombre y Color (130x30)
+    trackName.setBounds(10, 910, 130, 30);
 }
 
 void MixerChannelUI::mouseDown(const juce::MouseEvent& e) {
