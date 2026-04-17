@@ -5,7 +5,8 @@
 #include <functional>
 #include "../Data/GlobalData.h" 
 #include "../Data/Track.h" 
-#include "AutomationEditor.h" 
+#include "../Playlist/ScrollBar/PlaylistNavigator.h" 
+#include "../Playlist/ScrollBar/VerticalNavigator.h" 
 
 enum class ToolMode { Draw, Select };
 
@@ -20,8 +21,7 @@ struct FadingEntity {
 class PianoRollComponent : public juce::Component,
     public juce::KeyListener,
     public juce::FileDragAndDropTarget,
-    private juce::Timer,
-    private juce::ScrollBar::Listener
+    private juce::Timer
 {
 public:
     PianoRollComponent();
@@ -36,11 +36,9 @@ public:
 
     void setActiveClip(MidiPattern* clip) {
         activeClip = clip;
-        automationEditor.setClipReference(clip);
         if (clip != nullptr) {
             double newScroll = clip->getStartX() * hZoom;
-            hBar.setCurrentRangeStart(newScroll);
-            automationEditor.updateView((float)hBar.getCurrentRangeStart(), hZoom, (float)vBar.getCurrentRangeStart(), vZoom, (float)getSnapPixels(), playheadAbsPos);
+            hBar.setCurrentRange(newScroll, (double)getWidth() - keyW - vBarWidth);
         }
         repaint();
     }
@@ -72,16 +70,16 @@ public:
     bool isInterestedInFileDrag(const juce::StringArray& files) override;
     void filesDropped(const juce::StringArray& files, int x, int y) override;
 
-    void scrollBarMoved(juce::ScrollBar* scrollBarThatHasMoved, double newRangeStart) override;
     bool keyPressed(const juce::KeyPress& key, juce::Component* originatingComponent) override;
     void timerCallback() override;
+
+    void drawMinimap(juce::Graphics& g, juce::Rectangle<int> bounds);
+    double getContentLengthTicks() const;
 
     const std::vector<Note>& getNotes() const {
         static std::vector<Note> empty;
         return (activeClip != nullptr) ? activeClip->getNotes() : empty;
     }
-
-    AutomationEditor& getAutoEditor() { return automationEditor; }
 
 private:
     MidiPattern* activeClip = nullptr;
@@ -122,26 +120,22 @@ private:
     const int keyW = 80;
     const int toolH = 50;
     const int timelineH = 24;
-    int autoH = 300;
     const int totalNotes = 128;
-    const int scrollBarSize = 16;
+    const int vBarWidth = 32;
+    const int navigatorH = 51;
     const float baseRowH = 22.0f;
 
-    float hZoom = 1.0f;
-    float vZoom = 1.0f;
+    double hZoom = 1.0;
+    double vZoom = 1.0;
     float getRowHeight() const { return baseRowH * vZoom; }
 
-    juce::Slider hZoomSlider; juce::Slider vZoomSlider;
-    juce::Label hZoomLabel; juce::Label vZoomLabel;
     juce::ComboBox snapSelector;
     juce::TextButton toolBtn;
     juce::TextButton pyHumanizeBtn;
     juce::TextButton chordGeneratorBtn;
     juce::TextButton linkAutoBtn;
-    juce::ScrollBar hBar{ false }; juce::ScrollBar vBar{ true };
+    PlaylistNavigator hBar; VerticalNavigator vBar;
     juce::ComboBox rootNoteCombo; juce::ComboBox scaleCombo;
-
-    AutomationEditor automationEditor;
 
     double getSnapPixels();
     void updateScrollBars();

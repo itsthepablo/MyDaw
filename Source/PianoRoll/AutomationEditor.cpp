@@ -60,7 +60,7 @@ void AutomationEditor::setClipReference(MidiPattern* clip) {
     repaint();
 }
 
-void AutomationEditor::updateView(float hS, float hZ, float vS, float vZ, double snap, float ph) {
+void AutomationEditor::updateView(double hS, double hZ, float vS, float vZ, double snap, float ph) {
     hScroll = hS; hZoom = hZ; vScroll = vS; vZoom = vZ; snapPixels = snap; currentPlayheadX = ph;
     repaint();
 }
@@ -206,8 +206,8 @@ void AutomationEditor::paint(juce::Graphics& g) {
 
     double visualSnap = snapPixels; if (visualSnap * hZoom < 12.0) visualSnap = 80.0;
     for (double i = 0; i <= limitX; i += visualSnap) {
-        int dx = (int)(i * hZoom) + keyW - (int)hScroll;
-        if (dx > getWidth()) break;
+        int dx = (int)(i * hZoom - hScroll) + keyW;
+        if (dx > getWidth() + 100) break;
         bool isCompas = (std::fmod(i, 320.0) < 0.1);
         g.setColour(isCompas ? juce::Colours::white.withAlpha(0.15f) : juce::Colours::white.withAlpha(0.05f));
         g.drawVerticalLine(dx, (float)toolbarH, (float)getHeight());
@@ -218,8 +218,8 @@ void AutomationEditor::paint(juce::Graphics& g) {
             float cStart = (float)(currentPreviewCellIdx * snapPixels); float cEnd = (float)(cStart + snapPixels);
             float vy = getValueForY((float)currentMousePos.y);
 
-            int xStartDraw = (int)(cStart * hZoom) + keyW - (int)hScroll;
-            int xEndDraw = (int)(cEnd * hZoom) + keyW - (int)hScroll;
+            int xStartDraw = (int)(cStart * hZoom - hScroll) + keyW;
+            int xEndDraw = (int)(cEnd * hZoom - hScroll) + keyW;
 
             if (xStartDraw < getWidth() && xEndDraw >= keyW) {
                 juce::Path ghostPath; float baseVal = lane->defaultValue;
@@ -228,7 +228,7 @@ void AutomationEditor::paint(juce::Graphics& g) {
                 if (currentDrawTool == AutoDrawTool::SCurve || currentDrawTool == AutoDrawTool::Saw) {
                     bool first = true;
                     for (int px = xStartDraw; px <= xEndDraw; px += 2) {
-                        float timeX = (px - keyW + hScroll) / hZoom; if (timeX > limitX || timeX > cEnd + 0.1f) break;
+                        double timeX = (double)(px - keyW + hScroll) / hZoom; if (timeX > limitX || timeX > cEnd + 0.1f) break;
                         float t = (timeX - cStart) / (float)snapPixels;
                         float valY = baseVal;
 
@@ -249,7 +249,7 @@ void AutomationEditor::paint(juce::Graphics& g) {
                 else {
                     bool first = true;
                     for (int px = xStartDraw; px <= xEndDraw; px += 2) {
-                        float timeX = (px - keyW + hScroll) / hZoom; if (timeX > limitX || timeX > cEnd + 0.1f) break;
+                        double timeX = (double)(px - keyW + hScroll) / hZoom; if (timeX > limitX || timeX > cEnd + 0.1f) break;
                         float valY = baseVal;
 
                         if (currentDrawTool == AutoDrawTool::Arc) {
@@ -287,7 +287,8 @@ void AutomationEditor::paint(juce::Graphics& g) {
         if (getParentComponent() != nullptr) pH = (float)getParentComponent()->getHeight() - (float)getHeight() - 90.0f;
 
         for (const auto& n : clipRef->getNotes()) {
-            int nx = (int)(n.x * hZoom) + keyW - (int)hScroll; int nw = (int)(n.width * hZoom);
+            int nx = (int)(n.x * hZoom - hScroll) + keyW; 
+            int nw = (int)((n.x + n.width) * hZoom - hScroll) + keyW - nx;
             if (nx + nw < keyW || nx > getWidth()) continue;
             float absoluteY = (127 - n.pitch) * rowH; float yInPR = absoluteY - vScroll;
             float normalizedY = yInPR / pH; float ny = normalizedY * getHeight();
@@ -300,7 +301,7 @@ void AutomationEditor::paint(juce::Graphics& g) {
     if (!lane->nodes.empty()) {
         juce::Path path; juce::Path fillPath; bool first = true;
         for (int px = keyW; px <= getWidth(); px += 2) {
-            float timeX = (px - keyW + hScroll) / hZoom; if (timeX > limitX) break;
+            double timeX = (double)(px - keyW + hScroll) / hZoom; if (timeX > limitX) break;
             float valY = lane->getValueAt(timeX); float ny = getYForValue(valY);
             if (first) { path.startNewSubPath((float)px, ny); fillPath.startNewSubPath((float)px, (float)getHeight()); fillPath.lineTo((float)px, ny); first = false; }
             else { path.lineTo((float)px, ny); fillPath.lineTo((float)px, ny); }
@@ -311,19 +312,19 @@ void AutomationEditor::paint(juce::Graphics& g) {
 
         if (isMouseOverPanel || isDraggingNode) {
             for (size_t i = 0; i < lane->nodes.size(); ++i) {
-                int nx = (int)(lane->nodes[i].x * hZoom) + keyW - (int)hScroll;
+                int nx = (int)(lane->nodes[i].x * hZoom - hScroll) + keyW;
                 float ny = getYForValue(lane->nodes[i].value);
 
-                if (nx >= keyW) {
+                if (nx >= keyW - 10) {
                     g.setColour(i == (size_t)draggedAutoNodeIdx ? juce::Colours::white : lCol);
                     g.fillEllipse((float)nx - 6, ny - 6.0f, 12.0f, 12.0f);
                     g.setColour(bgColor); g.fillEllipse((float)nx - 3, ny - 3.0f, 6.0f, 6.0f);
                 }
 
                 if (i < lane->nodes.size() - 1) {
-                    float midTimeX = (lane->nodes[i].x + lane->nodes[i + 1].x) * 0.5f;
-                    float midValY = lane->getValueAt(midTimeX);
-                    int mx = (int)(midTimeX * hZoom) + keyW - (int)hScroll;
+                    double midTimeX = (lane->nodes[i].x + lane->nodes[i + 1].x) * 0.5;
+                    float midValY = lane->getValueAt((float)midTimeX);
+                    int mx = (int)(midTimeX * hZoom - hScroll) + keyW;
                     float my = getYForValue(midValY);
                     if (mx >= keyW && mx <= getWidth()) {
                         g.setColour(i == (size_t)draggedTensionNodeIdx ? juce::Colours::white : lCol.withAlpha(0.6f));
@@ -336,8 +337,8 @@ void AutomationEditor::paint(juce::Graphics& g) {
 
     // --- NUEVO: SOMBREADO VISUAL DE LOS LIMITES DEL PATRON ---
     if (clipRef != nullptr) {
-        int startScreenX = (int)(clipRef->getStartX() * hZoom) + keyW - (int)hScroll;
-        int endScreenX = (int)((clipRef->getStartX() + clipRef->getWidth()) * hZoom) + keyW - (int)hScroll;
+        int startScreenX = (int)(clipRef->getStartX() * hZoom - hScroll) + keyW;
+        int endScreenX = (int)((clipRef->getStartX() + clipRef->getWidth()) * hZoom - hScroll) + keyW;
 
         g.setColour(juce::Colours::black.withAlpha(0.5f));
         if (startScreenX > keyW) {
@@ -354,7 +355,7 @@ void AutomationEditor::paint(juce::Graphics& g) {
         juce::String text = getFormattedValue(tooltipValue);
 
         if (autoSelector.getSelectedId() == 4) {
-            float tx = (tooltipPos.x - keyW + hScroll) / hZoom; int baseP = -1;
+            double tx = (double)(tooltipPos.x - keyW + hScroll) / hZoom; int baseP = -1;
             if (clipRef != nullptr) {
                 for (const auto& n : clipRef->getNotes()) { if (tx >= n.x && tx <= n.x + n.width) { baseP = n.pitch; break; } }
             }
@@ -376,7 +377,7 @@ void AutomationEditor::paint(juce::Graphics& g) {
         g.setColour(juce::Colours::white); g.drawText(text, tb, juce::Justification::centred, false);
     }
 
-    int phX = (int)(currentPlayheadX * hZoom) + keyW - (int)hScroll;
+    int phX = (int)((double)currentPlayheadX * hZoom - hScroll) + keyW;
     if (phX >= keyW && phX <= getWidth() - 16) { g.setColour(juce::Colours::red.withAlpha(0.8f)); g.drawVerticalLine(phX, (float)toolbarH, (float)getHeight()); }
 
     g.setColour(juce::Colours::black.withAlpha(0.6f)); g.fillRect(0, toolbarH, keyW, getHeight());
@@ -436,7 +437,7 @@ void AutomationEditor::mouseMove(const juce::MouseEvent& e) {
     currentMousePos = e.getPosition();
 
     if (currentDrawTool != AutoDrawTool::Pencil && snapPixels > 1.0 && isMouseOverPanel && !isDraggingNode && e.y >= toolbarH) {
-        float rawAx = std::max(0.0f, (e.x - keyW + hScroll) / hZoom);
+        double rawAx = std::max(0.0, (double)(e.x - keyW + hScroll) / hZoom);
         int cellIdx = (int)(rawAx / snapPixels);
 
         if (cellIdx != currentPreviewCellIdx) {
@@ -454,7 +455,7 @@ void AutomationEditor::mouseDown(const juce::MouseEvent& e) {
     juce::ScopedLock sl(dataLock);
 
     mouseDownPos = e.getPosition();
-    float rawAx = std::max(0.0f, (e.x - keyW + hScroll) / hZoom);
+    double rawAx = std::max(0.0, (double)(e.x - keyW + hScroll) / hZoom);
     if (rawAx > 32.0 * 320.0) return;
     float vy = getValueForY(e.y);
 
@@ -480,8 +481,8 @@ void AutomationEditor::mouseDown(const juce::MouseEvent& e) {
 
     if (!lane->nodes.empty()) {
         for (size_t i = 0; i < lane->nodes.size() - 1; ++i) {
-            float midTimeX = (lane->nodes[i].x + lane->nodes[i + 1].x) * 0.5f; float midValY = lane->getValueAt(midTimeX);
-            int mx = (int)(midTimeX * hZoom) + keyW - (int)hScroll; float my = getYForValue(midValY);
+            double midTimeX = (lane->nodes[i].x + lane->nodes[i + 1].x) * 0.5; float midValY = lane->getValueAt((float)midTimeX);
+            int mx = (int)(midTimeX * hZoom - hScroll) + keyW; float my = getYForValue(midValY);
             if (std::abs(e.x - mx) < 15 && std::abs(e.y - my) < 15) {
                 draggedTensionNodeIdx = (int)i; isDraggingNode = true;
                 tooltipPos = e.position; tooltipValue = midValY; repaint(); return;
@@ -492,7 +493,7 @@ void AutomationEditor::mouseDown(const juce::MouseEvent& e) {
     if (e.mods.isRightButtonDown()) {
         int clickedNodeIdx = -1;
         for (size_t i = 0; i < lane->nodes.size(); ++i) {
-            if (std::abs(lane->nodes[i].x - rawAx) * hZoom < 15.0f) { clickedNodeIdx = (int)i; break; }
+            if (std::abs(lane->nodes[i].x - rawAx) * hZoom < 15.0) { clickedNodeIdx = (int)i; break; }
         }
 
         if (clickedNodeIdx != -1) {
@@ -521,7 +522,7 @@ void AutomationEditor::mouseDown(const juce::MouseEvent& e) {
     }
     else {
         for (size_t i = 0; i < lane->nodes.size(); ++i) {
-            if (std::abs(lane->nodes[i].x - rawAx) * hZoom < 15.0f) {
+            if (std::abs(lane->nodes[i].x - rawAx) * hZoom < 15.0) {
                 draggedAutoNodeIdx = (int)i; lane->nodes[i].value = vy; nodeOriginalX = lane->nodes[i].x; break;
             }
         }
@@ -540,7 +541,7 @@ void AutomationEditor::mouseDown(const juce::MouseEvent& e) {
 void AutomationEditor::mouseDrag(const juce::MouseEvent& e) {
     juce::ScopedLock sl(dataLock); AutoLane* lane = getCurrentAutoLane();
     float vy = getValueForY(e.y);
-    float rawAx = juce::jlimit(0.0f, (float)(32.0 * 320.0), (e.x - keyW + hScroll) / hZoom);
+    double rawAx = juce::jlimit(0.0, (double)(32.0 * 320.0), (double)(e.x - keyW + hScroll) / hZoom);
 
     bool isTempPointer = e.mods.isCtrlDown() || e.mods.isCommandDown();
 
@@ -564,15 +565,15 @@ void AutomationEditor::mouseDrag(const juce::MouseEvent& e) {
         isDraggingNode = true; tooltipPos = e.position; tooltipValue = vy;
     }
     else if (draggedAutoNodeIdx != -1) {
-        float finalAx = rawAx;
-        if (std::abs(e.x - mouseDownPos.x) < 5) { finalAx = nodeOriginalX; }
+        double finalAx = rawAx;
+        if (std::abs(e.x - mouseDownPos.x) < 5) { finalAx = (double)nodeOriginalX; }
         else {
             if (!e.mods.isAltDown() && snapPixels > 1.0) { finalAx = std::round(rawAx / snapPixels) * snapPixels; }
         }
         lane->nodes[draggedAutoNodeIdx].value = vy;
         float minX = draggedAutoNodeIdx > 0 ? lane->nodes[draggedAutoNodeIdx - 1].x + 0.1f : 0.0f;
         float maxX = draggedAutoNodeIdx < (int)lane->nodes.size() - 1 ? lane->nodes[draggedAutoNodeIdx + 1].x - 0.1f : (float)(32.0 * 320.0);
-        lane->nodes[draggedAutoNodeIdx].x = juce::jlimit(minX, maxX, finalAx);
+        lane->nodes[draggedAutoNodeIdx].x = (float)juce::jlimit((double)minX, (double)maxX, finalAx);
         isDraggingNode = true; tooltipPos = e.position; tooltipValue = vy;
     }
     if (auto* pr = findParentComponentOfClass<PianoRollComponent>()) pr->notifyPatternEdited();

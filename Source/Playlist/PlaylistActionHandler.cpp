@@ -47,6 +47,7 @@ void PlaylistActionHandler::deleteSelectedClips(PlaylistComponent& p) {
             tr->commitSnapshot();
     }
 
+    p.updateScrollBars();
     p.repaint();
     p.hNavigator.repaint(); // SINCRONIZA EL MINIMAPA
 }
@@ -82,6 +83,7 @@ void PlaylistActionHandler::purgeClipsOfTrack(PlaylistComponent& p, Track* track
     p.clips.erase(std::remove_if(p.clips.begin(), p.clips.end(),
         [track](const TrackClip& c) { return c.trackPtr == track; }),
         p.clips.end());
+    p.updateScrollBars();
     p.hNavigator.repaint();
 }
 
@@ -126,13 +128,14 @@ void PlaylistActionHandler::handleDoubleClick(PlaylistComponent& p, const juce::
             newMidiClip = new MidiPattern();
             newMidiClip->setName("Pattern " + juce::String(maxPatternNum + 1));
             newMidiClip->setStartX(snappedX);
-            newMidiClip->setWidth(320.0f);
+            newMidiClip->setWidth(1280.0f);
             newMidiClip->setColor(targetTrack->getColor());
         }
 
         targetTrack->getMidiClips().add(newMidiClip);
         p.clips.push_back({ targetTrack, snappedX, newMidiClip->getWidth(), newMidiClip->getName(), nullptr, newMidiClip });
         targetTrack->commitSnapshot(); // DOUBLE BUFFER: nuevo clip MIDI creado
+        p.updateScrollBars();
         p.repaint();
         p.hNavigator.repaint(); // SINCRONIZA EL MINIMAPA
     }

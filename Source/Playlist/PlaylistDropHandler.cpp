@@ -34,7 +34,7 @@ void PlaylistDropHandler::processExternalFiles(const juce::StringArray& files, i
 
         for (auto path : files) {
             juce::File f(path);
-            float clipWidth = 320.0f; // fallback, se actualiza con los metadatos del archivo
+            float clipWidth = 1280.0f; // fallback, se actualiza con los metadatos del archivo
             if (f.existsAsFile()) {
                 auto* data = new AudioClip();
                 data->setName(f.getFileNameWithoutExtension());
@@ -87,16 +87,16 @@ void PlaylistDropHandler::processExternalFiles(const juce::StringArray& files, i
                 auto* pattern = new MidiPattern();
                 pattern->setName(f.getFileNameWithoutExtension());
                 pattern->setStartX(absX);
-                pattern->setWidth(320.0f); // Ancho por defecto inicial
+                pattern->setWidth(1280.0f); // Ancho por defecto inicial
                 
                 // Nota: Aquí se debería parsear el archivo MIDI si quisiéramos importar notas reales.
                 // Por ahora, creamos el "contenedor" de patrón como estaba previsto en el diseño.
 
                 (*playlist.tracksRef)[tIdx]->getMidiClips().add(pattern);
-                playlist.clips.push_back({ (*playlist.tracksRef)[tIdx], absX, 320.0f, pattern->getName(), nullptr, pattern });
+                playlist.clips.push_back({ (*playlist.tracksRef)[tIdx], absX, 1280.0f, pattern->getName(), nullptr, pattern });
                 
                 (*playlist.tracksRef)[tIdx]->commitSnapshot();
-                absX += 320.0f;
+                absX += 1280.0f;
             }
         }
     }

@@ -18,81 +18,70 @@ void LayoutHandler::performLayout(LayoutDependencies d) {
 
     // La TransportBar ha sido unificada en la TopMenuBar
 
-    if (d.isPianoRollVisible) {
-        d.pianoRollUI.setVisible(true);
-        d.closePianoRollBtn.setVisible(true);
-
-        d.pianoRollUI.setBounds(area);
-        d.closePianoRollBtn.setBounds(area.getRight() - 160, area.getY() + 10, 140, 25);
-
+    if (d.currentView == ViewMode::Mixer && !d.isPianoRollVisible) {
+        d.masterChannelUI.setVisible(true);
         d.trackContainer.setVisible(false);
         d.playlistUI.setVisible(false);
         d.bottomDock.setVisible(false);
         d.leftSidebar.setVisible(false);
         d.sidebarResizer.setVisible(false);
-        d.mixerUI.setVisible(false);
-        d.masterChannelUI.setVisible(false);
-        d.rightDock.setVisible(false);
-    }
-    else {
+
+        d.mixerUI.setVisible(true);
         d.pianoRollUI.setVisible(false);
         d.closePianoRollBtn.setVisible(false);
 
-        if (d.currentView == ViewMode::Mixer) {
-            d.masterChannelUI.setVisible(true);
+        int masterWidth = 200; // Fijo para diseño 1:1
+        d.masterChannelUI.setBounds(area.removeFromLeft(masterWidth));
+        d.mixerUI.setBounds(area);
+        d.rightDock.setVisible(false);
+    }
+    else {
+        // --- VISTA ARRANGEMENT O PIANO ROLL INTEGRADO ---
+        d.masterChannelUI.setVisible(false);
+        d.mixerUI.setVisible(false);
+
+        if (d.isBottomDockVisible) {
+            d.bottomDock.setVisible(true);
+            auto bottomArea = area.removeFromBottom(d.bottomDockHeight);
+            d.bottomDockResizer.setBounds(bottomArea.removeFromTop(4)); 
+            d.bottomDock.setBounds(bottomArea);
+        }
+        else {
+            d.bottomDock.setVisible(false);
+            d.bottomDockResizer.setVisible(false);
+        }
+
+        if (d.isLeftSidebarVisible) {
+            d.leftSidebar.setVisible(true);
+            d.sidebarResizer.setVisible(true);
+            d.leftSidebar.setBounds(area.removeFromLeft(d.leftSidebarWidth));
+            d.sidebarResizer.setBounds(area.removeFromLeft(4));
+        }
+        else {
+            d.leftSidebar.setVisible(false);
+            d.sidebarResizer.setVisible(false);
+        }
+
+        // --- RIGHT DOCK (CON INSPECTOR DE CANAL SELECCIONADO) ---
+        d.rightDock.setVisible(true);
+        int rightDockWidth = d.rightDock.getIdealWidthForHeight(area.getHeight());
+        d.rightDock.setBounds(area.removeFromRight(rightDockWidth));
+
+        if (d.isPianoRollVisible) {
+            d.pianoRollUI.setVisible(true);
+            d.closePianoRollBtn.setVisible(true);
+            d.pianoRollUI.setBounds(area);
+            
+            // Botón de cierre en la esquina superior derecha del área activa
+            d.closePianoRollBtn.setBounds(area.getRight() - 150, area.getY() + 10, 140, 25);
 
             d.trackContainer.setVisible(false);
             d.playlistUI.setVisible(false);
-            d.bottomDock.setVisible(false);
-            d.leftSidebar.setVisible(false);
-            d.sidebarResizer.setVisible(false);
-
-            d.mixerUI.setVisible(true);
-
-            int masterWidth = 200; // Fijo para diseño 1:1
-            d.masterChannelUI.setBounds(area.removeFromLeft(masterWidth));
-
-            d.mixerUI.setBounds(area);
-            d.rightDock.setVisible(false);
+            d.masterStrip.setVisible(false);
         }
         else {
-            d.masterChannelUI.setVisible(false);
-            d.mixerUI.setVisible(false);
-
-            d.trackContainer.setVisible(true);
-            d.playlistUI.setVisible(true);
-
-            if (d.isBottomDockVisible) {
-                d.bottomDock.setVisible(true);
-                
-                auto bottomArea = area.removeFromBottom(d.bottomDockHeight);
-                
-                // El resizer solo se muestra si el Bottom Dock es visible.
-                // Sin embargo, su visibilidad real se controla en MainComponent basándose en la pestaña.
-                // Aquí solo definimos dónde DEBE ESTAR si es visible.
-                d.bottomDockResizer.setBounds(bottomArea.removeFromTop(4)); 
-                d.bottomDock.setBounds(bottomArea);
-            }
-            else {
-                d.bottomDock.setVisible(false);
-                d.bottomDockResizer.setVisible(false);
-            }
-
-            if (d.isLeftSidebarVisible) {
-                d.leftSidebar.setVisible(true);
-                d.sidebarResizer.setVisible(true);
-                d.leftSidebar.setBounds(area.removeFromLeft(d.leftSidebarWidth));
-                d.sidebarResizer.setBounds(area.removeFromLeft(4));
-            }
-            else {
-                d.leftSidebar.setVisible(false);
-                d.sidebarResizer.setVisible(false);
-            }
-
-            // --- RIGHT DOCK (CON INSPECTOR DE CANAL SELECCIONADO) ---
-            d.rightDock.setVisible(true);
-            int rightDockWidth = d.rightDock.getIdealWidthForHeight(area.getHeight());
-            d.rightDock.setBounds(area.removeFromRight(rightDockWidth));
+            d.pianoRollUI.setVisible(false);
+            d.closePianoRollBtn.setVisible(false);
 
             // --- DISEÑO INTEGRADO: Playlist completa, TrackContainer con espacio para Master ---
             auto trackArea = area.removeFromLeft(250);
@@ -105,7 +94,7 @@ void LayoutHandler::performLayout(LayoutDependencies d) {
             d.trackContainer.setBounds(trackArea);
 
             d.playlistUI.setVisible(true);
-            d.playlistUI.setBounds(area); // La Playlist toma el resto del alto total
+            d.playlistUI.setBounds(area);
         }
     }
 }

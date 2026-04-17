@@ -53,8 +53,13 @@ public:
     juce::String getName() const { return name; }
     void setName(juce::String n);
     TrackType getType() const { return type; }
+    void setType(TrackType newType);
     juce::Colour getColor() const { return color; }
     void setColor(juce::Colour c, bool isManualAssignment = false);
+
+    bool isEmpty() const {
+        return audioClips.isEmpty() && midiClips.isEmpty() && automationClips.empty();
+    }
 
     float getVolume() const { return mixerData.volume; }
     void setVolume(float v) { mixerData.setVolume(v); }

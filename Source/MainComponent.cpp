@@ -198,7 +198,10 @@ void MainComponent::getNextAudioBlock(const juce::AudioSourceChannelInfo& buffer
     audioEngine.transportState.isPreviewing.store(ui.pianoRollUI.getIsPreviewing(), std::memory_order_relaxed);
     audioEngine.transportState.previewPitch.store(ui.pianoRollUI.getPreviewPitch(), std::memory_order_relaxed);
     audioEngine.transportState.bpm.store(ui.pianoRollUI.getBpm(), std::memory_order_relaxed);
-    audioEngine.transportState.loopEndPos.store(juce::jmax(ui.pianoRollUI.getLoopEndPos(), ui.playlistUI.getLoopEndPos()), std::memory_order_relaxed);
+    
+    // Solo si el Piano Roll está visible, forzamos su loop dinámico de patrón
+    float finalLoopEnd = viewManager.isPianoRollVisibleNow() ? ui.pianoRollUI.getLoopEndPos() : ui.playlistUI.getLoopEndPos();
+    audioEngine.transportState.loopEndPos.store(finalLoopEnd, std::memory_order_relaxed);
 
     // PROTECCIÓN ANTI-CRASH: El audioMutex se toma brevemente para garantizar que
     // el audio thread no acceda a Track* que el UI thread acaba de destruir.

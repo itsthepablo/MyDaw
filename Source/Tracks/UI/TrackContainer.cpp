@@ -266,17 +266,20 @@ void TrackContainer::itemDragMove(const SourceDetails& d)
     if (d.description != "TRACK") return;
     auto* drg = dynamic_cast<TrackControlPanel*>(d.sourceComponent.get());
     if (!drg) return;
-    draggedPanelForGhost = drg;
-    if (ghostSnapshot.isNull()) ghostSnapshot = drg->createComponentSnapshot(drg->getLocalBounds());
     
-    ghostY = d.localPosition.y - (drg->getHeight() / 2);
+    // (Ghost image logic removed)
     
     for (auto* p : trackPanels) {
         if (!p->isVisible()) continue;
         juce::Point<int> pRel = d.localPosition - trackContent.getPosition();
         if (p->getBounds().contains(pRel) && p != drg) {
             float nY = (float)(pRel.y - p->getY()) / (float)p->getHeight();
-            if (p->track.getType() == TrackType::Folder && nY > 0.3f && nY < 0.7f) p->dragHoverMode = 2;
+            
+            // Permitimos "soltar dentro" (mode 2) si es un Folder O si es una pista normal y está vacía
+            bool canBeFolder = p->track.getType() == TrackType::Folder || 
+                               (p->track.isEmpty() && (p->track.getType() == TrackType::Audio || p->track.getType() == TrackType::MIDI));
+
+            if (canBeFolder && nY > 0.3f && nY < 0.7f) p->dragHoverMode = 2;
             else p->dragHoverMode = (nY < 0.5f) ? 1 : 3;
         } else { p->dragHoverMode = 0; }
         p->repaint();
@@ -287,7 +290,6 @@ void TrackContainer::itemDragMove(const SourceDetails& d)
 void TrackContainer::itemDropped(const SourceDetails& d) 
 {
     if (d.description != "TRACK") return;
-    draggedPanelForGhost = nullptr; ghostSnapshot = juce::Image();
     auto* drg = dynamic_cast<TrackControlPanel*>(d.sourceComponent.get());
     if (!drg) return;
     int sIdx = tracks.indexOf(&drg->track);
@@ -295,17 +297,31 @@ void TrackContainer::itemDropped(const SourceDetails& d)
     
     juce::Point<int> pRel = d.localPosition - trackContent.getPosition();
     for (int i = 0; i < trackPanels.size(); ++i) {
-        if (trackPanels[i]->isVisible() && trackPanels[i]->getBounds().contains(pRel)) {
+        // SEGURIDAD: No podemos soltar una pista sobre sí misma (evita el "rebote" de conversión)
+        if (trackPanels[i]->isVisible() && trackPanels[i]->getBounds().contains(pRel) && trackPanels[i] != drg) {
             tIdx = i; float nY = (float)(pRel.y - trackPanels[i]->getY()) / (float)trackPanels[i]->getHeight();
-            if (trackPanels[i]->track.getType() == TrackType::Folder && nY > 0.3f && nY < 0.7f) mode = 2;
+            bool canBeFolder = trackPanels[i]->track.getType() == TrackType::Folder || 
+                               (trackPanels[i]->track.isEmpty() && (trackPanels[i]->track.getType() == TrackType::Audio || trackPanels[i]->track.getType() == TrackType::MIDI));
+
+            if (canBeFolder && nY > 0.3f && nY < 0.7f) mode = 2;
             else mode = (nY < 0.5f) ? 1 : 3; break;
         }
     }
     for (auto* p : trackPanels) { p->dragHoverMode = 0; p->repaint(); }
     if (tIdx >= 0) {
         std::unique_ptr<juce::ScopedLock> lock; if (audioMutex != nullptr) lock = std::make_unique<juce::ScopedLock>(*audioMutex);
-        if (mode == 2 && tracks[tIdx]->getType() == TrackType::Folder) {
-            if (sIdx != tIdx) { tracks[sIdx]->parentId = tracks[tIdx]->getId(); }
+        if (mode == 2) {
+            auto* targetTrack = tracks[tIdx];
+            
+            // Si no es carpeta pero está vacío, lo convertimos
+            if (targetTrack->getType() != TrackType::Folder && targetTrack->isEmpty()) {
+                targetTrack->setType(TrackType::Folder);
+            }
+            
+            // Si ahora es una carpeta, metemos la pista arrastrada dentro
+            if (targetTrack->getType() == TrackType::Folder && sIdx != tIdx) {
+                tracks[sIdx]->parentId = targetTrack->getId();
+            }
         } else if (sIdx != tIdx) {
             tracks[sIdx]->parentId = -1;
             auto tM = tracks.removeAndReturn(sIdx); auto pM = trackPanels.removeAndReturn(sIdx);

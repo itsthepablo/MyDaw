@@ -67,6 +67,20 @@ void Track::setColor(juce::Colour c, bool isManualAssignment)
     sendChangeMessage();
 }
 
+void Track::setType(TrackType newType)
+{
+    if (type == newType) return;
+    type = newType;
+    
+    // Si se convierte en Folder y no tiene color manual, le damos el gris de folder
+    if (!isColorManual && type == TrackType::Folder)
+    {
+        setColor(juce::Colour(60, 65, 75), false);
+    }
+    
+    sendChangeMessage();
+}
+
 float Track::getModulationForTarget(const ModTarget& target, double beatPhase)
 {
     if (target.type == ModTarget::None) return 0.0f;

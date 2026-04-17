@@ -53,7 +53,7 @@ public:
     }
 
     std::vector<TrackClip> clips;
-    float hZoom = 1.0f;
+    float hZoom = 0.2f;
 
     PlaylistMenuBar menuBar;
     PlaylistNavigator hNavigator;
@@ -116,7 +116,7 @@ public:
     }
 
     double getTimelineLength() const {
-        double defaultLength = 20.0 * 320.0; // 20 compases base (Estilo FL Studio)
+        double defaultLength = 20.0 * 320.0; // 20 compases base (Original)
         double maxTime = defaultLength;
         for (const auto& clip : clips) {
             double clipEnd = (double)clip.startX + (double)clip.width;

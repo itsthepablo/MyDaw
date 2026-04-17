@@ -80,14 +80,13 @@ public:
     // Drag-and-drop
     bool isInterestedInDragSource(const SourceDetails& d) override { return d.description == "TRACK"; }
     void itemDragMove(const SourceDetails& d) override;
-    void itemDragExit(const SourceDetails& d) override { draggedPanelForGhost = nullptr; ghostSnapshot = juce::Image(); for (auto* p : trackPanels) { p->dragHoverMode = 0; p->repaint(); } repaint(); }
+    void itemDragExit(const SourceDetails& d) override { for (auto* p : trackPanels) { p->dragHoverMode = 0; p->repaint(); } repaint(); }
     void itemDropped(const SourceDetails& d) override;
 
     bool isInterestedInFileDrag(const juce::StringArray&) override { return true; }
     void filesDropped(const juce::StringArray& files, int, int) override;
 
     void paint(juce::Graphics& g) override;
-    void paintOverChildren(juce::Graphics& g) override { if (draggedPanelForGhost != nullptr && !ghostSnapshot.isNull()) { g.setOpacity(0.6f); g.drawImageAt(ghostSnapshot, 0, ghostY); } }
     void resized() override;
     void updateStyles();
     void lookAndFeelChanged() override { updateStyles(); headerBg.repaint(); repaint(); }
@@ -100,8 +99,6 @@ private:
     juce::OwnedArray<Track> tracks;
     juce::OwnedArray<TrackControlPanel> trackPanels;
     juce::CriticalSection* audioMutex = nullptr;
-    TrackControlPanel* draggedPanelForGhost = nullptr;
-    int ghostY = 0; juce::Image ghostSnapshot;
     int lastSelectedTrackIndex = -1;
     int nextTrackId = 1;
 

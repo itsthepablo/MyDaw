@@ -234,9 +234,12 @@ void TrackControlPanel::updateFolderBtnVisuals()
 {
     if (track.getType() == TrackType::Folder) {
         folderBtn.setButtonText(track.isCollapsed ? "+" : "-");
-        folderBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(80, 85, 95));
+        folderBtn.setColour(juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
+        folderBtn.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
         folderBtn.setVisible(true);
-    } else { folderBtn.setVisible(false); }
+    } else { 
+        folderBtn.setVisible(false); 
+    }
     compactBtn.setVisible(false);
 }
 
@@ -259,13 +262,18 @@ void TrackControlPanel::paint(juce::Graphics& g)
     auto area = getLocalBounds();
     int indent = track.folderDepth * 15;
     
+    // Restaurando el indicador de color (barra vertical)
     auto colorBarArea = area.withTrimmedLeft(indent + 4).removeFromLeft(6).reduced(0, 4);
     g.setColour(track.getColor());
     g.fillRoundedRectangle(colorBarArea.toFloat(), 3.0f);
 
     auto contentArea = area.withTrimmedLeft(indent + 4 + 6 + 4).withTrimmedRight(20);
-    g.setColour(track.getColor().withAlpha(0.15f));
-    g.fillRoundedRectangle(contentArea.toFloat().reduced(0, 2), 4.0f);
+
+    // Fondo del área de contenido (Solo para pistas que NO son carpetas)
+    if (track.getType() != TrackType::Folder) {
+        g.setColour(track.getColor().withAlpha(0.15f));
+        g.fillRoundedRectangle(contentArea.toFloat().reduced(0, 2), 4.0f);
+    }
 
     if (track.folderDepth > 0) {
         g.setColour(juce::Colours::white.withAlpha(0.15f));
@@ -276,26 +284,18 @@ void TrackControlPanel::paint(juce::Graphics& g)
         }
     }
 
-    if (track.getType() == TrackType::Folder) {
-        auto iconArea = contentArea.removeFromTop(20).removeFromLeft(20).reduced(5);
-        g.setColour(juce::Colours::orange.withAlpha(0.6f));
-        g.fillRect(iconArea);
-    }
 
     if (track.isSelected) {
-        g.setColour(juce::Colours::white.withAlpha(0.2f));
-        g.fillRoundedRectangle(contentArea.toFloat().reduced(0, 2), 4.0f);
-        
-        // Borde de selección más visible
+        // Contorno limitado estrictamente al Rectángulo de Controles (knobs y botones)
         g.setColour(juce::Colours::white);
         g.drawRoundedRectangle(contentArea.toFloat().reduced(0, 2), 4.0f, 2.0f);
     }
 
     if (dragHoverMode != 0) {
         g.setColour(dragHoverMode == 2 ? juce::Colours::cyan : juce::Colours::white);
-        if (dragHoverMode == 1) g.fillRect(0, 0, getWidth(), 2);
-        else if (dragHoverMode == 3) g.fillRect(indent, getHeight() - 2, getWidth() - indent, 2);
-        else if (dragHoverMode == 2) g.drawRect(contentArea, 2);
+        if (dragHoverMode == 1)      g.fillRect(0, 0, getWidth(), 4);
+        else if (dragHoverMode == 3) g.fillRect(indent, getHeight() - 4, getWidth() - indent, 4);
+        else if (dragHoverMode == 2) g.drawRect(contentArea, 4);
     }
 }
 
@@ -409,6 +409,8 @@ void TrackControlPanel::changeListenerCallback(juce::ChangeBroadcaster* s)
     {
         nameLabel.setText(track.getName(), juce::dontSendNotification);
         trackMeterLF.setTrackColour(track.getColor());
+        updateFolderBtnVisuals();
+        resized();
         repaint();
     }
     else if (auto* cs = dynamic_cast<juce::ColourSelector*>(s)) 

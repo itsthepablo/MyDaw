@@ -66,10 +66,6 @@ void PlaylistNavigator::paint(juce::Graphics& g) {
     g.fillRect(thumbB);
     g.setColour(juce::Colours::white.withAlpha(0.6f));
     g.drawRect(thumbB, 1.0f);
-
-    g.setColour(juce::Colours::white.withAlpha(0.8f));
-    g.fillRect(thumbB.getX() + 2, getHeight() / 2 - 4, 2, 8);
-    g.fillRect(thumbB.getRight() - 4, getHeight() / 2 - 4, 2, 8);
 }
 
 void PlaylistNavigator::mouseDown(const juce::MouseEvent& e) {

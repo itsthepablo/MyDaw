@@ -160,10 +160,18 @@ void PlaylistComponent::timerCallback() {
 
 
 void PlaylistComponent::updateScrollBars() {
-  hNavigator.setZoomContext(hZoom, getTimelineLength());
-  hNavigator.setRangeLimits(0.0, getTimelineLength() * hZoom);
-  hNavigator.setCurrentRange(hNavigator.getCurrentRangeStart(),
-                             (double)(getWidth() - vBarWidth));
+  double effectiveLen = getTimelineLength();
+  double visibleW = (double)getWidth() - vBarWidth;
+  
+  // Límite dinámico solo para Zoom Out (no ver el vacío)
+  double minHZoom = visibleW / effectiveLen;
+  if (hZoom < minHZoom) hZoom = minHZoom;
+
+  hNavigator.setZoomContext(hZoom, effectiveLen);
+  hNavigator.setRangeLimits(0.0, effectiveLen * hZoom);
+  hNavigator.setCurrentRange(hNavigator.getCurrentRangeStart(), visibleW);
+  
+  double currentHS = hNavigator.getCurrentRangeStart();
 
   int totalH = 0;
   if (tracksRef) {
@@ -272,7 +280,7 @@ void PlaylistComponent::paint(juce::Graphics &g) {
     g.fillAll(juce::Colour(25, 27, 30));
   }
 
-  float hS = (float)hNavigator.getCurrentRangeStart();
+  double hS = hNavigator.getCurrentRangeStart();
   float vS = (float)vBar.getCurrentRangeStart();
   int topOffset = menuBarH + navigatorH + timelineH;
   int viewAreaH = getHeight() - topOffset - masterTrackH; // Descontar el Master Lane fijo
@@ -375,11 +383,16 @@ void PlaylistComponent::mouseWheelMove(const juce::MouseEvent &e,
     double zoomFactor = (w.deltaY > 0) ? 1.15 : (1.0 / 1.15);
     if (w.isReversed)
       zoomFactor = 1.0 / zoomFactor;
-    hZoom = juce::jlimit(0.01, 71960.0, hZoom * zoomFactor);
+      
+    double visibleW = (double)getWidth() - vBarWidth;
+    double effectiveLen = getTimelineLength();
+    double minHZoom = visibleW / effectiveLen;
+    
+    hZoom = juce::jlimit(minHZoom, 71960.0, hZoom * zoomFactor);
     if (onZoomChanged) onZoomChanged(hZoom);
     double newStart = (mouseAbsX * hZoom) - e.x;
-    hNavigator.setRangeLimits(0.0, getTimelineLength() * hZoom);
-    hNavigator.setCurrentRange(newStart, (double)(getWidth() - vBarWidth));
+    hNavigator.setRangeLimits(0.0, effectiveLen * hZoom);
+    hNavigator.setCurrentRange(newStart, visibleW);
     updateScrollBars();
   } else if (e.mods.isShiftDown()) {
     // Scroll Horizontal Estándar

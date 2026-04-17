@@ -62,7 +62,7 @@ public:
 private:
     juce::String name;
     float startX = 0.0f;
-    float width = 320.0f;
+    float width = 1280.0f;
     float offsetX = 0.0f;
     bool isMuted = false;
     bool isSelected = false;

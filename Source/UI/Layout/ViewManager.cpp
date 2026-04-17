@@ -63,8 +63,6 @@ void ViewManager::toggleViewMode() {
 
 void ViewManager::openPianoRoll() {
     if (!isPianoRollVisible) {
-        prePianoRollLeftSidebar = isLeftSidebarVisible;
-        prePianoRollBottomDock = isBottomDockVisible;
         isPianoRollVisible = true;
         currentView = ViewMode::Arrangement;
         resized();
@@ -74,8 +72,6 @@ void ViewManager::openPianoRoll() {
 void ViewManager::closePianoRoll() {
     if (isPianoRollVisible) {
         isPianoRollVisible = false;
-        isLeftSidebarVisible = prePianoRollLeftSidebar;
-        isBottomDockVisible = prePianoRollBottomDock;
         ui.pianoRollUI.setActiveClip(nullptr);
         resized();
     }

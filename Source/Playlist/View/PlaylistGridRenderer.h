@@ -18,8 +18,8 @@ public:
                                  int topOffset, 
                                  int height, 
                                  int width, 
-                                 float hS, 
-                                 float hZoom, 
+                                 double hS, 
+                                 double hZoom, 
                                  double snapPixels, 
                                  double timelineLength,
                                  juce::LookAndFeel& lnf);
@@ -45,8 +45,8 @@ public:
                                   int navigatorH, 
                                   int timelineH, 
                                   int width, 
-                                  float hS, 
-                                  float hZoom, 
+                                  double hS, 
+                                  double hZoom, 
                                   double timelineLength);
 
     /**
@@ -55,8 +55,8 @@ public:
      */
     static void drawPlayhead(juce::Graphics& g, 
                              float playheadAbsPos, 
-                             float hZoom, 
-                             float hS, 
+                             double hZoom, 
+                             double hS, 
                              int menuBarH, 
                              int navigatorH, 
                              int width, 

@@ -37,7 +37,7 @@ public:
     float getFilterAt(float playheadX);
     float getPitchAt(float playheadX);
 
-    void updateView(float hS, float hZ, float vS, float vZ, double snap, float ph);
+    void updateView(double hS, double hZ, float vS, float vZ, double snap, float ph);
 
     // <-- AQUÍ ESTÁ LA FUNCIÓN QUE EL COMPILADOR NO ENCUENTRA. ASEGÚRATE DE PEGAR ESTO:
     void setClipReference(MidiPattern* clip);
@@ -78,8 +78,8 @@ private:
     const int keyW = 80;
     const int toolbarH = 35;
 
-    float hScroll = 0.0f;
-    float hZoom = 1.0f;
+    double hScroll = 0.0f;
+    double hZoom = 1.0f;
     float vScroll = 0.0f;
     float vZoom = 1.0f;
     double snapPixels = 80.0;

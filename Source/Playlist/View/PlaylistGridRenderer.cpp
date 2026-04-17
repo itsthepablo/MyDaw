@@ -6,8 +6,8 @@ void PlaylistGridRenderer::drawVerticalGrid(juce::Graphics& g,
                                              int topOffset, 
                                              int height, 
                                              int width, 
-                                             float hS, 
-                                             float hZoom, 
+                                             double hS, 
+                                             double hZoom, 
                                              double snapPixels, 
                                              double timelineLength,
                                              juce::LookAndFeel& lnf)
@@ -86,8 +86,8 @@ void PlaylistGridRenderer::drawTimelineRuler(juce::Graphics& g,
                                               int navigatorH, 
                                               int timelineH, 
                                               int width, 
-                                              float hS, 
-                                              float hZoom, 
+                                              double hS, 
+                                              double hZoom, 
                                               double timelineLength)
 {
     g.setColour(juce::Colour(20, 22, 25));
@@ -109,7 +109,7 @@ void PlaylistGridRenderer::drawTimelineRuler(juce::Graphics& g,
 
     for (double i = 0; i <= timelineLength; i += 80.0) {
         int dx = (int)(i * hZoom - hS);
-        if (dx < 0 || dx > width)
+        if (dx < -100 || dx > width + 100)
             continue;
 
         if (std::fmod(i, 320.0) == 0.0) {
@@ -132,14 +132,14 @@ void PlaylistGridRenderer::drawTimelineRuler(juce::Graphics& g,
 
 void PlaylistGridRenderer::drawPlayhead(juce::Graphics& g, 
                                         float playheadAbsPos, 
-                                        float hZoom, 
-                                        float hS, 
+                                        double hZoom, 
+                                        double hS, 
                                         int menuBarH, 
                                         int navigatorH, 
                                         int width, 
                                         int height)
 {
-    int phX = (int)(playheadAbsPos * hZoom) - (int)hS;
+    int phX = (int)((double)playheadAbsPos * hZoom - hS);
     if (phX >= 0 && phX <= width) {
         float phTop = (float)(menuBarH + navigatorH);
         float phBottom = (float)height;

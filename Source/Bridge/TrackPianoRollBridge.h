@@ -15,33 +15,46 @@ public:
         auto syncEngine = [&container, &playlist](MidiPattern* sourceClip) {
             if (!sourceClip) return;
 
+            // --- AUTO-CRECIMIENTO DINÁMICO (Siempre activo) ---
+            double contentExt = 0.0;
+            for (const auto& n : sourceClip->getNotes()) { if (n.x + n.width > contentExt) contentExt = n.x + n.width; }
+            double snappedExt = (contentExt <= 0.0) ? 1280.0 : std::ceil(contentExt / 320.0) * 320.0;
+            float finalWidth = (float)std::max(1280.0, snappedExt);
+            
+            sourceClip->setWidth(finalWidth);
+
+            // --- ACTUALIZACIÓN DEL CACHÉ VISUAL DE LA PLAYLIST ---
+            // Buscamos el bloque visual en la Playlist y actualizamos su ancho
+            for (auto& clip : playlist.clips) {
+                if (clip.linkedMidi == sourceClip || (clip.linkedMidi && clip.linkedMidi->getName() == sourceClip->getName())) {
+                    clip.width = finalWidth;
+                }
+            }
+
             for (auto* track : container.getTracks()) {
                 bool trackModified = false;
                 for (auto* targetClip : track->getMidiClips()) {
-                    // Si es el clip original que estamos editando
                     if (targetClip == sourceClip) {
                         trackModified = true;
                     }
-                    // Si es un clon (Ghost Copy) - Sincronizamos notas 0-based
                     else if (targetClip->getName() == sourceClip->getName()) {
                         targetClip->getNotes() = sourceClip->getNotes();
-
                         targetClip->autoVol = sourceClip->autoVol;
                         targetClip->autoPan = sourceClip->autoPan;
                         targetClip->autoPitch = sourceClip->autoPitch;
                         targetClip->autoFilter = sourceClip->autoFilter;
-
                         targetClip->setColor(sourceClip->getColor());
-                        targetClip->setWidth(sourceClip->getWidth());
+                        targetClip->setWidth(finalWidth);
                         trackModified = true;
                     }
                 }
                 
-                // CRUCIAL: Publicar los cambios al hilo de Audio (Doble Buffer)
                 if (trackModified) {
                     track->commitSnapshot();
                 }
             }
+            
+            playlist.updateScrollBars(); // Recalcular límites de scroll en Playlist
             playlist.repaint();
         };
 
@@ -72,7 +85,7 @@ public:
                 targetClip = new MidiPattern();
                 targetClip->setName("Pattern " + juce::String(nextPatternNum));
                 targetClip->setStartX(0.0f);
-                targetClip->setWidth(320.0f);
+                targetClip->setWidth(1280.0f);
                 targetClip->setColor(t.getColor());
                 t.getMidiClips().add(targetClip);
 

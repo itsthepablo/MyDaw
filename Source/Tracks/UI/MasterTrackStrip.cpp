@@ -111,10 +111,8 @@ void MasterTrackStrip::paint(juce::Graphics& g)
     g.fillRoundedRectangle(contentArea.toFloat(), 4.0f);
 
     if (masterTrack && masterTrack->isSelected) {
-        g.setColour(masterColor.withAlpha(0.2f));
-        g.fillRoundedRectangle(contentArea.toFloat(), 4.0f);
-        g.setColour(masterColor.withAlpha(0.5f));
-        g.drawRoundedRectangle(contentArea.toFloat(), 4.0f, 1.5f);
+        g.setColour(masterColor.withAlpha(0.81f));
+        g.drawRoundedRectangle(contentArea.toFloat(), 4.0f, 2.0f);
     }
 
     // --- Línea Divisoria Superior (Integración con Playlist) ---
