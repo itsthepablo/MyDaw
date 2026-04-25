@@ -102,5 +102,7 @@ private:
     int lastSelectedTrackIndex = -1;
     int nextTrackId = 1;
 
+    std::vector<Track*> getRecursiveChildren(Track* parent);
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TrackContainer)
 };

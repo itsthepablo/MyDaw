@@ -310,24 +310,58 @@ void TrackContainer::itemDropped(const SourceDetails& d)
     for (auto* p : trackPanels) { p->dragHoverMode = 0; p->repaint(); }
     if (tIdx >= 0) {
         std::unique_ptr<juce::ScopedLock> lock; if (audioMutex != nullptr) lock = std::make_unique<juce::ScopedLock>(*audioMutex);
+        
+        Track* draggedTrack = &drg->track;
+        Track* targetTrack = tracks[tIdx];
+
+        // 1. Identificar TODAS las pistas a mover (el padre + todos sus hijos recursivos)
+        std::vector<Track*> children = getRecursiveChildren(draggedTrack);
+        std::vector<int> indicesToMove;
+        indicesToMove.push_back(tracks.indexOf(draggedTrack));
+        for (auto* c : children) {
+            int idx = tracks.indexOf(c);
+            if (idx >= 0) indicesToMove.push_back(idx);
+        }
+        std::sort(indicesToMove.begin(), indicesToMove.end());
+
+        // 2. Si es modo 2 (soltar dentro), gestionar la conversión a carpeta y nueva paternidad
         if (mode == 2) {
-            auto* targetTrack = tracks[tIdx];
-            
-            // Si no es carpeta pero está vacío, lo convertimos
             if (targetTrack->getType() != TrackType::Folder && targetTrack->isEmpty()) {
                 targetTrack->setType(TrackType::Folder);
             }
-            
-            // Si ahora es una carpeta, metemos la pista arrastrada dentro
-            if (targetTrack->getType() == TrackType::Folder && sIdx != tIdx) {
-                tracks[sIdx]->parentId = targetTrack->getId();
+            if (targetTrack->getType() == TrackType::Folder && draggedTrack != targetTrack) {
+                draggedTrack->parentId = targetTrack->getId();
             }
-        } else if (sIdx != tIdx) {
-            tracks[sIdx]->parentId = -1;
-            auto tM = tracks.removeAndReturn(sIdx); auto pM = trackPanels.removeAndReturn(sIdx);
-            if (sIdx < tIdx) tIdx--;
-            tracks.insert(mode == 1 ? tIdx : tIdx + 1, tM); trackPanels.insert(mode == 1 ? tIdx : tIdx + 1, pM);
+        } else {
+            // Herencia inteligente: al reordenar, heredamos el nivel de jerarquía (padre) del objetivo
+            if (draggedTrack != targetTrack) {
+                draggedTrack->parentId = targetTrack->parentId;
+            }
         }
+
+        // 3. Extraer el bloque completo de pistas y paneles
+        std::vector<Track*> tracksToMove;
+        std::vector<TrackControlPanel*> panelsToMove;
+        
+        // Removemos de mayor a menor índice para no alterar los índices de las que faltan por quitar
+        std::vector<int> sortedIndices = indicesToMove;
+        std::sort(sortedIndices.rbegin(), sortedIndices.rend());
+        
+        for (int idx : sortedIndices) {
+            tracksToMove.insert(tracksToMove.begin(), tracks.removeAndReturn(idx));
+            panelsToMove.insert(panelsToMove.begin(), trackPanels.removeAndReturn(idx));
+        }
+
+        // 4. Calcular el nuevo índice de destino tras haber quitado las pistas
+        int finalTargetIdx = tracks.indexOf(targetTrack);
+        if (mode != 1) finalTargetIdx++; // Para modo 2 y 3 insertamos después del target
+
+        // 5. Insertar todo el bloque en la nueva posición
+        for (int i = 0; i < tracksToMove.size(); ++i) {
+            tracks.insert(finalTargetIdx + i, tracksToMove[i]);
+            trackPanels.insert(finalTargetIdx + i, panelsToMove[i]);
+        }
+
         recalculateFolderHierarchy(); resized(); repaint(); if (onTracksReordered) onTracksReordered();
     }
 }
@@ -410,4 +444,20 @@ void TrackContainer::mouseWheelMove(const juce::MouseEvent& e, const juce::Mouse
 {
     if (onScrollWheel) onScrollWheel(wheel.deltaY); 
     juce::Component::mouseWheelMove(e, wheel);
+}
+
+std::vector<Track*> TrackContainer::getRecursiveChildren(Track* parent)
+{
+    std::vector<Track*> result;
+    if (!parent) return result;
+    
+    int parentId = parent->getId();
+    for (auto* t : tracks) {
+        if (t->parentId == parentId) {
+            result.push_back(t);
+            auto children = getRecursiveChildren(t);
+            result.insert(result.end(), children.begin(), children.end());
+        }
+    }
+    return result;
 }
