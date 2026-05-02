@@ -96,13 +96,13 @@ void MainComponent::setupCallbacks() {
 
     ui.masterStrip.onEffectsRequested = [this](Track* mt) {
         selectionManager.selectTrack(mt, true);
-        viewManager.showBottomDock(BottomDock::EffectsTab);
+        viewManager.showLeftSidebar(LeftSidebar::EffectsTab);
     };
 
 
     ui.trackContainer.onOpenEffects = [this](Track& track) {
         selectionManager.selectTrack(&track, false);
-        viewManager.showBottomDock(BottomDock::EffectsTab);
+        viewManager.showLeftSidebar(LeftSidebar::EffectsTab);
     };
 
     ui.trackContainer.onTrackAdded = [this] {
@@ -173,7 +173,7 @@ void MainComponent::setupBridges() {
         [this] { viewManager.resized(); }, [this] { viewManager.toggleViewMode(); },
         [this] {
             if (viewManager.isPianoRollVisibleNow()) viewManager.closePianoRoll();
-            viewManager.showBottomDock(BottomDock::EffectsTab);
+            viewManager.showLeftSidebar(LeftSidebar::EffectsTab);
         },
         ui.masterTrackObj.get()
         });

@@ -115,7 +115,7 @@ void TrackManager::handleDeleteTrack(int index, std::function<void()> onPianoRol
         ui.pickerPanelUI.refreshList();
 
         // Limpiar track seleccionado en paneles si era este
-        if (ui.bottomDock.getCurrentTab() == BottomDock::EffectsTab)
+        if (ui.leftSidebar.getCurrentTab() == LeftSidebar::EffectsTab)
             ui.effectsPanelUI.setTrack(nullptr);
         if (ui.bottomDock.getCurrentTab() == BottomDock::InstrumentTab)
             ui.instrumentPanelUI.setTrack(nullptr);

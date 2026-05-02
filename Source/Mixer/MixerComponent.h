@@ -61,6 +61,7 @@ public:
     // --- CALLBACKS PARA EL SISTEMA ---
     std::function<void(Track&)> onAddVST3;
     std::function<void(Track&)> onAddNativeUtility;
+    std::function<void(Track&)> onAddNativeNodePatcher;
     std::function<void(Track&, int)> onOpenPlugin;
     std::function<void(Track&, int)> onDeleteEffect;
     std::function<void(Track&, int, bool)> onBypassChanged;

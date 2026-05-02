@@ -15,6 +15,7 @@ public:
     void openPianoRoll();
     void closePianoRoll();
     void showBottomDock(BottomDock::Tab tab);
+    void showLeftSidebar(LeftSidebar::Tab tab);
 
     // Getters de estado (para puentes o lógica externa si es necesario)
     ViewMode getCurrentView() const { return currentView; }
@@ -35,7 +36,7 @@ private:
     // --- ESTADO INTERNO DEL LAYOUT ---
     ViewMode currentView = ViewMode::Arrangement;
     
-    bool isBottomDockVisible = true;
+    bool isBottomDockVisible = false;
     int bottomDockHeight = 300;
     int lastMixerHeight = 300;
     bool isResizerActive = false;

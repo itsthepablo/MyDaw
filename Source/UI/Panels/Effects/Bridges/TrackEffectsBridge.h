@@ -5,6 +5,7 @@
 #include "../../../../Playlist/PlaylistComponent.h"
 #include "../../../../NativePlugins/Utility/UtilityPlugin.h" 
 #include "../../../../NativePlugins/Orion/OrionPlugin.h"
+#include "../../../../NativePlugins/NodePatcher/NodePatcher.h"
 
 #include "../../../../Engine/Core/AudioEngine.h"
 
@@ -100,6 +101,55 @@ public:
         mixerUI.onAddNativeUtility = addNativeAction;
         miniMixerUI.onAddNativeUtility = addNativeAction;
         if (masterChannelUI) masterChannelUI->onAddNativeUtility = addNativeAction;
+
+        // --- LÓGICA NODE PATCHER ---
+        auto addNodePatcherAction = [&audioMutex, &sampleRate, &blockSize, refreshUIs, &engine, &container](Track& t) {
+            juce::MessageManager::callAsync([&t, &audioMutex, sampleRate, blockSize, refreshUIs, &engine, &container]() {
+                juce::ScopedLock sl(audioMutex);
+                auto* patcher = new NodePatcher();
+                int currentBlockSize = blockSize > 0 ? blockSize : 512;
+                patcher->prepareToPlay(sampleRate, currentBlockSize);
+                t.plugins.add(patcher);
+                t.dsp.allocatePdcBuffer(); 
+                patcher->setIsInstrument(false); 
+                
+                // --- BINDING PARA CARGAR PLUGINS REALES EN EL PATCHER ---
+                patcher->onAddNativeUtilityRequest = [patcher, sampleRate, blockSize](juce::Point<int> pos) {
+                    juce::MessageManager::callAsync([patcher, pos, sampleRate, blockSize]() {
+                        auto effect = std::make_shared<UtilityPlugin>();
+                        int currentBlockSize = blockSize > 0 ? blockSize : 512;
+                        effect->prepareToPlay(sampleRate, currentBlockSize);
+                        patcher->addNode("Utility", effect, pos);
+                    });
+                };
+                
+                patcher->onAddVST3Request = [patcher, sampleRate, blockSize](juce::Point<int> pos) {
+                    auto effect = std::make_shared<VSTHost>();
+                    effect->loadPluginAsync(sampleRate, [patcher, effect, pos, sampleRate, blockSize](bool success) {
+                        if (success) {
+                            juce::MessageManager::callAsync([patcher, effect, pos, sampleRate, blockSize]() {
+                                int currentBlockSize = blockSize > 0 ? blockSize : 512;
+                                effect->prepareToPlay(sampleRate, currentBlockSize);
+                                patcher->addNode(effect->getLoadedPluginName(), effect, pos);
+                            });
+                        }
+                    });
+                };
+                
+                patcher->onSidechainChanged = [&engine, &container]() { engine.routingMatrix.commitNewTopology(container.getTracks()); };
+                engine.routingMatrix.commitNewTopology(container.getTracks());
+                refreshUIs();
+                
+                t.commitSnapshot();
+                
+                patcher->showWindow(&container);
+            });
+        };
+
+        ui.onAddNativeNodePatcher = addNodePatcherAction;
+        mixerUI.onAddNativeNodePatcher = addNodePatcherAction;
+        miniMixerUI.onAddNativeNodePatcher = addNodePatcherAction;
+        if (masterChannelUI) masterChannelUI->onAddNativeNodePatcher = addNodePatcherAction;
 
         // --- LÓGICA ORION ---
         auto addOrionAction = [&audioMutex, &sampleRate, &blockSize, refreshUIs, &engine, &container](Track& t) {

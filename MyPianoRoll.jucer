@@ -194,6 +194,12 @@
           <FILE id="UTL002" name="UtilityPlugin.cpp" compile="1" resource="0"
                 file="Source/NativePlugins/Utility/UtilityPlugin.cpp"/>
         </GROUP>
+        <GROUP id="{NODE-PTC-GRP}" name="NodePatcher">
+          <FILE id="NpTchH" name="NodePatcher.h" compile="0" resource="0" file="Source/NativePlugins/NodePatcher/NodePatcher.h"/>
+          <FILE id="NpTchC" name="NodePatcher.cpp" compile="1" resource="0" file="Source/NativePlugins/NodePatcher/NodePatcher.cpp"/>
+          <FILE id="PEngH" name="PatcherEngine.h" compile="0" resource="0" file="Source/NativePlugins/NodePatcher/PatcherEngine.h"/>
+          <FILE id="PEngC" name="PatcherEngine.cpp" compile="1" resource="0" file="Source/NativePlugins/NodePatcher/PatcherEngine.cpp"/>
+        </GROUP>
         <GROUP id="{FFT-ANL-GRP}" name="FFTAnalyzerPlugin">
           <FILE id="FFTDefH" name="JucePluginDefs.h" compile="0" resource="0"
                 file="Source/NativePlugins/FFTAnalyzerPlugin/JucePluginDefs.h"/>

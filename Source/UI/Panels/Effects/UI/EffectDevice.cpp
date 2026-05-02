@@ -108,11 +108,11 @@ void EffectDevice::paint(juce::Graphics& g) {
 
     if (dragHoverMode == 1) {
         g.setColour(juce::Colours::orange);
-        g.fillRoundedRectangle(2.0f, 2.0f, 4.0f, (float)getHeight() - 4.0f, 2.0f);
+        g.fillRoundedRectangle(2.0f, 2.0f, (float)getWidth() - 4.0f, 4.0f, 2.0f);
     }
     else if (dragHoverMode == 2) {
         g.setColour(juce::Colours::orange);
-        g.fillRoundedRectangle((float)getWidth() - 6.0f, 2.0f, 4.0f, (float)getHeight() - 4.0f, 2.0f);
+        g.fillRoundedRectangle(2.0f, (float)getHeight() - 6.0f, (float)getWidth() - 4.0f, 4.0f, 2.0f);
     }
 }
 
@@ -184,7 +184,7 @@ void EffectDevice::itemDragEnter(const SourceDetails& details) {
 
 void EffectDevice::itemDragMove(const SourceDetails& details) {
     int oldMode = dragHoverMode;
-    if (details.localPosition.x < getWidth() / 2) dragHoverMode = 1;
+    if (details.localPosition.y < getHeight() / 2) dragHoverMode = 1;
     else dragHoverMode = 2;
     if (oldMode != dragHoverMode) repaint();
 }

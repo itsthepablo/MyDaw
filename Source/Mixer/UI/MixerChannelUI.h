@@ -46,7 +46,7 @@ public:
     void mouseDown(const juce::MouseEvent& e) override;
 
     // Callbacks del sistema
-    std::function<void(Track&)> onAddVST3, onAddNativeUtility, onAddSend;
+    std::function<void(Track&)> onAddVST3, onAddNativeUtility, onAddNativeNodePatcher, onAddSend;
     std::function<void(Track&, int)> onOpenPlugin, onDeleteEffect, onDeleteSend;
     std::function<void(Track&, int, bool)> onBypassChanged;
     std::function<void(Track&, int, juce::String)> onCreateAutomation;

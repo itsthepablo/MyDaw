@@ -52,8 +52,7 @@ public:
                     juce::MessageManager::callAsync([&t, newPlugin, &trackContainer, &effectsPanel, &instrumentPanel, &bottomDock]() {
                         trackContainer.refreshTrackPanels();
 
-                        if (bottomDock.getCurrentTab() == BottomDock::EffectsTab)
-                            effectsPanel.updateSlots();
+                        effectsPanel.updateSlots();
 
                         if (bottomDock.getCurrentTab() == BottomDock::InstrumentTab)
                             instrumentPanel.updateInstrumentView();
@@ -85,7 +84,7 @@ public:
                 
                 // Refrescar UIs
                 trackContainer.refreshTrackPanels();
-                if (bottomDock.getCurrentTab() == BottomDock::EffectsTab) effectsPanel.updateSlots();
+                effectsPanel.updateSlots();
                 if (bottomDock.getCurrentTab() == BottomDock::InstrumentTab) instrumentPanel.updateInstrumentView();
                 
                 // IMPORTANTE: Publicar cambio para el hilo de audio inmediatamente (Soluciona silencio Orion)

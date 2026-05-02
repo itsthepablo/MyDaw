@@ -2,20 +2,22 @@
 #include <JuceHeader.h>
 #include "../../Panels/Browsers/PickerPanel.h"
 #include "../../Panels/Browsers/FileBrowserPanel.h" 
+#include "../../Panels/Effects/EffectsPanel.h"
 #include "../../../Theme/CustomTheme.h"
 
 class LeftSidebar : public juce::Component {
 public:
-    enum Tab { PickerTab, FilesTab };
+    enum Tab { PickerTab, FilesTab, EffectsTab };
 
     std::function<void()> onClose;
 
-    LeftSidebar(PickerPanel& picker, FileBrowserPanel& files)
-        : pickerPanel(picker), filesPanel(files)
+    LeftSidebar(PickerPanel& picker, FileBrowserPanel& files, EffectsPanel& fx)
+        : pickerPanel(picker), filesPanel(files), effectsPanel(fx)
     {
         updateStyles();
         addAndMakeVisible(pickerPanel);
         addAndMakeVisible(filesPanel);
+        addAndMakeVisible(effectsPanel);
 
         addAndMakeVisible(pickerTabBtn);
         pickerTabBtn.setButtonText("PICKER");
@@ -33,6 +35,14 @@ public:
         filesTabBtn.setRadioGroupId(200);
         filesTabBtn.onClick = [this] { showTab(FilesTab); };
 
+        addAndMakeVisible(effectsTabBtn);
+        effectsTabBtn.setButtonText("EFFECTS");
+        effectsTabBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(25, 27, 30));
+        effectsTabBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(45, 48, 52));
+        effectsTabBtn.setClickingTogglesState(true);
+        effectsTabBtn.setRadioGroupId(200);
+        effectsTabBtn.onClick = [this] { showTab(EffectsTab); };
+
         addAndMakeVisible(closeBtn);
         closeBtn.setButtonText("X");
         closeBtn.setTooltip("Cerrar Panel Lateral");
@@ -48,6 +58,7 @@ public:
             auto bg = theme->getSkinColor("SIDEBAR_BG", juce::Colour(25, 27, 30));
             pickerTabBtn.setColour(juce::TextButton::buttonColourId, bg);
             filesTabBtn.setColour(juce::TextButton::buttonColourId, bg);
+            effectsTabBtn.setColour(juce::TextButton::buttonColourId, bg);
             closeBtn.setColour(juce::TextButton::buttonColourId, bg);
         }
     }
@@ -62,9 +73,11 @@ public:
 
         pickerPanel.setVisible(tab == PickerTab);
         filesPanel.setVisible(tab == FilesTab);
+        effectsPanel.setVisible(tab == EffectsTab);
 
         if (tab == PickerTab) pickerTabBtn.setToggleState(true, juce::dontSendNotification);
-        else filesTabBtn.setToggleState(true, juce::dontSendNotification);
+        else if (tab == FilesTab) filesTabBtn.setToggleState(true, juce::dontSendNotification);
+        else effectsTabBtn.setToggleState(true, juce::dontSendNotification);
 
         resized();
     }
@@ -77,20 +90,23 @@ public:
 
         closeBtn.setBounds(tabArea.removeFromRight(30).reduced(2));
 
-        int tabW = tabArea.getWidth() / 2;
+        int tabW = tabArea.getWidth() / 3;
         pickerTabBtn.setBounds(tabArea.removeFromLeft(tabW));
-        filesTabBtn.setBounds(tabArea);
+        filesTabBtn.setBounds(tabArea.removeFromLeft(tabW));
+        effectsTabBtn.setBounds(tabArea);
 
         if (currentTab == PickerTab) pickerPanel.setBounds(area);
-        else filesPanel.setBounds(area);
+        else if (currentTab == FilesTab) filesPanel.setBounds(area);
+        else effectsPanel.setBounds(area);
     }
 
 private:
     PickerPanel& pickerPanel;
     FileBrowserPanel& filesPanel;
+    EffectsPanel& effectsPanel;
 
-    juce::TextButton pickerTabBtn, filesTabBtn, closeBtn;
-    Tab currentTab = FilesTab;
+    juce::TextButton pickerTabBtn, filesTabBtn, effectsTabBtn, closeBtn;
+    Tab currentTab = EffectsTab;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LeftSidebar)
 };

@@ -43,10 +43,10 @@ struct DAWUIComponents {
     InspectorPanel inspectorPanelUI;
     ModulatorRackPanel modulatorRackPanelUI;
     VUMeterComponent vuMeterUI; // Se inicializa con referencia a VUBallistics después
-    BottomDock bottomDock{ rackPanelUI, effectsPanelUI, instrumentPanelUI, miniMixerUI, inspectorPanelUI, vuMeterUI, modulatorRackPanelUI };
+    BottomDock bottomDock{ rackPanelUI, instrumentPanelUI, miniMixerUI, inspectorPanelUI, vuMeterUI, modulatorRackPanelUI };
     PickerPanel pickerPanelUI;
     FileBrowserPanel fileBrowserPanelUI;
-    LeftSidebar leftSidebar{ pickerPanelUI, fileBrowserPanelUI };
+    LeftSidebar leftSidebar{ pickerPanelUI, fileBrowserPanelUI, effectsPanelUI };
     SidebarResizer sidebarResizer;
     BottomDockResizer bottomDockResizer;
     RightDock rightDock;

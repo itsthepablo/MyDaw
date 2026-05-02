@@ -38,15 +38,15 @@ public:
             triggerResize();
             };
 
-        topMenu.onToggleFx = [&isBottomDockVisible, &bottomDock, triggerResize, &effectsPanelUI, &trackContainer] {
-            if (!isBottomDockVisible) {
-                isBottomDockVisible = true; bottomDock.showTab(BottomDock::EffectsTab);
+        topMenu.onToggleFx = [&isLeftSidebarVisible, &leftSidebar, triggerResize, &effectsPanelUI, &trackContainer] {
+            if (!isLeftSidebarVisible) {
+                isLeftSidebarVisible = true; leftSidebar.showTab(LeftSidebar::EffectsTab);
             }
             else {
-                if (bottomDock.getCurrentTab() == BottomDock::EffectsTab) isBottomDockVisible = false;
-                else bottomDock.showTab(BottomDock::EffectsTab);
+                if (leftSidebar.getCurrentTab() == LeftSidebar::EffectsTab) isLeftSidebarVisible = false;
+                else leftSidebar.showTab(LeftSidebar::EffectsTab);
             }
-            if (isBottomDockVisible && bottomDock.getCurrentTab() == BottomDock::EffectsTab) {
+            if (isLeftSidebarVisible && leftSidebar.getCurrentTab() == LeftSidebar::EffectsTab) {
                 bool found = false;
                 for (auto* t : trackContainer.getTracks()) {
                     if (t->getType() == TrackType::Audio || t->getType() == TrackType::MIDI) {

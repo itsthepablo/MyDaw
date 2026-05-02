@@ -58,6 +58,6 @@ void UIManager::setupUI(DAWUIComponents& ui, juce::Component& parent, std::funct
         if (ui.onResized) ui.onResized();
     };
 
-    ui.bottomDock.setVisible(true);
+    ui.bottomDock.setVisible(false);
     ui.leftSidebar.setVisible(true);
 }

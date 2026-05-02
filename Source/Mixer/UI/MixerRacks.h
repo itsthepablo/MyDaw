@@ -15,7 +15,7 @@ public:
     void resized() override;
     void mouseDown(const juce::MouseEvent& e) override;
 
-    std::function<void(int)> onOpenPlugin, onDeletePlugin, onAddNativeUtility, onAddVST3;
+    std::function<void(int)> onOpenPlugin, onDeletePlugin, onAddNativeUtility, onAddNativeNodePatcher, onAddVST3;
     std::function<void(int, bool)> onBypassChanged;
 
 private:

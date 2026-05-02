@@ -60,10 +60,11 @@ void PluginSlot::mouseDown(const juce::MouseEvent& e) {
             m.showMenuAsync(juce::PopupMenu::Options(), [this](int r) { if (r == 1 && onDeletePlugin) onDeletePlugin(index); });
         } else if (onOpenPlugin) onOpenPlugin(index);
     } else {
-        juce::PopupMenu m; m.addItem(1, "Native Utility"); m.addItem(2, "External VST3...");
+        juce::PopupMenu m; m.addItem(1, "Native Utility"); m.addItem(2, "Native Node Patcher"); m.addItem(3, "External VST3...");
         m.showMenuAsync(juce::PopupMenu::Options(), [this](int r) {
             if (r == 1 && onAddNativeUtility) onAddNativeUtility(index);
-            if (r == 2 && onAddVST3) onAddVST3(index);
+            if (r == 2 && onAddNativeNodePatcher) onAddNativeNodePatcher(index);
+            if (r == 3 && onAddVST3) onAddVST3(index);
         });
     }
 }

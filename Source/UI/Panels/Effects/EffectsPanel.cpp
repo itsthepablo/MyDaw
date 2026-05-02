@@ -34,13 +34,15 @@ EffectsPanel::EffectsPanel() {
             juce::PopupMenu m;
             m.addItem(1, "Native: Utility (Gain/Pan)");
             m.addItem(2, "Native: Orion (Synth)");
+            m.addItem(3, "Native: Node Patcher");
             m.addSeparator();
-            m.addItem(3, "External VST3...");
+            m.addItem(4, "External VST3...");
 
             m.showMenuAsync(juce::PopupMenu::Options(), [this](int result) {
                 if (result == 1 && onAddNativeUtility) onAddNativeUtility(*activeTrack);
                 if (result == 2 && onAddNativeOrion) onAddNativeOrion(*activeTrack);
-                if (result == 3 && onAddVST3) onAddVST3(*activeTrack);
+                if (result == 3 && onAddNativeNodePatcher) onAddNativeNodePatcher(*activeTrack);
+                if (result == 4 && onAddVST3) onAddVST3(*activeTrack);
                 });
         }
         };
@@ -55,6 +57,10 @@ EffectsPanel::EffectsPanel() {
 
     addEffectBtn.setVisible(false);
     addSendBtn.setVisible(false);
+
+    addAndMakeVisible(viewport);
+    viewport.setViewedComponent(&container, false);
+    viewport.setScrollBarsShown(true, false, false, true);
 
     // --- BARRA NEGRA (SOLO VISIBLE CUANDO ESTÁ OCULTO) ---
     addAndMakeVisible(toggleGainStationBtn);
@@ -80,6 +86,8 @@ EffectsPanel::EffectsPanel() {
         };
 
     addAndMakeVisible(gainStation);
+    container.addAndMakeVisible(addEffectBtn);
+    container.addAndMakeVisible(addSendBtn);
 }
 
 void EffectsPanel::setTrack(Track* t) {
@@ -125,7 +133,7 @@ void EffectsPanel::updateSlots() {
 
             auto* device = new EffectDevice(i, name, false, isBypassed, effectRef, *this);
             devices.add(device);
-            addAndMakeVisible(device);
+            container.addAndMakeVisible(device);
         }
 
         // --- 2. ENVÍOS ---
@@ -135,7 +143,7 @@ void EffectsPanel::updateSlots() {
                 [this] { if (onChangeSend) onChangeSend(*activeTrack); },
                 [this](int idx) { if (onDeleteSend) onDeleteSend(*activeTrack, idx); });
             sends.add(sendDev);
-            addAndMakeVisible(sendDev);
+            container.addAndMakeVisible(sendDev);
         }
     }
 
@@ -165,9 +173,7 @@ void EffectsPanel::paint(juce::Graphics& g) {
         g.fillAll(juce::Colour(40, 43, 48));
     }
 
-    int trackInfoWidth = 110;
-    int gainStationWidth = isGainStationExpanded ? gainStation.getPreferredWidth() : 0;
-    int totalLeftWidth = trackInfoWidth + gainStationWidth; 
+    int trackInfoHeight = 110;
 
     if (auto* theme = dynamic_cast<CustomTheme*>(&getLookAndFeel())) {
         g.setColour(theme->getSkinColor("EFFECTS_BG", juce::Colour(40, 43, 48)).darker(0.1f));
@@ -175,9 +181,9 @@ void EffectsPanel::paint(juce::Graphics& g) {
         g.setColour(juce::Colour(30, 33, 36));
     }
     
-    g.fillRect(0, 0, totalLeftWidth, getHeight());
+    g.fillRect(0, 0, getWidth(), trackInfoHeight);
     g.setColour(juce::Colours::black.withAlpha(0.5f));
-    g.drawVerticalLine(totalLeftWidth, 0.0f, (float)getHeight());
+    g.drawHorizontalLine(trackInfoHeight, 0.0f, (float)getWidth());
 
     if (!activeTrack) {
         g.setColour(juce::Colours::white.withAlpha(0.3f));
@@ -188,20 +194,19 @@ void EffectsPanel::paint(juce::Graphics& g) {
 
     g.setColour(juce::Colours::white.withAlpha(0.5f));
     g.setFont(juce::Font(12.0f, juce::Font::bold));
-    g.drawText("EFFECTS", 15, 10, 60, 30, juce::Justification::centredLeft);
+    g.drawText("EFFECTS", 15, 10, getWidth() - 30, 30, juce::Justification::centredLeft);
 
     g.setColour(juce::Colours::white.withAlpha(0.6f));
     g.setFont(juce::Font(14.0f));
-    g.drawText(activeTrack->getName(), 35, 40, trackInfoWidth - 40, 20, juce::Justification::centredLeft);
+    g.drawText(activeTrack->getName(), 35, 40, getWidth() - 50, 20, juce::Justification::centredLeft);
 
     g.setColour(activeTrack->getColor());
     g.fillEllipse(15, 43, 12, 12);
 }
 
 void EffectsPanel::resized() {
-    int trackInfoWidth = 110;
-    int gainStationWidth = gainStation.getPreferredWidth();
-    int toggleBarWidth = 20;
+    int trackInfoHeight = 110;
+    int toggleBarHeight = 20;
     int padding = 15;
 
     bypassAllBtn.setBounds(15, 70, 80, 20);
@@ -210,52 +215,64 @@ void EffectsPanel::resized() {
         toggleGainStationBtn.setVisible(false);
         hideGainStationBtn.setVisible(false);
         gainStation.setVisible(false);
+        viewport.setBounds(0, trackInfoHeight, getWidth(), getHeight() - trackInfoHeight);
         return;
     }
 
-    int startX = trackInfoWidth;
+    int startY = trackInfoHeight;
+    int slotWidth = getWidth() - 25; // espacio para el scrollbar
+    if (slotWidth < 50) slotWidth = 50;
 
     if (isGainStationExpanded) {
+        int gainStationHeight = gainStation.getPreferredHeight();
         toggleGainStationBtn.setVisible(false);
         hideGainStationBtn.setVisible(true);
         gainStation.setVisible(true);
-        gainStation.setBounds(trackInfoWidth, 20, gainStationWidth, getHeight() - 30);
-        hideGainStationBtn.setBounds(trackInfoWidth + gainStationWidth - 45, 5, 40, 15);
-        startX += gainStationWidth + padding;
+        gainStation.setBounds(10, startY, getWidth() - 20, gainStationHeight);
+        hideGainStationBtn.setBounds(getWidth() - 45, startY + 5, 40, 15);
+        startY += gainStationHeight + padding;
     }
     else {
         toggleGainStationBtn.setVisible(true);
         hideGainStationBtn.setVisible(false);
         gainStation.setVisible(false);
-        toggleGainStationBtn.setBounds(trackInfoWidth, 0, toggleBarWidth, getHeight());
-        startX += toggleBarWidth + padding;
+        toggleGainStationBtn.setButtonText("v");
+        toggleGainStationBtn.setBounds(0, startY, getWidth(), toggleBarHeight);
+        startY += toggleBarHeight + padding;
     }
 
-    int x = startX;
-    int y = 20;
-    int slotHeight = getHeight() - 40;
-    if (slotHeight < 50) slotHeight = 50;
+    // Set viewport bounds below GainStation
+    viewport.setBounds(0, startY, getWidth(), getHeight() - startY);
+
+    int y = 0; // Local al container
+    int viewWidth = viewport.getWidth();
+    if (viewWidth == 0) viewWidth = getWidth();
+    
+    int x = 10;
 
     // --- 1. PLUGINS ---
     for (auto* device : devices) {
-        int dWidth = device->getPreferredWidth();
-        device->setBounds(x, y, dWidth, slotHeight);
-        x += dWidth + padding;
+        int dHeight = device->getPreferredHeight();
+        device->setBounds(x, y, slotWidth, dHeight);
+        y += dHeight + padding;
     }
 
-    addEffectBtn.setBounds(x, y + (slotHeight / 2) - 20, 80, 40);
-    x += 100;
+    addEffectBtn.setBounds(x, y, slotWidth, 40);
+    y += 40 + padding;
 
     // --- 2. SEPARADOR VISUAL PARA SENDS ---
     if (sends.size() > 0) {
-        x += 20;
+        y += 20;
     }
 
     // --- 3. SENDS ---
     for (auto* send : sends) {
-        send->setBounds(x, y, 130, slotHeight);
-        x += 130 + padding;
+        send->setBounds(x, y, slotWidth, 110); 
+        y += 110 + padding;
     }
 
-    addSendBtn.setBounds(x, y + (slotHeight / 2) - 20, 80, 40);
+    addSendBtn.setBounds(x, y, slotWidth, 40);
+    y += 40 + padding;
+
+    container.setSize(viewWidth, y);
 }

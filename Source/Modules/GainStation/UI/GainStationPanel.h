@@ -15,6 +15,7 @@ public:
 
     void setBridge(GainStationBridge* b);
     int getPreferredWidth() const { return 180; }
+    int getPreferredHeight() const { return 200; }
     void paint(juce::Graphics& g) override;
     void resized() override;
 

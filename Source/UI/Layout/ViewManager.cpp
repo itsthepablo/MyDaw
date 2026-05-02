@@ -82,3 +82,9 @@ void ViewManager::showBottomDock(BottomDock::Tab tab) {
     ui.bottomDock.showTab(tab);
     resized();
 }
+
+void ViewManager::showLeftSidebar(LeftSidebar::Tab tab) {
+    isLeftSidebarVisible = true;
+    ui.leftSidebar.showTab(tab);
+    resized();
+}

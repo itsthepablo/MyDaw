@@ -11,6 +11,7 @@ void MixerChannelUI::FXRack::syncSlots() {
         s->onOpenPlugin = [this](int idx) { if (parent->onOpenPlugin) parent->onOpenPlugin(*track, idx); };
         s->onBypassChanged = [this](int idx, bool b) { if (parent->onBypassChanged) parent->onBypassChanged(*track, idx, b); };
         s->onAddNativeUtility = [this](int idx) { if (parent->onAddNativeUtility) parent->onAddNativeUtility(*track); };
+        s->onAddNativeNodePatcher = [this](int idx) { if (parent->onAddNativeNodePatcher) parent->onAddNativeNodePatcher(*track); };
         s->onAddVST3 = [this](int idx) { if (parent->onAddVST3) parent->onAddVST3(*track); };
         s->onDeletePlugin = [this](int idx) { if (parent->onDeleteEffect) parent->onDeleteEffect(*track, idx); };
         slots.add(s);
