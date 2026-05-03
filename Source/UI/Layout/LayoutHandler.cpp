@@ -29,6 +29,7 @@ void LayoutHandler::performLayout(LayoutDependencies d) {
         d.mixerUI.setVisible(true);
         d.pianoRollUI.setVisible(false);
         d.closePianoRollBtn.setVisible(false);
+        if (d.tilingLayout != nullptr) d.tilingLayout->setVisible(false);
 
         int masterWidth = 200; // Fijo para diseño 1:1
         d.masterChannelUI.setBounds(area.removeFromLeft(masterWidth));
@@ -40,61 +41,21 @@ void LayoutHandler::performLayout(LayoutDependencies d) {
         d.masterChannelUI.setVisible(false);
         d.mixerUI.setVisible(false);
 
-        if (d.isBottomDockVisible) {
-            d.bottomDock.setVisible(true);
-            auto bottomArea = area.removeFromBottom(d.bottomDockHeight);
-            d.bottomDockResizer.setBounds(bottomArea.removeFromTop(4)); 
-            d.bottomDock.setBounds(bottomArea);
-        }
-        else {
-            d.bottomDock.setVisible(false);
-            d.bottomDockResizer.setVisible(false);
+        // --- SISTEMA DE MOSAICO (Dueño absoluto de la pantalla) ---
+        if (d.tilingLayout != nullptr) {
+            d.tilingLayout->setVisible(true);
+            d.tilingLayout->setBounds(area);
         }
 
-        if (d.isLeftSidebarVisible) {
-            d.leftSidebar.setVisible(true);
-            d.sidebarResizer.setVisible(true);
-            d.leftSidebar.setBounds(area.removeFromLeft(d.leftSidebarWidth));
-            d.sidebarResizer.setBounds(area.removeFromLeft(4));
-        }
-        else {
-            d.leftSidebar.setVisible(false);
-            d.sidebarResizer.setVisible(false);
-        }
-
-        // --- RIGHT DOCK (CON INSPECTOR DE CANAL SELECCIONADO) ---
-        d.rightDock.setVisible(true);
-        int rightDockWidth = d.rightDock.getIdealWidthForHeight(area.getHeight());
-        d.rightDock.setBounds(area.removeFromRight(rightDockWidth));
-
-        if (d.isPianoRollVisible) {
-            d.pianoRollUI.setVisible(true);
-            d.closePianoRollBtn.setVisible(true);
-            d.pianoRollUI.setBounds(area);
-            
-            // Botón de cierre en la esquina superior derecha del área activa
-            d.closePianoRollBtn.setBounds(area.getRight() - 150, area.getY() + 10, 140, 25);
-
-            d.trackContainer.setVisible(false);
-            d.playlistUI.setVisible(false);
-            d.masterStrip.setVisible(false);
-        }
-        else {
-            d.pianoRollUI.setVisible(false);
-            d.closePianoRollBtn.setVisible(false);
-
-            // --- DISEÑO INTEGRADO: Playlist completa, TrackContainer con espacio para Master ---
-            auto trackArea = area.removeFromLeft(250);
-            auto masterHeaderArea = trackArea.removeFromBottom(100);
-            
-            d.masterStrip.setVisible(true);
-            d.masterStrip.setBounds(masterHeaderArea);
-            
-            d.trackContainer.setVisible(true);
-            d.trackContainer.setBounds(trackArea);
-
-            d.playlistUI.setVisible(true);
-            d.playlistUI.setBounds(area);
-        }
+        // ESCONDEMOS SOLO LOS DOCKS FIJOS QUE NO QUEREMOS VER FUERA DEL MOSAICO
+        d.leftSidebar.setVisible(false);
+        d.sidebarResizer.setVisible(false);
+        d.bottomDock.setVisible(false);
+        d.bottomDockResizer.setVisible(false);
+        d.rightDock.setVisible(false);
+        
+        // NO APAGAMOS LA PLAYLIST NI EL TRACKCONTAINER (Son usados por el mosaico)
+        d.pianoRollUI.setVisible(false);
+        d.closePianoRollBtn.setVisible(false);
     }
 }

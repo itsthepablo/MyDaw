@@ -198,7 +198,8 @@
           <FILE id="NpTchH" name="NodePatcher.h" compile="0" resource="0" file="Source/NativePlugins/NodePatcher/NodePatcher.h"/>
           <FILE id="NpTchC" name="NodePatcher.cpp" compile="1" resource="0" file="Source/NativePlugins/NodePatcher/NodePatcher.cpp"/>
           <FILE id="PEngH" name="PatcherEngine.h" compile="0" resource="0" file="Source/NativePlugins/NodePatcher/PatcherEngine.h"/>
-          <FILE id="PEngC" name="PatcherEngine.cpp" compile="1" resource="0" file="Source/NativePlugins/NodePatcher/PatcherEngine.cpp"/>
+          <FILE id="PEngC" name="PatcherEngine.cpp" compile="1" resource="0"
+                file="Source/NativePlugins/NodePatcher/PatcherEngine.cpp"/>
         </GROUP>
         <GROUP id="{FFT-ANL-GRP}" name="FFTAnalyzerPlugin">
           <FILE id="FFTDefH" name="JucePluginDefs.h" compile="0" resource="0"
@@ -344,6 +345,8 @@
                 file="Source/UI/Commands/CommandController.h"/>
         </GROUP>
         <GROUP id="{493E77C4-3200-C8E2-90EC-33CDCA20C386}" name="Layout">
+          <FILE id="ArrPnlH" name="ArrangementPanel.h" compile="0" resource="0"
+                file="Source/UI/Layout/ArrangementPanel.h"/>
           <FILE id="TZjXHr" name="LayoutHandler.cpp" compile="1" resource="0"
                 file="Source/UI/Layout/LayoutHandler.cpp"/>
           <FILE id="BOvzG7" name="LayoutHandler.h" compile="0" resource="0" file="Source/UI/Layout/LayoutHandler.h"/>
@@ -367,6 +370,23 @@
         <GROUP id="{FD3485E8-2ED3-CBA4-AC86-E28D7D16B2D7}" name="Buttons">
           <FILE id="DNLFnt" name="ToolbarButtons.h" compile="0" resource="0"
                 file="Source/UI/Buttons/ToolbarButtons.h"/>
+        </GROUP>
+        <GROUP id="{TILING-LAY-GRP}" name="TilingLayout">
+          <FILE id="TELzoD" name="ComponentFactory.h" compile="0" resource="0"
+                file="Source/UI/TilingLayout/ComponentFactory.h"/>
+          <FILE id="TLNodH" name="TilingLayoutNode.h" compile="0" resource="0"
+                file="Source/UI/TilingLayout/TilingLayoutNode.h"/>
+          <FILE id="TPnHdr" name="PanelHeader.h" compile="0" resource="0" file="Source/UI/TilingLayout/PanelHeader.h"/>
+          <FILE id="TSpltH" name="TilingSplitterBar.h" compile="0" resource="0"
+                file="Source/UI/TilingLayout/TilingSplitterBar.h"/>
+          <FILE id="TContH" name="TilingContainer.h" compile="0" resource="0"
+                file="Source/UI/TilingLayout/TilingContainer.h"/>
+          <FILE id="TContC" name="TilingContainer.cpp" compile="1" resource="0"
+                file="Source/UI/TilingLayout/TilingContainer.cpp"/>
+          <FILE id="TMngrH" name="TilingLayoutManager.h" compile="0" resource="0"
+                file="Source/UI/TilingLayout/TilingLayoutManager.h"/>
+          <FILE id="TMngrC" name="TilingLayoutManager.cpp" compile="1" resource="0"
+                file="Source/UI/TilingLayout/TilingLayoutManager.cpp"/>
         </GROUP>
         <FILE id="BvdwDj" name="UIManager.cpp" compile="1" resource="0" file="Source/UI/UIManager.cpp"/>
         <FILE id="bmzdqo" name="UIManager.h" compile="0" resource="0" file="Source/UI/UIManager.h"/>

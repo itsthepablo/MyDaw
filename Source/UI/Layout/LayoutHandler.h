@@ -12,6 +12,7 @@
 #include "../Panels/HintPanel.h"
 #include "../Meters/ResourceMeter.h"
 #include "../Docks/RightDock/RightDock.h"
+#include "../TilingLayout/TilingLayoutManager.h"
 
 // Definimos ViewMode aquí o lo importamos si es accesible globalmente
 #ifndef VIEWMODE_DEFINED
@@ -42,6 +43,7 @@ struct LayoutDependencies {
     SidebarResizer& sidebarResizer;
     MasterTrackStrip& masterStrip;
     RightDock& rightDock;
+    TilingLayout::TilingLayoutManager* tilingLayout = nullptr;
 
     // Estados
     ViewMode currentView;

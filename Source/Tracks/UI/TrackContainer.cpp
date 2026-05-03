@@ -23,6 +23,8 @@ TrackContainer::TrackContainer()
     toggleLdnBtn.onClick = [this] { if (onToggleAnalysisTrack) onToggleAnalysisTrack(TrackType::Loudness, toggleLdnBtn.getToggleState()); };
     toggleBalBtn.onClick = [this] { if (onToggleAnalysisTrack) onToggleAnalysisTrack(TrackType::Balance, toggleBalBtn.getToggleState()); };
     toggleMsBtn.onClick = [this] { if (onToggleAnalysisTrack) onToggleAnalysisTrack(TrackType::MidSide, toggleMsBtn.getToggleState()); };
+    
+    startTimerHz(15); // Activar sincronización entre ventanas
 }
 
 void TrackContainer::setTrackHeight(float newHeight) 
@@ -34,13 +36,13 @@ void TrackContainer::setTrackHeight(float newHeight)
 
 void TrackContainer::deselectAllTracks() 
 {
-    for (auto* t : tracks) t->isSelected = false;
+    for (auto* t : getTracks()) t->isSelected = false;
     for (auto* p : trackPanels) p->repaint();
 }
 
 void TrackContainer::selectTrack(Track* selectedTrack, const juce::ModifierKeys& mods) 
 {
-    int clickedIndex = tracks.indexOf(selectedTrack);
+    int clickedIndex = getTracks().indexOf(selectedTrack);
     if (clickedIndex < 0) return;
 
     if (mods.isCommandDown() || mods.isCtrlDown()) {
@@ -49,10 +51,10 @@ void TrackContainer::selectTrack(Track* selectedTrack, const juce::ModifierKeys&
         if (selectedTrack->isSelected && onDeselectMasterRequested) onDeselectMasterRequested();
     }
     else if (mods.isShiftDown()) {
-        if (lastSelectedTrackIndex >= 0 && lastSelectedTrackIndex < tracks.size()) {
+        if (lastSelectedTrackIndex >= 0 && lastSelectedTrackIndex < getTracks().size()) {
             int start = std::min(lastSelectedTrackIndex, clickedIndex);
             int end = std::max(lastSelectedTrackIndex, clickedIndex);
-            for (int i = start; i <= end; ++i) tracks[i]->isSelected = true;
+            for (int i = start; i <= end; ++i) getTracks()[i]->isSelected = true;
         }
         else {
             selectedTrack->isSelected = true;
@@ -61,7 +63,7 @@ void TrackContainer::selectTrack(Track* selectedTrack, const juce::ModifierKeys&
         if (onDeselectMasterRequested) onDeselectMasterRequested();
     }
     else {
-        for (auto* t : tracks) t->isSelected = false;
+        for (auto* t : getTracks()) t->isSelected = false;
         selectedTrack->isSelected = true;
         lastSelectedTrackIndex = clickedIndex;
         if (onDeselectMasterRequested) onDeselectMasterRequested();
@@ -89,7 +91,7 @@ Track* TrackContainer::addTrack(TrackType type, int idToUse)
     else nameToUse = "Track " + juce::String(id);
 
     auto* t = new Track(id, nameToUse, type);
-    tracks.add(t);
+    getTracksMutable().add(t);
     auto* p = new TrackControlPanel(*t);
 
     p->onFxClick = [this, t, p] { if (onLoadFx) onLoadFx(*t, *p); };
@@ -98,13 +100,13 @@ Track* TrackContainer::addTrack(TrackType type, int idToUse)
     p->onPianoRollClick = [this, t] { if (onOpenPianoRoll) onOpenPianoRoll(*t); };
     p->onDeleteClick = [this, t] {
         juce::MessageManager::callAsync([this, t] {
-            if (!tracks.contains(t)) return;
+            if (!getTracks().contains(t)) return;
             if (t->isSelected) {
                 std::vector<int> toDelete;
-                for (int i = 0; i < tracks.size(); ++i) if (tracks[i]->isSelected) toDelete.push_back(i);
+                for (int i = 0; i < getTracks().size(); ++i) if (getTracks()[i]->isSelected) toDelete.push_back(i);
                 for (int i = (int)toDelete.size() - 1; i >= 0; --i) if (onDeleteTrack) onDeleteTrack(toDelete[i]);
             } else {
-                if (onDeleteTrack) onDeleteTrack(tracks.indexOf(t));
+                if (onDeleteTrack) onDeleteTrack(getTracks().indexOf(t));
             }
         });
     };
@@ -116,7 +118,7 @@ Track* TrackContainer::addTrack(TrackType type, int idToUse)
     p->onTrackColorChanged = [this, t] {
         if (t->isSelected) {
             juce::Colour nc = t->getColor();
-            for (auto* trk : tracks) if (trk->isSelected) trk->setColor(nc);
+            for (auto* trk : getTracks()) if (trk->isSelected) trk->setColor(nc);
         }
         repaint(); if (getParentComponent()) getParentComponent()->repaint();
     };
@@ -136,7 +138,7 @@ Track* TrackContainer::addTrack(TrackType type, int idToUse)
 
 Track* TrackContainer::getMasterTrack() 
 {
-    for (auto* t : tracks) {
+    for (auto* t : getTracks()) {
         if (t->getName().containsIgnoreCase("Master")) return t;
     }
     return nullptr;
@@ -147,8 +149,8 @@ void TrackContainer::removeTrack(int index)
     std::unique_ptr<juce::ScopedLock> lock;
     if (audioMutex != nullptr) lock = std::make_unique<juce::ScopedLock>(*audioMutex);
 
-    if (index >= 0 && index < tracks.size()) {
-        auto* t = tracks[index];
+    if (index >= 0 && index < getTracks().size()) {
+        auto* t = getTracks()[index];
         for (int i = t->getAudioClips().size() - 1; i >= 0; --i) {
             auto* a = t->getAudioClips()[i];
             t->getAudioClips().removeObject(a, false);
@@ -160,7 +162,7 @@ void TrackContainer::removeTrack(int index)
             unusedMidiPool.add(m);
         }
         trackPanels.remove(index);
-        tracks.remove(index);
+        getTracksMutable().remove(index);
         if (index == lastSelectedTrackIndex) lastSelectedTrackIndex = -1;
         else if (index < lastSelectedTrackIndex) lastSelectedTrackIndex--;
         recalculateFolderHierarchy(); resized(); repaint();
@@ -188,7 +190,7 @@ AutomationClipData* TrackContainer::createAutomation(int targetTrackId, int para
     }
 
     Track* target = nullptr;
-    for (auto* t : tracks) { if (t->getId() == targetTrackId) { target = t; break; } }
+    for (auto* t : getTracks()) { if (t->getId() == targetTrackId) { target = t; break; } }
     if (!target) return nullptr;
 
     auto* a = new AutomationClipData();
@@ -208,17 +210,17 @@ AutomationClipData* TrackContainer::createAutomation(int targetTrackId, int para
 void TrackContainer::recalculateFolderHierarchy() 
 {
     std::map<int, bool> folderCollapsedStates;
-    for (auto* t : tracks) if (t->getType() == TrackType::Folder) folderCollapsedStates[t->getId()] = t->isCollapsed;
+    for (auto* t : getTracks()) if (t->getType() == TrackType::Folder) folderCollapsedStates[t->getId()] = t->isCollapsed;
 
-    for (int i = 0; i < tracks.size(); ++i) {
-        auto* t = tracks[i];
+    for (int i = 0; i < getTracks().size(); ++i) {
+        auto* t = getTracks()[i];
         int depth = 0;
         int curr = t->parentId;
         int s1 = 0;
         while (curr != -1 && s1 < 32) {
             depth++;
             bool foundParent = false;
-            for (auto* pt : tracks) if (pt->getId() == curr) { curr = pt->parentId; foundParent = true; break; }
+            for (auto* pt : getTracks()) if (pt->getId() == curr) { curr = pt->parentId; foundParent = true; break; }
             if (!foundParent) break;
             s1++;
         }
@@ -230,14 +232,16 @@ void TrackContainer::recalculateFolderHierarchy()
         while (currParentId != -1 && safety < 32) {
             if (folderCollapsedStates.count(currParentId) && folderCollapsedStates[currParentId]) { t->isShowingInChildren = false; break; }
             bool found = false;
-            for (auto* pt : tracks) if (pt->getId() == currParentId) { currParentId = pt->parentId; found = true; break; }
+            for (auto* pt : getTracks()) if (pt->getId() == currParentId) { currParentId = pt->parentId; found = true; break; }
             if (!found) break;
             safety++;
         }
 
-        auto* p = trackPanels[i];
-        p->setVisible(t->isShowingInChildren);
-        p->updateFolderBtnVisuals(); p->resized(); p->repaint();
+        if (i < trackPanels.size()) {
+            auto* p = trackPanels[i];
+            p->setVisible(t->isShowingInChildren);
+            p->updateFolderBtnVisuals(); p->resized(); p->repaint();
+        }
     }
 }
 
@@ -247,15 +251,15 @@ void TrackContainer::moveSelectedTracksToNewFolder()
     if (audioMutex != nullptr) lock = std::make_unique<juce::ScopedLock>(*audioMutex);
     std::vector<Track*> selected;
     int firstIdx = -1;
-    for (int i = 0; i < tracks.size(); ++i) {
-        if (tracks[i]->isSelected) { selected.push_back(tracks[i]); if (firstIdx == -1) firstIdx = i; }
+    for (int i = 0; i < getTracks().size(); ++i) {
+        if (getTracks()[i]->isSelected) { selected.push_back(getTracks()[i]); if (firstIdx == -1) firstIdx = i; }
     }
     if (selected.empty()) return;
     auto* folder = addTrack(TrackType::Folder);
-    int fIdx = tracks.indexOf(folder);
-    auto fPvt = tracks.removeAndReturn(fIdx); auto pPvt = trackPanels.removeAndReturn(fIdx);
+    int fIdx = getTracks().indexOf(folder);
+    auto fPvt = getTracksMutable().removeAndReturn(fIdx); auto pPvt = trackPanels.removeAndReturn(fIdx);
     if (fIdx < firstIdx) firstIdx--;
-    tracks.insert(firstIdx, fPvt); trackPanels.insert(firstIdx, pPvt);
+    getTracksMutable().insert(firstIdx, fPvt); trackPanels.insert(firstIdx, pPvt);
     trackContent.addAndMakeVisible(pPvt);
     for (auto* t : selected) t->parentId = folder->getId();
     recalculateFolderHierarchy(); resized(); repaint(); if (onTracksReordered) onTracksReordered();
@@ -292,7 +296,7 @@ void TrackContainer::itemDropped(const SourceDetails& d)
     if (d.description != "TRACK") return;
     auto* drg = dynamic_cast<TrackControlPanel*>(d.sourceComponent.get());
     if (!drg) return;
-    int sIdx = tracks.indexOf(&drg->track);
+    int sIdx = getTracks().indexOf(&drg->track);
     int tIdx = -1, mode = 0;
     
     juce::Point<int> pRel = d.localPosition - trackContent.getPosition();
@@ -312,14 +316,14 @@ void TrackContainer::itemDropped(const SourceDetails& d)
         std::unique_ptr<juce::ScopedLock> lock; if (audioMutex != nullptr) lock = std::make_unique<juce::ScopedLock>(*audioMutex);
         
         Track* draggedTrack = &drg->track;
-        Track* targetTrack = tracks[tIdx];
+        Track* targetTrack = getTracks()[tIdx];
 
         // 1. Identificar TODAS las pistas a mover (el padre + todos sus hijos recursivos)
         std::vector<Track*> children = getRecursiveChildren(draggedTrack);
         std::vector<int> indicesToMove;
-        indicesToMove.push_back(tracks.indexOf(draggedTrack));
+        indicesToMove.push_back(getTracks().indexOf(draggedTrack));
         for (auto* c : children) {
-            int idx = tracks.indexOf(c);
+            int idx = getTracks().indexOf(c);
             if (idx >= 0) indicesToMove.push_back(idx);
         }
         std::sort(indicesToMove.begin(), indicesToMove.end());
@@ -348,17 +352,17 @@ void TrackContainer::itemDropped(const SourceDetails& d)
         std::sort(sortedIndices.rbegin(), sortedIndices.rend());
         
         for (int idx : sortedIndices) {
-            tracksToMove.insert(tracksToMove.begin(), tracks.removeAndReturn(idx));
+            tracksToMove.insert(tracksToMove.begin(), getTracksMutable().removeAndReturn(idx));
             panelsToMove.insert(panelsToMove.begin(), trackPanels.removeAndReturn(idx));
         }
 
         // 4. Calcular el nuevo índice de destino tras haber quitado las pistas
-        int finalTargetIdx = tracks.indexOf(targetTrack);
+        int finalTargetIdx = getTracks().indexOf(targetTrack);
         if (mode != 1) finalTargetIdx++; // Para modo 2 y 3 insertamos después del target
 
         // 5. Insertar todo el bloque en la nueva posición
         for (int i = 0; i < tracksToMove.size(); ++i) {
-            tracks.insert(finalTargetIdx + i, tracksToMove[i]);
+            getTracksMutable().insert(finalTargetIdx + i, tracksToMove[i]);
             trackPanels.insert(finalTargetIdx + i, panelsToMove[i]);
         }
 
@@ -430,6 +434,58 @@ void TrackContainer::updateStyles()
 
 void TrackContainer::refreshTrackPanels() 
 { 
+    // Sincronizamos paneles si hay un desajuste (aplica tanto a maestro como a clon)
+    if (getTracks().size() != trackPanels.size())
+    {
+        trackPanels.clear();
+        for (auto* t : getTracks())
+        {
+            auto* p = new TrackControlPanel(*t);
+            
+            p->onFxClick = [this, t, p] { if (onLoadFx) onLoadFx(*t, *p); };
+            p->onInstrumentClick = [this, t] { if (onOpenInstrument) onOpenInstrument(*t); };
+            p->onPluginClick = [this, t](int i) { if (onOpenFx) onOpenFx(*t, i); };
+            p->onPianoRollClick = [this, t] { if (onOpenPianoRoll) onOpenPianoRoll(*t); };
+            
+            p->onDeleteClick = [this, t] {
+                juce::MessageManager::callAsync([this, t] {
+                    if (!getTracks().contains(t)) return;
+                    if (t->isSelected) {
+                        std::vector<int> toDelete;
+                        for (int i = 0; i < getTracks().size(); ++i) if (getTracks()[i]->isSelected) toDelete.push_back(i);
+                        for (int i = (int)toDelete.size() - 1; i >= 0; --i) if (onDeleteTrack) onDeleteTrack(toDelete[i]);
+                    } else {
+                        if (onDeleteTrack) onDeleteTrack(getTracks().indexOf(t));
+                    }
+                });
+            };
+
+            p->onEffectsClick = [this, t] { if (onOpenEffects) onOpenEffects(*t); };
+            p->onTrackSelected = [this, t](const juce::ModifierKeys& mods) { selectTrack(t, mods); };
+            p->onMoveToNewFolder = [this] { moveSelectedTracksToNewFolder(); };
+            p->onFolderStateChange = [this] { recalculateFolderHierarchy(); resized(); repaint(); if (onTracksReordered) onTracksReordered(); };
+            p->onWaveformViewChanged = [this] { repaint(); if (getParentComponent()) getParentComponent()->repaint(); };
+            
+            p->onTrackColorChanged = [this, t] {
+                if (t->isSelected) {
+                    juce::Colour nc = t->getColor();
+                    for (auto* trk : getTracks()) if (trk->isSelected) trk->setColor(nc);
+                }
+                repaint(); if (getParentComponent()) getParentComponent()->repaint();
+            };
+
+            p->onCreateAutomation = [this, t](int paramId, juce::String paramName) {
+                createAutomation(t->getId(), paramId, paramName);
+            };
+            
+            trackPanels.add(p);
+            trackContent.addAndMakeVisible(p);
+        }
+        
+        recalculateFolderHierarchy();
+        resized();
+    }
+
     for (auto* p : trackPanels) p->updatePlugins(); 
 }
 
@@ -446,13 +502,31 @@ void TrackContainer::mouseWheelMove(const juce::MouseEvent& e, const juce::Mouse
     juce::Component::mouseWheelMove(e, wheel);
 }
 
+void TrackContainer::copyCallbacksFrom(const TrackContainer& other)
+{
+    onLoadFx = other.onLoadFx;
+    onOpenInstrument = other.onOpenInstrument;
+    onOpenFx = other.onOpenFx;
+    onOpenPianoRoll = other.onOpenPianoRoll;
+    onDeleteTrack = other.onDeleteTrack;
+    onOpenEffects = other.onOpenEffects;
+    onTracksReordered = other.onTracksReordered;
+    onTrackAdded = other.onTrackAdded;
+    onActiveTrackChanged = other.onActiveTrackChanged;
+    onToggleAnalysisTrack = other.onToggleAnalysisTrack;
+    onDeselectMasterRequested = other.onDeselectMasterRequested;
+    
+    // Forzar actualización de los paneles con los nuevos callbacks
+    refreshTrackPanels();
+}
+
 std::vector<Track*> TrackContainer::getRecursiveChildren(Track* parent)
 {
     std::vector<Track*> result;
     if (!parent) return result;
     
     int parentId = parent->getId();
-    for (auto* t : tracks) {
+    for (auto* t : getTracks()) {
         if (t->parentId == parentId) {
             result.push_back(t);
             auto children = getRecursiveChildren(t);

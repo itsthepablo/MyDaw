@@ -64,6 +64,7 @@ TopMenuBar::TopMenuBar()
     addAndMakeVisible(playBtn);
     addAndMakeVisible(stopBtn);
 
+    addAndMakeVisible(timeDisplayLabel);
     timeDisplayLabel.setBorderSize(juce::BorderSize<int>(2));
 
     addAndMakeVisible(zoomDisplayLabel);

@@ -2,6 +2,7 @@
 #include <JuceHeader.h>
 #include "../UIManager.h"
 #include "LayoutHandler.h"
+#include "../TilingLayout/TilingLayoutManager.h"
 
 class ViewManager {
 public:
@@ -27,6 +28,8 @@ public:
     bool& getBottomDockVisibleRef() { return isBottomDockVisible; }
     bool& getLeftSidebarVisibleRef() { return isLeftSidebarVisible; }
 
+    void setTilingLayout(TilingLayout::TilingLayoutManager* layout) { tilingLayout = layout; }
+
 private:
     void updateLayout();
 
@@ -45,6 +48,7 @@ private:
     int leftSidebarWidth = 200;
 
     bool isPianoRollVisible = false;
+    TilingLayout::TilingLayoutManager* tilingLayout = nullptr;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ViewManager)
 };

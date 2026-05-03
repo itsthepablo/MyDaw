@@ -53,7 +53,7 @@ void PlaylistRenderer::drawFolderSummaries(juce::Graphics& g,
                 if (clip.linkedMidi == nullptr)
                     continue;
                 if (std::find(descendantIds.begin(), descendantIds.end(),
-                              clip.trackPtr->getId()) != descendantIds.end()) {
+                               clip.trackPtr->getId()) != descendantIds.end()) {
                     folderHasMidi = true;
                     for (const auto &n : clip.linkedMidi->getNotes()) {
                         folderMinP = std::min(folderMinP, n.pitch);
@@ -77,7 +77,7 @@ void PlaylistRenderer::drawFolderSummaries(juce::Graphics& g,
 
                 bool isChild =
                     std::find(descendantIds.begin(), descendantIds.end(),
-                              clip.trackPtr->getId()) != descendantIds.end();
+                               clip.trackPtr->getId()) != descendantIds.end();
                 if (isChild) {
                     int xPos = (int)(clip.startX * ctx.hZoom - (double)ctx.hS);
                     int wPos = (int)(clip.width * ctx.hZoom);
@@ -106,8 +106,8 @@ void PlaylistRenderer::drawFolderSummaries(juce::Graphics& g,
 }
 
 void PlaylistRenderer::drawTracksAndClips(juce::Graphics& g, 
-                                          const PlaylistViewContext& ctx,
-                                          std::unordered_map<Track*, int>& trackYCache)
+                                           const PlaylistViewContext& ctx,
+                                           std::unordered_map<Track*, int>& trackYCache)
 {
     // --- OPTIMIZACIÓN DE RENDIMIENTO: CACHÉ DE COORDENADAS Y CULLING ---
     // Pre-calculamos las alturas Y de todas las pistas para evitar 5,000+
@@ -117,71 +117,45 @@ void PlaylistRenderer::drawTracksAndClips(juce::Graphics& g,
     double visibleTimeStart = (double)ctx.hS / ctx.hZoom;
     double visibleTimeEnd = (double)(ctx.hS + ctx.width) / ctx.hZoom;
 
-    for (int i = 0; i < (int)ctx.clips->size(); ++i) {
-        const auto &clip = (*ctx.clips)[i];
+    if (!ctx.tracksRef) return;
 
-        // --- CULLING HORIZONTAL REAL ---
-        if (clip.startX + clip.width < visibleTimeStart ||
-            clip.startX > visibleTimeEnd)
-            continue;
-
-        int yPos = -1;
-        if (trackYCache.count(clip.trackPtr))
-            yPos = trackYCache[clip.trackPtr];
-
-        // BUG FIX: Si el track está oculto por una carpeta, yPos será -1. Ignoramos
-        // este clip.
-        if (yPos == -1)
-            continue;
+    for (auto* trk : *ctx.tracksRef) {
+        int yPos = trackYCache.count(trk) ? trackYCache[trk] : -1;
+        if (yPos == -1) continue;
 
         int clipTop = yPos;
         int clipBottom = yPos + (int)ctx.trackHeight;
 
-        // Culling vertical correcto: omitimos si el clip completo está por encima o
-        // por debajo de la ventana
+        // Culling vertical correcto: omitimos si el clip completo está por encima o por debajo de la ventana
         if (clipBottom < ctx.topOffset || clipTop > ctx.height)
             continue;
 
-        // BLINDAJE DE COORDENADAS (Anti-Overflow): Usamos las coordenadas reales sin recorte para mantener el anclaje
-        float exactXPos = (float)(clip.startX * ctx.hZoom - (double)ctx.hS);
-        float exactWPos = (float)(clip.width * ctx.hZoom);
-        juce::Rectangle<float> clipRectF(exactXPos, (float)(yPos + 2),
-                                         exactWPos - 1.0f,
-                                         (float)((int)ctx.trackHeight - 4));
+        juce::Colour trackColor = trk->getColor();
 
-        // NO USAMOS INTERSECTION: El renderizador necesita la X original para calcular las muestras correctamente
-        if (clipRectF.getRight() < 0 || clipRectF.getX() > ctx.width)
-            continue;
-
-        juce::Colour trackColor = clip.trackPtr->getColor();
-
-        bool isMutedLocally = (clip.linkedAudio && clip.linkedAudio->getIsMuted()) ||
-                              (clip.linkedMidi && clip.linkedMidi->getIsMuted());
-        float alphaMult = isMutedLocally ? 0.3f : 1.0f;
-        g.setOpacity(alphaMult);
-
-        // 1. Dibujar el Clip
-        // 1. Dibujar el Clip
-        if (clip.linkedAudio != nullptr) {
-            double clipUnits = (double)clip.startX;
-            double viewUnits = (double)ctx.hS / ctx.hZoom;
-            AudioClipRenderer::drawAudioClip(
-                g, *clip.linkedAudio, clipRectF, trackColor,
-                clip.trackPtr->getWaveformViewMode(), ctx.hZoom, clipUnits, viewUnits);
-        }
-        else if (clip.linkedMidi != nullptr) {
-            MidiPatternRenderer::drawMidiPattern(
-                g, *clip.linkedMidi, clipRectF.toNearestInt(), trackColor, clip.name,
-                clip.trackPtr->isInlineEditingActive, ctx.hZoom, (int)ctx.hS, (double)ctx.playheadAbsPos);
+        // --- DIBUJAR CLIPS DE AUDIO (Extracción directa de la pista - Estilo Loudness) ---
+        for (auto* ac : trk->getAudioClips()) {
+            if (ac->getStartX() + ac->getWidth() < visibleTimeStart || ac->getStartX() > visibleTimeEnd) continue;
+            
+            float exactXPos = (float)(ac->getStartX() * ctx.hZoom - (double)ctx.hS);
+            float exactWPos = (float)(ac->getWidth() * ctx.hZoom);
+            juce::Rectangle<float> clipRectF(exactXPos, (float)(yPos + 2), exactWPos - 1.0f, (float)((int)ctx.trackHeight - 4));
+            
+            g.setOpacity(ac->getIsMuted() ? 0.3f : 1.0f);
+            AudioClipRenderer::drawAudioClip(g, *ac, clipRectF, trackColor, trk->getWaveformViewMode(), ctx.hZoom, ac->getStartX(), (double)ctx.hS / ctx.hZoom);
         }
 
-        // 4. Indicador de selección (Universal)
-        if (std::find(ctx.selectedClipIndices->begin(), ctx.selectedClipIndices->end(), i) !=
-            ctx.selectedClipIndices->end()) {
-            g.setColour(juce::Colours::yellow);
-            g.drawRoundedRectangle(clipRectF, 5.0f, 1.5f);
-        }
+        // --- DIBUJAR CLIPS DE MIDI (Extracción directa de la pista - Estilo Loudness) ---
+        for (auto* mc : trk->getMidiClips()) {
+            if (mc->getStartX() + mc->getWidth() < visibleTimeStart || mc->getStartX() > visibleTimeEnd) continue;
 
+            float exactXPos = (float)(mc->getStartX() * ctx.hZoom - (double)ctx.hS);
+            float exactWPos = (float)(mc->getWidth() * ctx.hZoom);
+            juce::Rectangle<float> clipRectF(exactXPos, (float)(yPos + 2), exactWPos - 1.0f, (float)((int)ctx.trackHeight - 4));
+
+            g.setOpacity(mc->getIsMuted() ? 0.3f : 1.0f);
+            MidiPatternRenderer::drawMidiPattern(g, *mc, clipRectF.toNearestInt(), trackColor, mc->getName(), 
+                                                 trk->isInlineEditingActive, ctx.hZoom, (int)ctx.hS, (double)ctx.playheadAbsPos);
+        }
         g.setOpacity(1.0f);
     }
 }
@@ -303,6 +277,6 @@ void PlaylistRenderer::drawMinimap(juce::Graphics& g,
         float padY = trackMinimapH > 3.0f ? 1.0f : 0.0f;
         g.fillRoundedRectangle(x, y + padY, juce::jmax(1.0f, w),
                                juce::jmax(1.0f, trackMinimapH - (padY * 2.0f)),
-                               1.5f);
+                                1.5f);
     }
 }

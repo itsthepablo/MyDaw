@@ -9,9 +9,6 @@
 #include <algorithm>
 #include <map>
 
-/**
- * TrackHeaderBackground — Dibujado del fondo de la cabecera de pistas.
- */
 struct TrackHeaderBackground : public juce::Component {
     TrackHeaderBackground() { setOpaque(true); }
     void paint(juce::Graphics& g) override {
@@ -23,13 +20,10 @@ struct TrackHeaderBackground : public juce::Component {
     }
 };
 
-/**
- * TrackContainer — Contenedor principal de los paneles de pista.
- * Gestiona el listado de pistas, jerarquía de carpetas y drag-and-drop.
- */
 class TrackContainer : public juce::Component,
     public juce::DragAndDropTarget,
-    public juce::FileDragAndDropTarget {
+    public juce::FileDragAndDropTarget,
+    private juce::Timer {
 public:
     std::function<void(Track&, TrackControlPanel&)> onLoadFx;
     std::function<void(Track&)> onOpenInstrument; 
@@ -58,8 +52,19 @@ public:
     TrackContainer();
     ~TrackContainer() override = default;
 
+    void timerCallback() override 
+    { 
+        if (getTracks().size() != trackPanels.size())
+            refreshTrackPanels();
+    }
+
     void setExternalMutex(juce::CriticalSection* mutex) { audioMutex = mutex; }
-    const juce::OwnedArray<Track>& getTracks() const { return tracks; }
+    void setExternalTracks(juce::OwnedArray<Track>* external) { externalTracks = external; refreshTrackPanels(); }
+    
+    const juce::OwnedArray<Track>& getTracks() const { return externalTracks != nullptr ? *externalTracks : tracks; }
+    juce::OwnedArray<Track>& getTracksMutable() { return externalTracks != nullptr ? *externalTracks : tracks; }
+
+    void copyCallbacksFrom(const TrackContainer& other);
 
     void setTrackHeight(float newHeight);
     void deselectAllTracks();
@@ -99,6 +104,7 @@ private:
     juce::OwnedArray<Track> tracks;
     juce::OwnedArray<TrackControlPanel> trackPanels;
     juce::CriticalSection* audioMutex = nullptr;
+    juce::OwnedArray<Track>* externalTracks = nullptr;
     int lastSelectedTrackIndex = -1;
     int nextTrackId = 1;
 

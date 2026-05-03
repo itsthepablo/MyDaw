@@ -44,13 +44,8 @@ public:
     TrackContainer* trackContainer = nullptr;
     Track* masterTrackPtr = nullptr;
 
-    void setTrackContainer(TrackContainer* tc) {
-        trackContainer = tc;
-        if (tc) {
-            setTracksReference(&(tc->getTracks()));
-            tc->setTrackHeight(trackHeight);
-        }
-    }
+    void setTrackContainer(TrackContainer* tc);
+    void copyCallbacksFrom(const PlaylistComponent& other);
 
     std::vector<TrackClip> clips;
     float hZoom = 0.2f;
@@ -109,32 +104,53 @@ public:
 
     float getLoopEndPos() const {
         double dynamicLoopEnd = 1280.0;
-        for (const auto& clip : clips) {
-            if (clip.startX + clip.width > dynamicLoopEnd) dynamicLoopEnd = clip.startX + clip.width;
+        if (tracksRef) {
+            for (auto* t : *tracksRef) {
+                for (auto* ac : t->getAudioClips()) {
+                    if (ac->getStartX() + ac->getWidth() > dynamicLoopEnd) dynamicLoopEnd = ac->getStartX() + ac->getWidth();
+                }
+                for (auto* mc : t->getMidiClips()) {
+                    if (mc->getStartX() + mc->getWidth() > dynamicLoopEnd) dynamicLoopEnd = mc->getStartX() + mc->getWidth();
+                }
+            }
         }
         return (float)(std::ceil((dynamicLoopEnd - 0.001) / 320.0) * 320.0);
     }
 
     double getTimelineLength() const {
-        double defaultLength = 20.0 * 320.0; // 20 compases base (Original)
+        double defaultLength = 20.0 * 320.0;
         double maxTime = defaultLength;
-        for (const auto& clip : clips) {
-            double clipEnd = (double)clip.startX + (double)clip.width;
-            if (clipEnd > maxTime) maxTime = clipEnd;
+        if (tracksRef) {
+            for (auto* t : *tracksRef) {
+                for (auto* ac : t->getAudioClips()) {
+                    double clipEnd = (double)ac->getStartX() + (double)ac->getWidth();
+                    if (clipEnd > maxTime) maxTime = clipEnd;
+                }
+                for (auto* mc : t->getMidiClips()) {
+                    double clipEnd = (double)mc->getStartX() + (double)mc->getWidth();
+                    if (clipEnd > maxTime) maxTime = clipEnd;
+                }
+            }
         }
-        if (maxTime > defaultLength) maxTime += (2.0 * 320.0); // 2 compases de padding al final
+        if (maxTime > defaultLength) maxTime += (2.0 * 320.0);
         return maxTime;
     }
 
     double getMaxAudioDurationSecs() const {
         double maxPixels = 0.0;
-        // Buscar el borde final de todos los clips
-        for (const auto& clip : clips) {
-            double clipEnd = (double)clip.startX + (double)clip.width;
-            if (clipEnd > maxPixels) maxPixels = clipEnd;
+        if (tracksRef) {
+            for (auto* t : *tracksRef) {
+                for (auto* ac : t->getAudioClips()) {
+                    double clipEnd = (double)ac->getStartX() + (double)ac->getWidth();
+                    if (clipEnd > maxPixels) maxPixels = clipEnd;
+                }
+                for (auto* mc : t->getMidiClips()) {
+                    double clipEnd = (double)mc->getStartX() + (double)mc->getWidth();
+                    if (clipEnd > maxPixels) maxPixels = clipEnd;
+                }
+            }
         }
-        if (maxPixels == 0.0) return 1.0; // Render mínimo si el proyecto está vacío
-        // Convertir de pixeles a Segundos
+        if (maxPixels == 0.0) return 1.0;
         return (maxPixels / 320.0) * 4.0 * (60.0 / bpm);
     }
 

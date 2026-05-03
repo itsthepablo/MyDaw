@@ -25,6 +25,19 @@ MainComponent::MainComponent() {
     ui.playlistUI.setTrackContainer(&ui.trackContainer);
     ui.pickerPanelUI.setTrackContainer(&ui.trackContainer);
 
+    // --- CONEXIÓN DEL SISTEMA DE MOSAICO ---
+    arrangementPanel = std::make_unique<TilingLayout::ArrangementPanel>(ui.trackContainer, ui.playlistUI, audioEngine, audioMutex);
+    tilingLayout = std::make_unique<TilingLayout::TilingLayoutManager>(ui, audioEngine, audioMutex);
+    tilingLayout->setArrangementPanel(arrangementPanel.get());
+    addAndMakeVisible(*tilingLayout);
+    
+    // Le decimos al ViewManager que el mosaico es el que manda ahora en el área central
+    viewManager.setTilingLayout(tilingLayout.get());
+
+    // Sincronizar duración inicial
+    audioEngine.transportState.loopEndPos.store(ui.playlistUI.getLoopEndPos());
+
+
     setSize(1920, 1080);
 
     setAudioChannels(0, 2);
@@ -87,6 +100,22 @@ void MainComponent::setupCallbacks() {
 
     ui.playlistUI.onClipSelected = [this](Track* t) {
         ui.trackContainer.selectTrack(t, juce::ModifierKeys());
+    };
+
+    // --- CONEXIONES DE TRANSPORTE Y TIMELINE ---
+    ui.topMenuBar.playBtn.onClick = [this] { 
+        commandController->perform(juce::ApplicationCommandTarget::InvocationInfo(DAWCommands::playStop)); 
+    };
+    ui.topMenuBar.stopBtn.onClick = [this] { 
+        if (ui.pianoRollUI.getIsPlaying())
+            commandController->perform(juce::ApplicationCommandTarget::InvocationInfo(DAWCommands::playStop)); 
+    };
+    ui.playlistUI.onPlayheadSeekRequested = [this](float pos) { 
+        audioEngine.transportState.seekRequestPh.store(pos); 
+    };
+    ui.playlistUI.onZoomChanged = [this](float zoom) {
+        ui.topMenuBar.setZoomInfo((double)zoom);
+        audioEngine.transportState.loopEndPos.store(ui.playlistUI.getLoopEndPos());
     };
 
     // --- CONEXIÓN MASTER TRACK ---
@@ -158,6 +187,22 @@ void MainComponent::setupCallbacks() {
 
     ui.rightDock.onLayoutChanged = [this] {
         resized();
+    };
+
+    // --- CONEXIONES DE TRANSPORTE Y SEEK ---
+    ui.topMenuBar.playBtn.onClick = [this] { 
+        commandController->perform(juce::ApplicationCommandTarget::InvocationInfo(DAWCommands::playStop)); 
+    };
+    ui.topMenuBar.stopBtn.onClick = [this] { 
+        if (ui.pianoRollUI.getIsPlaying())
+            commandController->perform(juce::ApplicationCommandTarget::InvocationInfo(DAWCommands::playStop)); 
+    };
+    ui.playlistUI.onPlayheadSeekRequested = [this](float pos) { 
+        audioEngine.transportState.seekRequestPh.store(pos); 
+    };
+    ui.playlistUI.onZoomChanged = [this](float zoom) {
+        ui.topMenuBar.setZoomInfo((double)zoom);
+        audioEngine.transportState.loopEndPos.store(ui.playlistUI.getLoopEndPos());
     };
 }
 
@@ -241,6 +286,16 @@ void MainComponent::paint(juce::Graphics& g) {
 
 
 void MainComponent::resized() {
+    auto area = getLocalBounds();
+    
+    // El sistema de mosaico toma el área central (pero el viewManager sigue gestionando docks)
+    if (tilingLayout) {
+        auto tilingArea = area;
+        tilingArea.removeFromTop(96); // Dejar espacio al menú
+        tilingArea.removeFromBottom(34); // Dejar espacio al hint
+        tilingLayout->setBounds(tilingArea);
+    }
+
     viewManager.resized();
 }
 

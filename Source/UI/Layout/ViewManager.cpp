@@ -52,6 +52,7 @@ void ViewManager::updateLayout() {
         parent.getLocalBounds(), ui.topMenuBar, ui.hintPanel, ui.resourceMeter.get(),
         ui.pianoRollUI, ui.closePianoRollBtn, ui.mixerUI, *ui.masterChannelUI, ui.trackContainer, ui.playlistUI,
         ui.bottomDock, ui.bottomDockResizer, ui.leftSidebar, ui.sidebarResizer, ui.masterStrip, ui.rightDock,
+        tilingLayout,
         currentView, isPianoRollVisible, isBottomDockVisible, bottomDockHeight, isLeftSidebarVisible, leftSidebarWidth
     });
 }

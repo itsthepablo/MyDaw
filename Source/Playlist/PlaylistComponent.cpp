@@ -103,6 +103,24 @@ PlaylistComponent::PlaylistComponent() {
   startTimerHz(60);
 }
 
+void PlaylistComponent::setTrackContainer(TrackContainer* tc) {
+  trackContainer = tc;
+  if (tc) {
+    setTracksReference(&(tc->getTracks()));
+    tc->setTrackHeight(trackHeight);
+  }
+}
+
+void PlaylistComponent::copyCallbacksFrom(const PlaylistComponent& other) {
+  getPlaybackPosition = other.getPlaybackPosition;
+  onPlayheadSeekRequested = other.onPlayheadSeekRequested;
+  onNewTrackRequested = other.onNewTrackRequested;
+  onMidiClipDoubleClicked = other.onMidiClipDoubleClicked;
+  onMidiClipDeleted = other.onMidiClipDeleted;
+  onPatternEdited = other.onPatternEdited;
+  onClipSelected = other.onClipSelected;
+}
+
 void PlaylistComponent::setExternalMutex(juce::CriticalSection *mutex) {
   audioMutex = mutex;
 }
@@ -143,17 +161,16 @@ PlaylistComponent::~PlaylistComponent() {
 }
 
 void PlaylistComponent::timerCallback() {
-  // CORRECCIÓN DE RACE CONDITION: Solo lee el motor si está en Play y NO se
-  // está arrastrando el timeline
-  if (isPlaying && getPlaybackPosition && !isDraggingTimeline) {
+  // Sincronizar estado de transporte visual
+  if (getPlaybackPosition) {
     float newPos = getPlaybackPosition();
-    if (playheadAbsPos != newPos) {
-      playheadAbsPos = newPos;
-
-      // Delegación al Analyzer para grabación de historial (Loudness, Balance, MS)
-      PlaylistAnalyzer::recordAnalysisData(tracksRef, masterTrackPtr, playheadAbsPos, isDraggingTimeline);
-      
-      repaint();
+    if (newPos != playheadAbsPos) {
+       playheadAbsPos = newPos;
+       
+       // Delegación al Analyzer para grabación de historial (Loudness, Balance, MS)
+       PlaylistAnalyzer::recordAnalysisData(tracksRef, masterTrackPtr, playheadAbsPos, isDraggingTimeline);
+       
+       repaint();
     }
   }
 }
@@ -322,7 +339,8 @@ void PlaylistComponent::paint(juce::Graphics &g) {
   // 3. Dibujar resúmenes de carpeta (Reaper style)
   PlaylistRenderer::drawFolderSummaries(g, ctx, trackYCache);
 
-  // 4. Dibujar clips de audio y MIDI
+  // 4. Dibujar clips de audio y MIDI (EXTRACCIÓN DINÁMICA DEL PROYECTO)
+  // En lugar de usar la lista local 'clips', le pedimos al renderizador que lea de tracksRef
   PlaylistRenderer::drawTracksAndClips(g, ctx, trackYCache);
 
   // 5. Dibujar pistas de análisis (Loudness, Balance, MidSide)
@@ -380,9 +398,11 @@ void PlaylistComponent::mouseWheelMove(const juce::MouseEvent &e,
   if (e.mods.isCtrlDown()) {
     // Zoom Horizontal Detallado - Centrado en el mouse
     double mouseAbsX = getAbsoluteXFromMouse(e.x);
-    double zoomFactor = (w.deltaY > 0) ? 1.15 : (1.0 / 1.15);
-    if (w.isReversed)
-      zoomFactor = 1.0 / zoomFactor;
+    
+    // Zoom exponencial basado en la distancia real del scroll (anti-jitter garantizado)
+    double zoomFactor = std::pow(1.25, std::abs(w.deltaY));
+    if (w.deltaY < 0) zoomFactor = 1.0 / zoomFactor;
+    if (w.isReversed) zoomFactor = 1.0 / zoomFactor;
       
     double visibleW = (double)getWidth() - vBarWidth;
     double effectiveLen = getTimelineLength();
@@ -406,9 +426,12 @@ void PlaylistComponent::mouseWheelMove(const juce::MouseEvent &e,
     if (currentMouseY > topOffset) {
       double vS = vBar.getCurrentRangeStart();
       double mouseAbsY = vS + (currentMouseY - topOffset);
-      double zoomFactor = (w.deltaY > 0) ? 1.15 : (1.0 / 1.15);
-      if (w.isReversed)
-        zoomFactor = 1.0 / zoomFactor;
+      
+      // Zoom exponencial
+      double zoomFactor = std::pow(1.25, std::abs(w.deltaY));
+      if (w.deltaY < 0) zoomFactor = 1.0 / zoomFactor;
+      if (w.isReversed) zoomFactor = 1.0 / zoomFactor;
+        
       double oldTrackHeight = trackHeight;
       trackHeight = (float)juce::jlimit(30.0, 400.0, trackHeight * zoomFactor);
       if (trackContainer)

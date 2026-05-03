@@ -10,6 +10,8 @@
 
 // 2. INCLUDES RESTANTES DESPUÉS DE LA UI
 #include "UI/Layout/ViewManager.h"
+#include "UI/TilingLayout/TilingLayoutManager.h"
+#include "UI/Layout/ArrangementPanel.h"
 #include "Project/ProjectController.h"
 #include "Engine/Core/AudioEngine.h"
 #include "Bridge/BridgeManager.h"
@@ -53,6 +55,8 @@ private:
 
     DAWUIComponents ui;
     ViewManager viewManager{ ui, *this };
+    std::unique_ptr<TilingLayout::TilingLayoutManager> tilingLayout;
+    std::unique_ptr<TilingLayout::ArrangementPanel> arrangementPanel;
     TrackManager trackManager{ ui, audioEngine, audioMutex };
     SelectionManager selectionManager{ ui, audioEngine };
 public:

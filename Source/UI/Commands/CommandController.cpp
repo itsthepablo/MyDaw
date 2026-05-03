@@ -39,6 +39,7 @@ bool CommandController::perform(const juce::ApplicationCommandTarget::Invocation
             // --- STOP con RESET (Lógica original completa) ---
             ui.pianoRollUI.setPlaying(false);
             ui.playlistUI.isPlaying = false;
+            audioEngine.transportState.isPlaying.store(false); // <--- REPARACIÓN: Detener motor
             
             ui.pianoRollUI.setPlayheadPos(0);
             ui.playlistUI.setPlayheadPos(0);
@@ -54,6 +55,7 @@ bool CommandController::perform(const juce::ApplicationCommandTarget::Invocation
             // --- PLAY / RESUME ---
             ui.pianoRollUI.setPlaying(true);
             ui.playlistUI.isPlaying = true;
+            audioEngine.transportState.isPlaying.store(true); // <--- REPARACIÓN: Encender motor
             
             ui.topMenuBar.playBtn.setButtonText("S");
             ui.topMenuBar.playBtn.setColour(juce::TextButton::buttonColourId, juce::Colours::red);
@@ -69,6 +71,7 @@ bool CommandController::perform(const juce::ApplicationCommandTarget::Invocation
             
             ui.pianoRollUI.setPlaying(false);
             ui.playlistUI.isPlaying = false;
+            audioEngine.transportState.isPlaying.store(false); // <--- REPARACIÓN: Pausar motor
             
             ui.pianoRollUI.setPlayheadPos(currentPos);
             ui.playlistUI.setPlayheadPos(currentPos);
@@ -83,6 +86,7 @@ bool CommandController::perform(const juce::ApplicationCommandTarget::Invocation
             // --- RESUME ---
             ui.pianoRollUI.setPlaying(true);
             ui.playlistUI.isPlaying = true;
+            audioEngine.transportState.isPlaying.store(true); // <--- REPARACIÓN: Reanudar motor
             
             ui.topMenuBar.playBtn.setButtonText("S");
             ui.topMenuBar.playBtn.setColour(juce::TextButton::buttonColourId, juce::Colours::red);
