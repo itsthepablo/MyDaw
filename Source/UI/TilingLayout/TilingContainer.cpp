@@ -235,8 +235,94 @@ namespace TilingLayout
     {
         float totalSize = (node.getOrientation() == Node::Vertical) ? (float)getWidth() : (float)getHeight();
         if (totalSize <= 0) return;
-        float newRatio = juce::jlimit(0.05f, 0.95f, (float)absolutePos / totalSize);
+        
+        float oldRatio = node.getRatio();
+        float oldW1 = totalSize * oldRatio;
+        float idealNewW1 = absolutePos;
+        float delta = idealNewW1 - oldW1; 
+        
+        if (delta == 0.0f) return;
+
+        // Función para descubrir cuánto puede encogerse un sub-árbol antes de golpear su límite
+        std::function<float(juce::ValueTree, Node::Orientation, float, bool)> getAvailableShrink = 
+            [&getAvailableShrink](juce::ValueTree v, Node::Orientation parentOri, float currentSize, bool shrinkFromLeft) -> float
+        {
+            Node n(v);
+            float minSize = std::max(30.0f, currentSize * 0.05f); // 5% o 30 píxeles mínimo
+            
+            if (n.getType() == Node::Leaf || n.getOrientation() != parentOri) {
+                return std::max(0.0f, currentSize - minSize);
+            }
+
+            float r = n.getRatio();
+            if (shrinkFromLeft) {
+                // El impacto viene por la izquierda, lo absorbe el hijo izquierdo
+                return getAvailableShrink(n.getChild(0), parentOri, currentSize * r, true);
+            } else {
+                // El impacto viene por la derecha, lo absorbe el hijo derecho
+                return getAvailableShrink(n.getChild(1), parentOri, currentSize * (1.0f - r), false);
+            }
+        };
+
+        // Pre-calcular el límite máximo de arrastre para no aplastar ventanas
+        if (delta > 0) 
+        {
+            float maxShrink = getAvailableShrink(node.getChild(1), node.getOrientation(), totalSize - oldW1, true);
+            if (delta > maxShrink) delta = maxShrink;
+        }
+        else 
+        {
+            float maxShrink = getAvailableShrink(node.getChild(0), node.getOrientation(), oldW1, false);
+            if (-delta > maxShrink) delta = -maxShrink;
+        }
+
+        // Aplicar el delta seguro
+        float newW1 = oldW1 + delta;
+        float newRatio = juce::jlimit(0.05f, 0.95f, newW1 / totalSize);
         node.setRatio(newRatio);
+
+        // Recalcular el delta real aplicado (por si jlimit lo redujo aún más)
+        delta = (totalSize * newRatio) - oldW1;
+
+        // Lambda recursiva para compensar los paneles anidados
+        std::function<void(juce::ValueTree, Node::Orientation, float, float, bool)> compensate = 
+            [&compensate](juce::ValueTree v, Node::Orientation parentOri, float sizeChange, float oldTotalSize, bool absorbOnLeft) 
+        {
+            if (sizeChange == 0.0f) return;
+            Node n(v);
+            if (n.getType() != Node::Split) return;
+            if (n.getOrientation() != parentOri) return; 
+
+            float newTotalSize = oldTotalSize + sizeChange;
+            if (newTotalSize <= 1.0f) return;
+
+            float r = n.getRatio();
+            float oldChild0Size = oldTotalSize * r;
+
+            if (absorbOnLeft) 
+            {
+                float newChild0Size = oldChild0Size + sizeChange;
+                float newR = juce::jlimit(0.05f, 0.95f, newChild0Size / newTotalSize);
+                n.setRatio(newR);
+                compensate(n.getChild(0), parentOri, sizeChange, oldChild0Size, true);
+            }
+            else 
+            {
+                float newChild0Size = oldChild0Size;
+                float newR = juce::jlimit(0.05f, 0.95f, newChild0Size / newTotalSize);
+                n.setRatio(newR);
+                float oldChild1Size = oldTotalSize - oldChild0Size;
+                compensate(n.getChild(1), parentOri, sizeChange, oldChild1Size, false);
+            }
+        };
+
+        // El hijo izquierdo (child0) cambia su tamaño en +delta. 
+        // Su lado izquierdo (pegado al borde lejano) no debe moverse, así que absorbe por la derecha (absorbOnLeft = false).
+        compensate(node.getChild(0), node.getOrientation(), delta, oldW1, false);
+
+        // El hijo derecho (child1) cambia su tamaño en -delta. 
+        // Su lado derecho (pegado al borde lejano) no debe moverse, así que absorbe por la izquierda (absorbOnLeft = true).
+        compensate(node.getChild(1), node.getOrientation(), -delta, totalSize - oldW1, true);
     }
 
     void TilingContainer::valueTreePropertyChanged(juce::ValueTree& v, const juce::Identifier& i)
