@@ -6,6 +6,11 @@ namespace TilingLayout
     TilingContainer::TilingContainer(juce::ValueTree nodeState, ContentProvider provider)
         : node(nodeState), contentProvider(provider)
     {
+        for (int i = 0; i < 4; ++i) {
+            corners[i] = std::make_unique<CornerGrabber>(*this, i);
+            addAndMakeVisible(corners[i].get());
+        }
+        
         node.state.addListener(this);
         triggerAsyncUpdate(); 
     }
@@ -24,7 +29,7 @@ namespace TilingLayout
     void TilingContainer::paint(juce::Graphics& g)
     {
         auto bounds = getLocalBounds().toFloat();
-        const float gap = 4.0f;
+        const float gap = 1.0f;
         const float radius = 6.0f;
         auto panelArea = bounds.reduced(gap);
 
@@ -54,46 +59,79 @@ namespace TilingLayout
         g.drawLine(bounds.getWidth() - gap - cSize, gap, bounds.getWidth() - gap, gap + cSize, 1.0f);
         // Bottom-Left
         g.drawLine(gap, bounds.getHeight() - gap - cSize, gap + cSize, bounds.getHeight() - gap, 1.0f);
-        // Bottom-Right
-        g.drawLine(bounds.getWidth() - gap - cSize, bounds.getHeight() - gap, bounds.getWidth() - gap, bounds.getHeight() - gap - cSize, 1.0f);
+    }
 
+    void TilingContainer::paintOverChildren(juce::Graphics& g)
+    {
         if (dragMode == CornerDragMode::Splitting)
         {
-            g.setColour(juce::Colours::white.withAlpha(0.5f));
+            auto bounds = getLocalBounds().toFloat();
+            const float gap = 4.0f;
+            const float radius = 6.0f;
+            auto panelArea = bounds.reduced(gap);
+            
             auto p = getMouseXYRelative();
+            
+            // La línea de división
+            g.setColour(juce::Colours::white.withAlpha(0.8f));
             if (isSplitVertical)
                 g.drawVerticalLine((float)p.getX(), panelArea.getY(), panelArea.getBottom());
             else
                 g.drawHorizontalLine((float)p.getY(), panelArea.getX(), panelArea.getRight());
+                
+            // Rectángulo azul de previsualización para la NUEVA ventana (Child 2)
+            g.setColour(juce::Colour(80, 150, 255).withAlpha(0.25f)); 
+            
+            juce::Rectangle<float> newWindowArea;
+            if (isSplitVertical)
+                newWindowArea = juce::Rectangle<float>((float)p.getX(), panelArea.getY(), panelArea.getRight() - (float)p.getX(), panelArea.getHeight());
+            else
+                newWindowArea = juce::Rectangle<float>(panelArea.getX(), (float)p.getY(), panelArea.getWidth(), panelArea.getBottom() - (float)p.getY());
+            
+            newWindowArea = newWindowArea.getIntersection(panelArea);
+            g.fillRoundedRectangle(newWindowArea, radius);
         }
     }
 
     void TilingContainer::resized()
     {
         auto bounds = getLocalBounds();
-        const int gap = 4;
+        const int gap = 1;
 
         if (node.getType() == Node::Split)
         {
+            for (int i = 0; i < 4; ++i) corners[i]->setVisible(false);
+            
             if (child1 && child2 && splitter)
             {
-                const int splitterSize = 2;
+                const int layoutSplitterSize = 1;
                 float ratio = node.getRatio();
 
                 if (node.getOrientation() == Node::Vertical)
                 {
                     int w1 = (int)((float)bounds.getWidth() * ratio);
                     child1->setBounds(bounds.removeFromLeft(w1));
-                    splitter->setBounds(bounds.removeFromLeft(splitterSize));
+                    
+                    auto layoutSplitArea = bounds.removeFromLeft(layoutSplitterSize);
+                    auto hitBoxArea = layoutSplitArea;
+                    hitBoxArea.expand(3, 0); // Hitbox invisible de 7px para agarrar fácil
+                    splitter->setBounds(hitBoxArea);
+                    
                     child2->setBounds(bounds);
                 }
                 else
                 {
                     int h1 = (int)((float)bounds.getHeight() * ratio);
                     child1->setBounds(bounds.removeFromTop(h1));
-                    splitter->setBounds(bounds.removeFromTop(splitterSize));
+                    
+                    auto layoutSplitArea = bounds.removeFromTop(layoutSplitterSize);
+                    auto hitBoxArea = layoutSplitArea;
+                    hitBoxArea.expand(0, 3);
+                    splitter->setBounds(hitBoxArea);
+                    
                     child2->setBounds(bounds);
                 }
+                splitter->toFront(false);
             }
         }
         else
@@ -104,6 +142,18 @@ namespace TilingLayout
             {
                 contentComponent->setVisible(true);
                 contentComponent->setBounds(panelArea);
+            }
+
+            // Posicionar los corners
+            const int cSize = 24; // Área de 24x24 px reales y prioritarios
+            corners[0]->setBounds(0, 0, cSize, cSize); // Top-Left
+            corners[1]->setBounds(bounds.getWidth() - cSize, 0, cSize, cSize); // Top-Right
+            corners[2]->setBounds(0, bounds.getHeight() - cSize, cSize, cSize); // Bottom-Left
+            corners[3]->setBounds(bounds.getWidth() - cSize, bounds.getHeight() - cSize, cSize, cSize); // Bottom-Right
+            
+            for (int i = 0; i < 4; ++i) {
+                corners[i]->setVisible(true);
+                corners[i]->toFront(false);
             }
         }
     }
@@ -166,39 +216,41 @@ namespace TilingLayout
         resized();
     }
 
-    bool TilingContainer::isMouseOverCorner(juce::Point<int> p)
+    void TilingContainer::CornerGrabber::mouseDown(const juce::MouseEvent& e) { parent.cornerMouseDown(e.getEventRelativeTo(&parent)); }
+    void TilingContainer::CornerGrabber::mouseDrag(const juce::MouseEvent& e) { parent.cornerMouseDrag(e.getEventRelativeTo(&parent)); }
+    void TilingContainer::CornerGrabber::mouseUp(const juce::MouseEvent& e) { parent.cornerMouseUp(e.getEventRelativeTo(&parent)); }
+    
+    void TilingContainer::CornerGrabber::paint(juce::Graphics& g)
     {
-        if (node.getType() != Node::Leaf) return false;
-        const int cornerSize = 60; // Área mucho más generosa para agarrar
-        auto b = getLocalBounds();
-        
-        // Esquinas: Top-Left, Top-Right, Bottom-Left, Bottom-Right
-        bool isNearLeft = p.getX() < cornerSize;
-        bool isNearRight = p.getX() > b.getWidth() - cornerSize;
-        bool isNearTop = p.getY() < cornerSize;
-        bool isNearBottom = p.getY() > b.getHeight() - cornerSize;
-
-        return (isNearLeft || isNearRight) && (isNearTop || isNearBottom);
-    }
-
-    void TilingContainer::mouseMove(const juce::MouseEvent& e)
-    {
-        bool overCorner = isMouseOverCorner(e.getPosition());
-        auto targetCursor = overCorner ? juce::MouseCursor::CrosshairCursor : juce::MouseCursor::NormalCursor;
-        if (getMouseCursor() != targetCursor) setMouseCursor(targetCursor);
-    }
-
-    void TilingContainer::mouseDown(const juce::MouseEvent& e)
-    {
-        if (isMouseOverCorner(e.getPosition()))
-        {
-            dragMode = CornerDragMode::Splitting;
-            dragStartPos = e.getPosition();
-            repaint();
+        // Icono visual: Pequeño triángulo sutil estilo Blender en la punta de la esquina
+        g.setColour(juce::Colours::white.withAlpha(0.2f));
+        juce::Path p;
+        if (cornerType == 0) { // Top-Left
+            p.addTriangle(2, 2, 12, 2, 2, 12);
+        } else if (cornerType == 1) { // Top-Right
+            p.addTriangle(22, 2, 12, 2, 22, 12);
+        } else if (cornerType == 2) { // Bottom-Left
+            p.addTriangle(2, 22, 12, 22, 2, 12);
+        } else if (cornerType == 3) { // Bottom-Right
+            p.addTriangle(22, 22, 12, 22, 22, 12);
         }
+        
+        // Efecto hover para que sea más visible si el ratón está encima
+        if (isMouseOver()) {
+            g.setColour(juce::Colours::white.withAlpha(0.6f));
+        }
+        
+        g.fillPath(p);
     }
 
-    void TilingContainer::mouseDrag(const juce::MouseEvent& e)
+    void TilingContainer::cornerMouseDown(const juce::MouseEvent& e)
+    {
+        if (node.getType() != Node::Leaf) return;
+        dragMode = CornerDragMode::Splitting;
+        dragStartPos = e.getPosition();
+    }
+
+    void TilingContainer::cornerMouseDrag(const juce::MouseEvent& e)
     {
         if (dragMode == CornerDragMode::Splitting)
         {
@@ -208,14 +260,31 @@ namespace TilingLayout
         }
     }
 
-    void TilingContainer::mouseUp(const juce::MouseEvent& e)
+    void TilingContainer::cornerMouseUp(const juce::MouseEvent& e)
     {
         if (dragMode == CornerDragMode::Splitting)
         {
-            dragMode = CornerDragMode::None;
             performCornerSplit(e.getPosition());
+            dragMode = CornerDragMode::None;
             repaint();
         }
+    }
+
+    void TilingContainer::mouseMove(const juce::MouseEvent& e)
+    {
+        // Ya no es necesario manejar isMouseOverCorner aquí, los CornerGrabbers gestionan el cursor
+    }
+
+    void TilingContainer::mouseDown(const juce::MouseEvent& e)
+    {
+    }
+
+    void TilingContainer::mouseDrag(const juce::MouseEvent& e)
+    {
+    }
+
+    void TilingContainer::mouseUp(const juce::MouseEvent& e)
+    {
     }
 
     void TilingContainer::performCornerSplit(juce::Point<int> endPos)

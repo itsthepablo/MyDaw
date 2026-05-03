@@ -18,6 +18,7 @@ namespace TilingLayout
         ~TilingContainer();
 
         void paint(juce::Graphics& g) override;
+        void paintOverChildren(juce::Graphics& g) override;
         void resized() override;
         
         void handleAsyncUpdate() override;
@@ -55,6 +56,29 @@ namespace TilingLayout
         std::unique_ptr<TilingContainer> child2;
         std::unique_ptr<SplitterBar> splitter;
         std::unique_ptr<PanelHeader> header;
+        
+        // --- ESQUINAS PARA DIVIDIR VENTANAS ---
+        class CornerGrabber : public juce::Component
+        {
+        public:
+            CornerGrabber(TilingContainer& p, int type) : parent(p), cornerType(type) {
+                setMouseCursor(juce::MouseCursor::CrosshairCursor);
+            }
+            void mouseDown(const juce::MouseEvent& e) override;
+            void mouseDrag(const juce::MouseEvent& e) override;
+            void mouseUp(const juce::MouseEvent& e) override;
+            void mouseEnter(const juce::MouseEvent& e) override { repaint(); }
+            void mouseExit(const juce::MouseEvent& e) override { repaint(); }
+            void paint(juce::Graphics& g) override;
+        private:
+            TilingContainer& parent;
+            int cornerType; // 0: TL, 1: TR, 2: BL, 3: BR
+        };
+        std::unique_ptr<CornerGrabber> corners[4];
+
+        void cornerMouseDown(const juce::MouseEvent& e);
+        void cornerMouseDrag(const juce::MouseEvent& e);
+        void cornerMouseUp(const juce::MouseEvent& e);
         
         juce::Component* contentComponent = nullptr;
         TilingContent ownedContent;

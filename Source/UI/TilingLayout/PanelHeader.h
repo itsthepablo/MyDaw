@@ -31,7 +31,8 @@ namespace TilingLayout
             juce::String displayName = panelID;
             if (panelID == ContentID::Arrangement) displayName = "Playlist";
             
-            g.drawText(displayName.toUpperCase(), getLocalBounds().reduced(8, 0), juce::Justification::centredLeft);
+            // Desplazamos 28 píxeles por la izquierda para no pisar el triángulo de arrastre
+            g.drawText(displayName.toUpperCase(), getLocalBounds().withTrimmedLeft(28).reduced(8, 0), juce::Justification::centredLeft);
         }
 
         void mouseDown(const juce::MouseEvent& e) override { showTypeMenu(); }
