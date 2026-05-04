@@ -80,6 +80,14 @@ namespace TilingLayout
         void cornerMouseDrag(const juce::MouseEvent& e);
         void cornerMouseUp(const juce::MouseEvent& e);
         
+        TilingContainer* getRootContainer();
+        TilingContainer* findLeafAt(juce::Point<int> p);
+        
+        enum class DropAction { None, Swap, SplitLeft, SplitRight, SplitTop, SplitBottom };
+        DropAction currentDropAction = DropAction::None;
+        juce::Rectangle<float> dropPreviewArea;
+        juce::ValueTree findDropTarget(juce::ValueTree v);
+        
         juce::Component* contentComponent = nullptr;
         TilingContent ownedContent;
         bool isUpdating = false;

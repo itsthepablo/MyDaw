@@ -61,7 +61,7 @@ namespace TilingLayout
 
         juce::ValueTree getChild(int index) const { return state.getChild(index); }
         
-        void split(Orientation o, float ratio, const juce::String& newContentID)
+        void split(Orientation o, float ratio, const juce::String& newContentID, bool newIsFirst = false)
         {
             if (getType() != Leaf) return;
 
@@ -71,8 +71,13 @@ namespace TilingLayout
             state.setProperty("ratio", ratio, nullptr);
             state.removeProperty("contentID", nullptr);
             
-            state.addChild(oldLeaf, -1, nullptr);
-            state.addChild(createLeaf(newContentID), -1, nullptr);
+            if (newIsFirst) {
+                state.addChild(createLeaf(newContentID), -1, nullptr);
+                state.addChild(oldLeaf, -1, nullptr);
+            } else {
+                state.addChild(oldLeaf, -1, nullptr);
+                state.addChild(createLeaf(newContentID), -1, nullptr);
+            }
         }
 
         void remove()

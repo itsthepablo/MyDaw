@@ -11,34 +11,81 @@ namespace TilingLayout
     class PanelHeader : public juce::Component
     {
     public:
-        PanelHeader(const juce::String& currentID) : panelID(currentID)
-        {
-            setMouseCursor(juce::MouseCursor::PointingHandCursor);
-        }
+        PanelHeader(const juce::String& currentID) : panelID(currentID) {}
 
         void paint(juce::Graphics& g) override
         {
             auto b = getLocalBounds().toFloat();
-            
-            // Fondo oscuro integrado
             g.setColour(juce::Colour(40, 40, 40).withAlpha(0.8f));
             g.fillRect(b);
 
-            // Icono / Texto del panel
+            // Icono de "Mover" (Grip handle) a la derecha, pero alejado de la esquina
+            auto dragArea = getLocalBounds().withTrimmedRight(24).removeFromRight(24).toFloat();
+            g.setColour(juce::Colours::white.withAlpha(isHoveringDrag ? 0.9f : 0.3f));
+            float cx = dragArea.getCentreX();
+            float cy = dragArea.getCentreY();
+            g.drawLine(cx - 4, cy - 3, cx + 4, cy - 3, 2.0f);
+            g.drawLine(cx - 4, cy,     cx + 4, cy,     2.0f);
+            g.drawLine(cx - 4, cy + 3, cx + 4, cy + 3, 2.0f);
+
+            // Texto del panel
             g.setColour(juce::Colours::white.withAlpha(0.6f));
             g.setFont(juce::Font(11.0f));
-            
             juce::String displayName = panelID;
             if (panelID == ContentID::Arrangement) displayName = "Playlist";
             
-            // Desplazamos 28 píxeles por la izquierda para no pisar el triángulo de arrastre
-            g.drawText(displayName.toUpperCase(), getLocalBounds().withTrimmedLeft(28).reduced(8, 0), juce::Justification::centredLeft);
+            g.drawText(displayName.toUpperCase(), getLocalBounds().withTrimmedLeft(28).withTrimmedRight(48).reduced(8, 0), juce::Justification::centredLeft);
         }
 
-        void mouseDown(const juce::MouseEvent& e) override { showTypeMenu(); }
+        void mouseMove(const juce::MouseEvent& e) override
+        {
+            bool overDrag = e.x >= getWidth() - 48 && e.x <= getWidth() - 24;
+            if (isHoveringDrag != overDrag) {
+                isHoveringDrag = overDrag;
+                setMouseCursor(isHoveringDrag ? juce::MouseCursor::DraggingHandCursor : juce::MouseCursor::PointingHandCursor);
+                repaint();
+            }
+        }
+        
+        void mouseExit(const juce::MouseEvent& e) override
+        {
+            if (isHoveringDrag) {
+                isHoveringDrag = false;
+                repaint();
+            }
+        }
+
+        void mouseDown(const juce::MouseEvent& e) override 
+        { 
+            if (e.x >= getWidth() - 48 && e.x <= getWidth() - 24) {
+                isDraggingPanel = true;
+                if (onPanelDragStart) onPanelDragStart();
+            } else {
+                showTypeMenu(); 
+            }
+        }
+        
+        void mouseDrag(const juce::MouseEvent& e) override
+        {
+            if (isDraggingPanel && onPanelDrag) {
+                onPanelDrag(e.getScreenPosition());
+            }
+        }
+        
+        void mouseUp(const juce::MouseEvent& e) override
+        {
+            if (isDraggingPanel) {
+                isDraggingPanel = false;
+                if (onPanelDragEnd) onPanelDragEnd(e.getScreenPosition());
+            }
+        }
 
         std::function<void(juce::String)> onTypeChanged;
         std::function<void()> onCloseRequested;
+        
+        std::function<void()> onPanelDragStart;
+        std::function<void(juce::Point<int>)> onPanelDrag;
+        std::function<void(juce::Point<int>)> onPanelDragEnd;
 
     private:
         void showTypeMenu()
@@ -68,6 +115,8 @@ namespace TilingLayout
         }
 
         juce::String panelID;
+        bool isHoveringDrag = false;
+        bool isDraggingPanel = false;
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PanelHeader)
     };
 }

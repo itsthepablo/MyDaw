@@ -91,6 +91,16 @@ namespace TilingLayout
             newWindowArea = newWindowArea.getIntersection(panelArea);
             g.fillRoundedRectangle(newWindowArea, radius);
         }
+
+        // Previsualización de Drag & Drop (Swap / Dock)
+        if (!dropPreviewArea.isEmpty())
+        {
+            g.setColour(juce::Colour(255, 150, 50).withAlpha(0.3f)); // Naranja brillante
+            g.fillRoundedRectangle(dropPreviewArea, 6.0f);
+            
+            g.setColour(juce::Colours::white.withAlpha(0.8f));
+            g.drawRoundedRectangle(dropPreviewArea, 6.0f, 2.0f);
+        }
     }
 
     void TilingContainer::resized()
@@ -158,6 +168,36 @@ namespace TilingLayout
         }
     }
 
+    TilingContainer* TilingContainer::getRootContainer()
+    {
+        auto* c = this;
+        while (auto* p = dynamic_cast<TilingContainer*>(c->getParentComponent())) {
+            c = p;
+        }
+        return c;
+    }
+
+    TilingContainer* TilingContainer::findLeafAt(juce::Point<int> p)
+    {
+        if (!getLocalBounds().contains(p)) return nullptr;
+        if (node.getType() == Node::Leaf) return this;
+        
+        if (child1 && child1->getBounds().contains(p)) return child1->findLeafAt(child1->getLocalPoint(this, p));
+        if (child2 && child2->getBounds().contains(p)) return child2->findLeafAt(child2->getLocalPoint(this, p));
+        
+        return nullptr;
+    }
+
+    juce::ValueTree TilingContainer::findDropTarget(juce::ValueTree v)
+    {
+        if (v.getProperty("isDropTarget", false)) return v;
+        for (int i = 0; i < v.getNumChildren(); ++i) {
+            auto found = findDropTarget(v.getChild(i));
+            if (found.isValid()) return found;
+        }
+        return {};
+    }
+
     void TilingContainer::updateStructure()
     {
         if (isUpdating) return;
@@ -201,6 +241,87 @@ namespace TilingLayout
             
             header->onCloseRequested = [this]() {
                 node.remove();
+            };
+
+            // Lógica de movimiento (Swap & Dock Panels)
+            header->onPanelDragStart = [this]() {
+                auto* root = getRootContainer();
+                root->currentDropAction = DropAction::None;
+                root->dropPreviewArea = {};
+            };
+            header->onPanelDrag = [this](juce::Point<int> screenPos) {
+                auto* root = getRootContainer();
+                auto localPos = root->getLocalPoint(nullptr, screenPos);
+                auto* target = root->findLeafAt(localPos);
+                
+                if (target && target != this) {
+                    auto bounds = target->getLocalBounds();
+                    auto p = target->getLocalPoint(root, localPos);
+                    
+                    float w = (float)bounds.getWidth();
+                    float h = (float)bounds.getHeight();
+                    float edgeW = w * 0.25f;
+                    float edgeH = h * 0.25f;
+
+                    if (p.x < edgeW) {
+                        root->currentDropAction = DropAction::SplitLeft;
+                        root->dropPreviewArea = root->getLocalArea(target, juce::Rectangle<int>(0, 0, (int)(w/2), (int)h)).toFloat();
+                    } else if (p.x > w - edgeW) {
+                        root->currentDropAction = DropAction::SplitRight;
+                        root->dropPreviewArea = root->getLocalArea(target, juce::Rectangle<int>((int)(w/2), 0, (int)(w/2), (int)h)).toFloat();
+                    } else if (p.y < edgeH) {
+                        root->currentDropAction = DropAction::SplitTop;
+                        root->dropPreviewArea = root->getLocalArea(target, juce::Rectangle<int>(0, 0, (int)w, (int)(h/2))).toFloat();
+                    } else if (p.y > h - edgeH) {
+                        root->currentDropAction = DropAction::SplitBottom;
+                        root->dropPreviewArea = root->getLocalArea(target, juce::Rectangle<int>(0, (int)(h/2), (int)w, (int)(h/2))).toFloat();
+                    } else {
+                        root->currentDropAction = DropAction::Swap;
+                        root->dropPreviewArea = root->getLocalArea(target, bounds).toFloat();
+                    }
+                } else {
+                    root->currentDropAction = DropAction::None;
+                    root->dropPreviewArea = {};
+                }
+                root->repaint();
+            };
+            header->onPanelDragEnd = [this](juce::Point<int> screenPos) {
+                auto* root = getRootContainer();
+                auto localPos = root->getLocalPoint(nullptr, screenPos);
+                auto* target = root->findLeafAt(localPos);
+                
+                if (target && target != this && root->currentDropAction != DropAction::None) {
+                    juce::String myID = node.getContentID();
+                    
+                    if (root->currentDropAction == DropAction::Swap) {
+                        juce::String targetID = target->node.getContentID();
+                        node.setContentID(targetID);
+                        target->node.setContentID(myID);
+                    } else {
+                        // Modo Docking (Mover)
+                        target->node.state.setProperty("isDropTarget", true, nullptr);
+                        node.remove(); // Borra nuestro panel actual
+                        
+                        juce::ValueTree targetNodeTree = findDropTarget(root->node.state);
+                        if (targetNodeTree.isValid()) {
+                            targetNodeTree.removeProperty("isDropTarget", nullptr);
+                            Node tNode(targetNodeTree);
+                            
+                            if (root->currentDropAction == DropAction::SplitLeft)
+                                tNode.split(Node::Vertical, 0.5f, myID, true);
+                            else if (root->currentDropAction == DropAction::SplitRight)
+                                tNode.split(Node::Vertical, 0.5f, myID, false);
+                            else if (root->currentDropAction == DropAction::SplitTop)
+                                tNode.split(Node::Horizontal, 0.5f, myID, true);
+                            else if (root->currentDropAction == DropAction::SplitBottom)
+                                tNode.split(Node::Horizontal, 0.5f, myID, false);
+                        }
+                    }
+                }
+                
+                root->currentDropAction = DropAction::None;
+                root->dropPreviewArea = {};
+                root->repaint();
             };
 
             ownedContent = contentProvider(id);
@@ -297,7 +418,9 @@ namespace TilingLayout
             : (float)endPos.getY() / (float)getHeight();
         ratio = juce::jlimit(0.1f, 0.9f, ratio);
         
-        node.split(isSplitVertical ? Node::Vertical : Node::Horizontal, ratio, ContentID::Empty);
+        // Clonamos el tipo de vista actual en la nueva ventana
+        juce::String currentID = node.getContentID();
+        node.split(isSplitVertical ? Node::Vertical : Node::Horizontal, ratio, currentID);
     }
 
     void TilingContainer::handleSplitterDrag(int absolutePos)
